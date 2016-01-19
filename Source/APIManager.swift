@@ -605,8 +605,8 @@ extension SessionDelegate: NSURLSessionDataDelegate {
             for taskInfo in tasks.values where taskInfo.task.trackingNetworkActivity {
                 NetworkActivityManager.shared.decrementCounter()
             }
-            tasks.removeAll()
         #endif
+        tasks.removeAll()
     }
     
     @objc func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {

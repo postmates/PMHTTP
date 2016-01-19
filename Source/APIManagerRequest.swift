@@ -76,11 +76,13 @@ public class APIManagerRequest: NSObject, NSCopying {
     /// `true` iff redirects should be followed when processing the response.
     /// If `false`, network requests return a successful result containing the redirection
     /// response, and parse requests return an error with `APIManagerError.UnexpectedRedirect()`.
+    /// Default is `true`.
     public var shouldFollowRedirects: Bool = true
     
-    /// Indicates whether the request is allowed to use the cellular radio. If `nil`,
-    /// the default behavior is used. Default is `nil`.
-    public var allowsCellularAccess: Bool?
+    /// Indicates whether the request is allowed to use the cellular radio. Default is `true`.
+    /// If the session configuration's `allowsCellularAccess` is `false`, access to the cellular
+    /// radio is always denied regardless of the request's `allowsCellularAccess` property.
+    public var allowsCellularAccess: Bool = true
     
     /// Whether the request represents an action the user is waiting on.
     /// Set this to `true` to increase the priority. Default is `false`.
@@ -156,9 +158,7 @@ public class APIManagerRequest: NSObject, NSCopying {
         if let timeout = timeoutInterval {
             request.timeoutInterval = timeout
         }
-        if let cell = allowsCellularAccess {
-            request.allowsCellularAccess = cell
-        }
+        request.allowsCellularAccess = allowsCellularAccess
         request.allHTTPHeaderFields = headerFields.dictionary
         if let credential = credential {
             request.setValue(basicAuthentication(credential), forHTTPHeaderField: "Authorization")
