@@ -1,6 +1,6 @@
 //
 //  API.swift
-//  PMAPI
+//  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 12/10/15.
 //  Copyright © 2015 Postmates. All rights reserved.
