@@ -18,7 +18,7 @@ import Foundation
 
 /// The default `APIManager` instance.
 /// - SeeAlso: `APIManagerConfigurable`.
-public let API = APIManager()
+public let API = APIManager(shared: true)
 
 /// Manages access to a REST API.
 ///
@@ -40,7 +40,7 @@ public final class APIManager: NSObject {
     ///
     /// - Important: If `environment` is `nil`, requests created with relative paths will fail,
     ///   but requests created with absolute URLs will continue to work. See `APIManagerConfigurable`
-    ///   for how to configure the `APIManager` prior to first use.
+    ///   for how to configure the shared `APIManager` prior to first use.
     ///
     /// - SeeAlso: `resetSession()`, `APIManagerConfigurable`.
     public var environment: Environment? {
@@ -127,6 +127,20 @@ public final class APIManager: NSObject {
         }
     }
     
+    /// Creates and returns a new `APIManager`.
+    ///
+    /// The returned `APIManager` needs its `environment` set, but is otherwise ready
+    /// for use.
+    ///
+    /// - Important: Unlike the global `API` property, calling this initializer does
+    ///   not go through `APIManagerConfigurable`. The calling code must configure
+    ///   the returned `APIManager` instance as appropriate.
+    ///
+    /// - SeeAlso: `API`.
+    public override convenience init() {
+        self.init(shared: false)
+    }
+    
     private class Inner {
         var environment: Environment?
         var sessionConfiguration: NSURLSessionConfiguration = .defaultSessionConfiguration()
@@ -147,20 +161,22 @@ public final class APIManager: NSObject {
     
     private let inner: QueueConfined<Inner> = QueueConfined(label: "APIManager internal queue", value: Inner())
     
-    private override init() {
+    private init(shared: Bool) {
         super.init()
         inner.unsafeDirectAccess { [value=APIManager.defaultUserAgent] in
             $0.setHeader("User-Agent", value: value, overwrite: true)
         }
-        let setup: APIManagerConfigurable?
-        #if os(OSX)
-            setup = NSApplication.sharedApplication().delegate as? APIManagerConfigurable
-        #elseif os(iOS) || os(tvOS)
-            setup = UIApplication.sharedApplication().delegate as? APIManagerConfigurable
-        #elseif os(watchOS)
-            setup = WKExtension.sharedExtension().delegate as? APIManagerConfigurable
-        #endif
-        setup?.configureAPIManager(self)
+        if shared {
+            let setup: APIManagerConfigurable?
+            #if os(OSX)
+                setup = NSApplication.sharedApplication().delegate as? APIManagerConfigurable
+            #elseif os(iOS) || os(tvOS)
+                setup = UIApplication.sharedApplication().delegate as? APIManagerConfigurable
+            #elseif os(watchOS)
+                setup = WKExtension.sharedExtension().delegate as? APIManagerConfigurable
+            #endif
+            setup?.configureAPIManager(self)
+        }
         inner.asyncBarrier { [value=APIManager.defaultUserAgent] in
             $0.setHeader("User-Agent", value: value, overwrite: false)
             self.resetSession($0, invalidate: false)
@@ -206,7 +222,7 @@ public final class APIManager: NSObject {
 /// }
 /// ```
 ///
-/// You can also use `APIManagerConfigurable` to configure the initial environment on the `APIManager`.
+/// You can also use `APIManagerConfigurable` to configure the initial environment on the shared `APIManager`.
 public final class APIManagerEnvironment: NSObject {
     /// The base URL for the environment.
     public let baseURL: NSURL
@@ -273,8 +289,8 @@ public final class APIManagerEnvironment: NSObject {
     }
 }
 
-/// A protocol that provides hooks for configuring the `APIManager`.
-/// If the application delegate conforms to this protocol, it will be asked to configure the `APIManager`.
+/// A protocol that provides hooks for configuring the shared `APIManager`.
+/// If the application delegate conforms to this protocol, it will be asked to configure the shared `APIManager`.
 /// This will occur on first access to the global `API` property.
 @objc public protocol APIManagerConfigurable {
     /// Invoked on first access to the global `API` property.
