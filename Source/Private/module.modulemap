@@ -1,0 +1,4 @@
+module PMAPIPrivate {
+    header "PMAPIManagerTaskStateBox.h"
+    export *
+}

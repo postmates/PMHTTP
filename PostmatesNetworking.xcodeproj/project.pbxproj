@@ -1,0 +1,502 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E29514A1C4D95CB001D38AC /* Utilities.swift */; };
+		9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */; };
+		9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77821C2B792A000FF8AC /* QueueConfined.swift */; };
+		9E4C77A91C360714000FF8AC /* APIObjectiveC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77A81C360714000FF8AC /* APIObjectiveC.swift */; };
+		9E4C77C91C3B568C000FF8AC /* APIManagerRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77C81C3B568C000FF8AC /* APIManagerRequest.swift */; };
+		9E4C77CB1C3B56D6000FF8AC /* APIManagerTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CA1C3B56D6000FF8AC /* APIManagerTask.swift */; };
+		9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */; };
+		9E4C77D01C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E4C77CE1C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.h */; };
+		9E4C77D11C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CF1C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.m */; };
+		9E7DDF251C18F2B600EA43AD /* PMAPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E7DDF241C18F2B600EA43AD /* PMAPI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		9E7DDF2C1C18F2B600EA43AD /* PMAPI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E7DDF211C18F2B500EA43AD /* PMAPI.framework */; };
+		9E7DDF311C18F2B600EA43AD /* PMAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF301C18F2B600EA43AD /* PMAPITests.swift */; };
+		9E7DDF4B1C1A388400EA43AD /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF4A1C1A388400EA43AD /* APIManager.swift */; };
+		9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */; };
+		9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9E7DDF2D1C18F2B600EA43AD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9E7DDF181C18F2B500EA43AD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9E7DDF201C18F2B500EA43AD;
+			remoteInfo = PostmatesAPI;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		9E29514A1C4D95CB001D38AC /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
+		9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityManager.swift; sourceTree = "<group>"; };
+		9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Carthage.xcconfig; sourceTree = "<group>"; };
+		9E4C77821C2B792A000FF8AC /* QueueConfined.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QueueConfined.swift; sourceTree = "<group>"; };
+		9E4C77A81C360714000FF8AC /* APIObjectiveC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = APIObjectiveC.swift; sourceTree = "<group>"; };
+		9E4C77C81C3B568C000FF8AC /* APIManagerRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = APIManagerRequest.swift; sourceTree = "<group>"; };
+		9E4C77CA1C3B56D6000FF8AC /* APIManagerTask.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = APIManagerTask.swift; sourceTree = "<group>"; };
+		9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UploadSupport.swift; sourceTree = "<group>"; };
+		9E4C77CE1C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMAPIManagerTaskStateBox.h; sourceTree = "<group>"; };
+		9E4C77CF1C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMAPIManagerTaskStateBox.m; sourceTree = "<group>"; };
+		9E4C77D51C3C9D90000FF8AC /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		9E7DDF211C18F2B500EA43AD /* PMAPI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PMAPI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E7DDF241C18F2B600EA43AD /* PMAPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMAPI.h; sourceTree = "<group>"; };
+		9E7DDF261C18F2B600EA43AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9E7DDF2B1C18F2B600EA43AD /* PMAPITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PMAPITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E7DDF301C18F2B600EA43AD /* PMAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PMAPITests.swift; sourceTree = "<group>"; };
+		9E7DDF321C18F2B600EA43AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9E7DDF4A1C1A388400EA43AD /* APIManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
+		9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
+		9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTest+HTTPServerExpectation.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9E7DDF1D1C18F2B500EA43AD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9E7DDF281C18F2B600EA43AD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E7DDF2C1C18F2B600EA43AD /* PMAPI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9E4C77D41C3C9D7F000FF8AC /* Private */ = {
+			isa = PBXGroup;
+			children = (
+				9E4C77D51C3C9D90000FF8AC /* module.modulemap */,
+				9E4C77CE1C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.h */,
+				9E4C77CF1C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.m */,
+			);
+			path = Private;
+			sourceTree = "<group>";
+		};
+		9E7DDF171C18F2B500EA43AD = {
+			isa = PBXGroup;
+			children = (
+				9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */,
+				9E7DDF231C18F2B600EA43AD /* PMAPI */,
+				9E7DDF2F1C18F2B600EA43AD /* PMAPITests */,
+				9E7DDF221C18F2B500EA43AD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9E7DDF221C18F2B500EA43AD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9E7DDF211C18F2B500EA43AD /* PMAPI.framework */,
+				9E7DDF2B1C18F2B600EA43AD /* PMAPITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9E7DDF231C18F2B600EA43AD /* PMAPI */ = {
+			isa = PBXGroup;
+			children = (
+				9E7DDF241C18F2B600EA43AD /* PMAPI.h */,
+				9E7DDF4A1C1A388400EA43AD /* APIManager.swift */,
+				9E4C77C81C3B568C000FF8AC /* APIManagerRequest.swift */,
+				9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */,
+				9E4C77CA1C3B56D6000FF8AC /* APIManagerTask.swift */,
+				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
+				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
+				9E4C77A81C360714000FF8AC /* APIObjectiveC.swift */,
+				9E4C77821C2B792A000FF8AC /* QueueConfined.swift */,
+				9E4C77D41C3C9D7F000FF8AC /* Private */,
+				9E7DDF261C18F2B600EA43AD /* Info.plist */,
+			);
+			name = PMAPI;
+			path = Source;
+			sourceTree = "<group>";
+		};
+		9E7DDF2F1C18F2B600EA43AD /* PMAPITests */ = {
+			isa = PBXGroup;
+			children = (
+				9EC8F0D11C408F1400297FC5 /* HTTP Server */,
+				9E7DDF301C18F2B600EA43AD /* PMAPITests.swift */,
+				9E7DDF321C18F2B600EA43AD /* Info.plist */,
+			);
+			name = PMAPITests;
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		9EC8F0D11C408F1400297FC5 /* HTTP Server */ = {
+			isa = PBXGroup;
+			children = (
+				9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */,
+				9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */,
+			);
+			name = "HTTP Server";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		9E7DDF1E1C18F2B500EA43AD /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E4C77D01C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.h in Headers */,
+				9E7DDF251C18F2B600EA43AD /* PMAPI.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		9E7DDF201C18F2B500EA43AD /* PMAPI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9E7DDF351C18F2B600EA43AD /* Build configuration list for PBXNativeTarget "PMAPI" */;
+			buildPhases = (
+				9E7DDF1C1C18F2B500EA43AD /* Sources */,
+				9E7DDF1D1C18F2B500EA43AD /* Frameworks */,
+				9E7DDF1E1C18F2B500EA43AD /* Headers */,
+				9E7DDF1F1C18F2B500EA43AD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PMAPI;
+			productName = PostmatesAPI;
+			productReference = 9E7DDF211C18F2B500EA43AD /* PMAPI.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		9E7DDF2A1C18F2B600EA43AD /* PMAPITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9E7DDF381C18F2B600EA43AD /* Build configuration list for PBXNativeTarget "PMAPITests" */;
+			buildPhases = (
+				9E7DDF271C18F2B600EA43AD /* Sources */,
+				9E7DDF281C18F2B600EA43AD /* Frameworks */,
+				9E7DDF291C18F2B600EA43AD /* Resources */,
+				9E49DF091C1FA773004FDCAD /* Copy Carthage Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9E7DDF2E1C18F2B600EA43AD /* PBXTargetDependency */,
+			);
+			name = PMAPITests;
+			productName = PostmatesAPITests;
+			productReference = 9E7DDF2B1C18F2B600EA43AD /* PMAPITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9E7DDF181C18F2B500EA43AD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 0720;
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = Postmates;
+				TargetAttributes = {
+					9E7DDF201C18F2B500EA43AD = {
+						CreatedOnToolsVersion = 7.2;
+					};
+					9E7DDF2A1C18F2B600EA43AD = {
+						CreatedOnToolsVersion = 7.2;
+					};
+				};
+			};
+			buildConfigurationList = 9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PostmatesNetworking" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 9E7DDF171C18F2B500EA43AD;
+			productRefGroup = 9E7DDF221C18F2B500EA43AD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9E7DDF201C18F2B500EA43AD /* PMAPI */,
+				9E7DDF2A1C18F2B600EA43AD /* PMAPITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9E7DDF1F1C18F2B500EA43AD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9E7DDF291C18F2B600EA43AD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		9E49DF091C1FA773004FDCAD /* Copy Carthage Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				PMJSON,
+				CocoaAsyncSocket,
+			);
+			name = "Copy Carthage Frameworks";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "case \"$PLATFORM_NAME\" in\nmacosx) plat=Mac;;\niphone*) plat=iOS;;\nwatch*) plat=watchOS;;\ntv*) plat=tvOS;;\n*) echo \"error: Unknown PLATFORM_NAME: $PLATFORM_NAME\"; exit 1;;\nesac\nfor (( n = 0; n < SCRIPT_INPUT_FILE_COUNT; n++ )); do\nVAR=SCRIPT_INPUT_FILE_$n\nframework=$(basename \"${!VAR}\")\nexport SCRIPT_INPUT_FILE_$n=\"$SRCROOT\"/Carthage/Build/$plat/\"$framework\".framework\ndone\n\n/usr/local/bin/carthage copy-frameworks || exit\n\nfor (( n = 0; n < SCRIPT_INPUT_FILE_COUNT; n++ )); do\nVAR=SCRIPT_INPUT_FILE_$n\nsource=${!VAR}.dSYM\ndest=${BUILT_PRODUCTS_DIR}/$(basename \"$source\")\nditto \"$source\" \"$dest\" || exit\ndone";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9E7DDF1C1C18F2B500EA43AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E4C77C91C3B568C000FF8AC /* APIManagerRequest.swift in Sources */,
+				9E7DDF4B1C1A388400EA43AD /* APIManager.swift in Sources */,
+				9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */,
+				9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */,
+				9E4C77D11C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.m in Sources */,
+				9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */,
+				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,
+				9E4C77CB1C3B56D6000FF8AC /* APIManagerTask.swift in Sources */,
+				9E4C77A91C360714000FF8AC /* APIObjectiveC.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9E7DDF271C18F2B600EA43AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
+				9E7DDF311C18F2B600EA43AD /* PMAPITests.swift in Sources */,
+				9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9E7DDF2E1C18F2B600EA43AD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9E7DDF201C18F2B500EA43AD /* PMAPI */;
+			targetProxy = 9E7DDF2D1C18F2B600EA43AD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		9E7DDF331C18F2B600EA43AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos watchsimulator watchos appletvsimulator appletvos macosx";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = "1,2,3,4";
+				TVOS_DEPLOYMENT_TARGET = 9.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+				WATCHOS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		9E7DDF341C18F2B600EA43AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos watchsimulator watchos appletvsimulator appletvos macosx";
+				TARGETED_DEVICE_FAMILY = "1,2,3,4";
+				TVOS_DEPLOYMENT_TARGET = 9.0;
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+				WATCHOS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		9E7DDF361C18F2B600EA43AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = NO;
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Source/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMAPI;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Source/Private/";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		9E7DDF371C18F2B600EA43AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = NO;
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Source/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMAPI;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Source/Private/";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+			};
+			name = Release;
+		};
+		9E7DDF391C18F2B600EA43AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Tests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMAPITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		9E7DDF3A1C18F2B600EA43AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Tests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMAPITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PostmatesNetworking" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9E7DDF331C18F2B600EA43AD /* Debug */,
+				9E7DDF341C18F2B600EA43AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9E7DDF351C18F2B600EA43AD /* Build configuration list for PBXNativeTarget "PMAPI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9E7DDF361C18F2B600EA43AD /* Debug */,
+				9E7DDF371C18F2B600EA43AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9E7DDF381C18F2B600EA43AD /* Build configuration list for PBXNativeTarget "PMAPITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9E7DDF391C18F2B600EA43AD /* Debug */,
+				9E7DDF3A1C18F2B600EA43AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9E7DDF181C18F2B500EA43AD /* Project object */;
+}

@@ -1,0 +1,279 @@
+//
+//  APIManagerTask.swift
+//  PMAPI
+//
+//  Created by Kevin Ballard on 1/4/16.
+//  Copyright © 2016 Postmates. All rights reserved.
+//
+
+import Foundation
+import PMAPIPrivate
+
+/// An initiated HTTP API operation.
+public final class APIManagerTask: NSObject {
+    public typealias State = APIManagerTaskState
+    
+    /// The underlying `NSURLSessionTask`.
+    public let networkTask: NSURLSessionTask
+    
+    /// The current state of the task.
+    /// - Note: This property is thread-safe and may be accessed concurrently.
+    /// - Note: This property supports KVO. The KVO notifications will execute
+    ///   on an arbitrary thread.
+    public var state: State {
+        return State(_stateBox.state)
+    }
+    
+    @objc private static let automaticallyNotifiesObserversOfState: Bool = false
+    
+    /// Cancels the operation, if it hasn't already completed.
+    ///
+    /// If the operation is still talking to the network, the underlying network
+    /// task is canceled. If the operation is processing the results, the
+    /// results processor is canceled at the earliest opportunity.
+    ///
+    /// Calling this on a task that's already moved to `.Completed` is a no-op.
+    public func cancel() {
+        willChangeValueForKey("state")
+        defer { didChangeValueForKey("state") }
+        let result = _stateBox.transitionStateTo(.Canceled)
+        if result.completed && result.oldState != .Canceled {
+            networkTask.cancel()
+        }
+    }
+    
+    internal let userInitiated: Bool
+    internal let followRedirects: Bool
+    #if os(iOS)
+    internal let trackingNetworkActivity: Bool
+    #endif
+    
+    internal init(networkTask: NSURLSessionTask, request: APIManagerRequest) {
+        self.networkTask = networkTask
+        self.userInitiated = request.userInitiated
+        self.followRedirects = request.shouldFollowRedirects
+        #if os(iOS)
+            self.trackingNetworkActivity = request.affectsNetworkActivityIndicator
+        #endif
+        super.init()
+    }
+    
+    internal func transitionStateTo(newState: State) -> (ok: Bool, oldState: State) {
+        willChangeValueForKey("state")
+        defer { didChangeValueForKey("state") }
+        let result = _stateBox.transitionStateTo(newState.boxState)
+        return (result.completed, State(result.oldState))
+    }
+    
+    private let _stateBox = PMAPIManagerTaskStateBox(state: State.Running.boxState)
+}
+
+extension APIManagerTask : CustomDebugStringConvertible {
+    // NSObject already conforms to CustomStringConvertible
+    
+    public override var description: String {
+        return getDescription(false)
+    }
+    
+    public override var debugDescription: String {
+        return getDescription(true)
+    }
+    
+    private func getDescription(debug: Bool) -> String {
+        var s = "<APIManagerTask: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) (\(state))"
+        if userInitiated {
+            s += " userInitiated"
+        }
+        if followRedirects {
+            s += " followRedirects"
+        }
+        #if os(iOS)
+            if trackingNetworkActivity {
+                s += " trackingNetworkActivity"
+            }
+        #endif
+        if debug {
+            s += " networkTask=\(networkTask)"
+        }
+        s += ">"
+        return s
+    }
+}
+
+/// The state of an `APIManagerTask`.
+@objc public enum APIManagerTaskState: CUnsignedChar, CustomStringConvertible {
+    // Important: The constants here must match those defined in PMAPIManagerTaskStateBoxState
+    
+    /// The task is currently running.
+    case Running = 0
+    /// The task is processing results (e.g. parsing JSON).
+    case Processing = 1
+    /// The task has been canceled. The completion handler may or may not
+    /// have been invoked yet.
+    case Canceled = 2
+    /// The task has completed. The completion handler may or may not have
+    /// been invoked yet.
+    case Completed = 3
+    
+    public var description: String {
+        switch self {
+        case .Running: return "Running"
+        case .Processing: return "Processing"
+        case .Canceled: return "Canceled"
+        case .Completed: return "Completed"
+        }
+    }
+    
+    private init(_ boxState: PMAPIManagerTaskStateBoxState) {
+        self = unsafeBitCast(boxState, APIManagerTaskState.self)
+    }
+    
+    private var boxState: PMAPIManagerTaskStateBoxState {
+        return unsafeBitCast(self, PMAPIManagerTaskStateBoxState.self)
+    }
+}
+
+/// The results of an API request.
+public enum APIManagerTaskResult<Value> {
+    /// The task finished successfully.
+    case Success(NSURLResponse, Value)
+    /// An error occurred, either during networking or while processing the
+    /// data.
+    ///
+    /// The `ErrorType` may be `NSError` for errors returned by `NSURLSession`,
+    /// `APIManagerError` for errors returned by this class, or any error type
+    /// thrown by a parse handler (including JSON errors returned by `PMJSON`).
+    case Error(NSURLResponse?, ErrorType)
+    /// The task was canceled before it completed.
+    case Canceled
+    
+    /// Returns the `Value` from a successful task result, otherwise returns `nil`.
+    public var success: Value? {
+        switch self {
+        case .Success(_, let value): return value
+        default: return nil
+        }
+    }
+    
+    /// Returns the `NSURLResponse` from a successful task result. For errored results,
+    /// if the error includes a response, the response is returned. Otherwise,
+    /// returns `nil`.
+    public var URLResponse: NSURLResponse? {
+        switch self {
+        case .Success(let response, _): return response
+        case .Error(let response, _): return response
+        case .Canceled: return nil
+        }
+    }
+    
+    /// Returns the `ErrorType` from an errored task result, otherwise returns `nil`.
+    public var error: ErrorType? {
+        switch self {
+        case .Error(_, let error): return error
+        default: return nil
+        }
+    }
+    
+    /// Returns `true` iff `self` is `.Success`.
+    public var isSuccess: Bool {
+        switch self {
+        case .Success: return true
+        default: return false
+        }
+    }
+    
+    /// Returns `true` iff `self` is `.Error`.
+    public var isError: Bool {
+        switch self {
+        case .Error: return true
+        default: return false
+        }
+    }
+    
+    /// Returns `true` iff `self` is `.Canceled`.
+    public var isCanceled: Bool {
+        switch self {
+        case .Canceled: return true
+        default: return false
+        }
+    }
+    
+    /// Maps a successful task result through the given block.
+    /// Errored and canceled results are returned as they are.
+    public func map<T>(@noescape f: (NSURLResponse, Value) throws -> T) rethrows -> APIManagerTaskResult<T> {
+        switch self {
+        case let .Success(response, value): return .Success(response, try f(response, value))
+        case let .Error(response, type): return .Error(response, type)
+        case .Canceled: return .Canceled
+        }
+    }
+    
+    /// Maps a successful task result through the given block.
+    /// Errored and canceled results are returned as they are.
+    /// Errors thrown by the block are caught and turned into `.Error` results.
+    public func map<T>(@noescape `try` f: (NSURLResponse, Value) throws -> T) -> APIManagerTaskResult<T> {
+        switch self {
+        case let .Success(response, value):
+            do {
+                return .Success(response, try f(response, value))
+            } catch {
+                return .Error(response, error)
+            }
+        case let .Error(response, type): return .Error(response, type)
+        case .Canceled: return .Canceled
+        }
+    }
+    
+    /// Maps a successful task result through the given block.
+    /// Errored and canceled results are returned as they are.
+    public func andThen<T>(@noescape f: (NSURLResponse, Value) throws -> APIManagerTaskResult<T>) rethrows -> APIManagerTaskResult<T> {
+        switch self {
+        case let .Success(response, value): return try f(response, value)
+        case let .Error(response, type): return .Error(response, type)
+        case .Canceled: return .Canceled
+        }
+    }
+    
+    /// Maps a successful task result through the given block.
+    /// Errored and canceled results are returned as they are.
+    /// Errors thrown by the block are caught and turned into `.Error` results.
+    public func andThen<T>(@noescape `try` f: (NSURLResponse, Value) throws -> APIManagerTaskResult<T>) -> APIManagerTaskResult<T> {
+        switch self {
+        case let .Success(response, value):
+            do {
+                return try f(response, value)
+            } catch {
+                return .Error(response, error)
+            }
+        case let .Error(response, type): return .Error(response, type)
+        case .Canceled: return .Canceled
+        }
+    }
+}
+
+extension APIManagerTaskResult : CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case let .Success(response, value):
+            return "Success(\(response), \(String(reflecting: value)))"
+        case let .Error(response, error):
+            return "Error(\(response), \(String(reflecting: error)))"
+        case .Canceled:
+            return "Canceled"
+        }
+    }
+}
+
+public func ??<Value>(result: APIManagerTaskResult<Value>, @autoclosure defaultValue: () throws -> APIManagerTaskResult<Value>) rethrows -> APIManagerTaskResult<Value> {
+    switch result {
+    case .Success: return result
+    default: return try defaultValue()
+    }
+}
+
+public func ??<Value>(result: APIManagerTaskResult<Value>, @autoclosure defaultValue: () throws -> Value) rethrows -> Value {
+    switch result {
+    case .Success(_, let value): return value
+    default: return try defaultValue()
+    }
+}
