@@ -551,3 +551,132 @@ public final class APIManagerObjectParseRequest: APIManagerRequest {
         return _request.prepareURLRequest()
     }
 }
+
+// MARK: - Delete Request
+
+extension APIManagerDeleteRequest {
+    /// Returns a new request that parses the data as JSON.
+    /// Any nulls in the JSON are represented as `NSNull`.
+    /// If the response is a 204 No Content, there is no data to parse.
+    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Note: If the response is a 204 No Content, the result object
+    ///   will return `nil` for `value`.
+    @objc(parseAsJSON)
+    public func __objc_parseAsJSON() -> APIManagerObjectParseRequest {
+        return __objc_parseAsJSONOmitNulls(false)
+    }
+    
+    /// Returns a new request that parses the data as JSON.
+    /// If the response is a 204 No Content, there is no data to parse.
+    /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
+    ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
+    ///   it is always represented as `NSNull` regardless of this parameter.
+    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Note: If the response is a 204 No Content, the result object
+    ///   will return `nil` for `value`.
+    @objc(parseAsJSONOmitNulls:)
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> APIManagerObjectParseRequest {
+        return APIManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+            return omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
+        }))
+    }
+    
+    /// Returns a new request that parses the data as JSON and passes it through
+    /// the specified handler. Any nulls in the JSON are represented as `NSNull`.
+    /// If the response is a 204 (No Content), there is no data to parse and
+    /// the handler is not invoked.
+    /// - Parameter handler: The handler to call as part of the request
+    ///   processing. This handler is not guaranteed to be called on any
+    ///   particular thread. The handler returns the new value for the request.
+    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Note: If the response is a 204 No Content, the result object
+    ///   will return `nil` for `value`.
+    /// - Note: If you need to parse on a particular thread, such as on the main
+    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   instead.
+    /// - Note: If the request is canceled, the results of the handler may be
+    ///   discarded. Any side-effects performed by your handler must be safe in
+    ///   the event of a cancelation.
+    @objc(parseAsJSONWithHandler:)
+    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
+        return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
+    }
+    
+    /// Returns a new request that parses the data as JSON and passes it through
+    /// the specified handler.
+    /// If the response is a 204 (No Content), there is no data to parse and
+    /// the handler is not invoked.
+    /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
+    ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
+    ///   it is always represented as `NSNull` regardless of this parameter.
+    /// - Parameter handler: The handler to call as part of the request
+    ///   processing. This handler is not guaranteed to be called on any
+    ///   particular thread. The handler returns the new value for the request.
+    ///   If the handler returns `nil`, then if `error` is filled in with an
+    ///   error the parse is considered to have errored, otherwise the parse is
+    ///   treated as successful but with a `nil` value.
+    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main
+    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   instead.
+    /// - Note: If the request is canceled, the results of the handler may be
+    ///   discarded. Any side-effects performed by your handler must be safe in
+    ///   the event of a cancelation.
+    @objc(parseAsJSONOmitNulls:withHandler:)
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
+        return APIManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+            var error: NSError?
+            let jsonObject = omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
+            if let object = handler(response: response, json: jsonObject, error: &error) {
+                return object
+            } else if let error = error {
+                throw error
+            } else {
+                return nil
+            }
+        }))
+    }
+    
+    /// Returns a new request that parses the data with the specified handler.
+    /// If the response is a 204 (No Content), there is no data to parse and
+    /// the handler is not invoked.
+    /// - Parameter handler: The handler to call as part of the request
+    ///   processing. This handler is not guaranteed to be called on any
+    ///   particular thread. The handler returns the new value for the request.
+    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main
+    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   instead.
+    /// - Note: If the request is canceled, the results of the handler may be
+    ///   discarded. Any side-effects performed by your handler must be safe in
+    ///   the event of a cancelation.
+    @objc(parseWithHandler:)
+    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
+        return APIManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
+            var error: NSError?
+            if let object = handler(response: response, data: data, error: &error) {
+                return object
+            } else if let error = error {
+                throw error
+            } else {
+                return nil
+            }
+        }))
+    }
+}
+
+// MARK: - Upload Request
+
+// It looks like APIManagerUploadRequest is already fully ObjC-compatible
+
+// MARK: - Upload JSON Request
+
+extension APIManagerUploadJSONRequest {
+    /// The JSON data to upload.
+    /// - Requires: Values assigned to this property must be json-compatible.
+    @objc(uploadJSON)
+    public var __objc_uploadJSON: AnyObject {
+        get { return uploadJSON.plist }
+        set { uploadJSON = try! JSON(plist: newValue) }
+    }
+}
