@@ -692,7 +692,7 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> APIManagerParseRequest<T?> {
+    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T?) -> APIManagerParseRequest<T?> {
         return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
@@ -716,7 +716,7 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> APIManagerParseRequest<T?> {
+    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T?) -> APIManagerParseRequest<T?> {
         return APIManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
@@ -884,6 +884,8 @@ public final class APIManagerUploadMultipart: NSObject {
     
     internal var multipartData: [MultipartBodyPart.Data] = []
 }
+
+// MARK: - Upload JSON Request
 
 /// An HTTP POST for JSON data that does not yet have a parse handler.
 ///
