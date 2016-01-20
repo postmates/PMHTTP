@@ -13,3 +13,5 @@ FOUNDATION_EXPORT double PMAPIVersionNumber;
 
 //! Project version string for PMAPI.
 FOUNDATION_EXPORT const unsigned char PMAPIVersionString[];
+
+#import <PMAPI/PMAPIError.h>

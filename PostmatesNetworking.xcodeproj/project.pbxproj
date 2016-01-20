@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9E139FA41C4EC82F00A764BD /* PMAPIError.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E139FA31C4EC82F00A764BD /* PMAPIError.m */; };
+		9E139FA61C4EC9EE00A764BD /* PMAPIError.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E139FA51C4EC83800A764BD /* PMAPIError.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E29514A1C4D95CB001D38AC /* Utilities.swift */; };
 		9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */; };
 		9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77821C2B792A000FF8AC /* QueueConfined.swift */; };
@@ -35,6 +37,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9E139FA31C4EC82F00A764BD /* PMAPIError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMAPIError.m; sourceTree = "<group>"; };
+		9E139FA51C4EC83800A764BD /* PMAPIError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMAPIError.h; sourceTree = "<group>"; };
 		9E29514A1C4D95CB001D38AC /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityManager.swift; sourceTree = "<group>"; };
 		9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Carthage.xcconfig; sourceTree = "<group>"; };
@@ -116,6 +120,8 @@
 				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
 				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
 				9E4C77A81C360714000FF8AC /* APIObjectiveC.swift */,
+				9E139FA51C4EC83800A764BD /* PMAPIError.h */,
+				9E139FA31C4EC82F00A764BD /* PMAPIError.m */,
 				9E4C77821C2B792A000FF8AC /* QueueConfined.swift */,
 				9E4C77D41C3C9D7F000FF8AC /* Private */,
 				9E7DDF261C18F2B600EA43AD /* Info.plist */,
@@ -153,6 +159,7 @@
 			files = (
 				9E4C77D01C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.h in Headers */,
 				9E7DDF251C18F2B600EA43AD /* PMAPI.h in Headers */,
+				9E139FA61C4EC9EE00A764BD /* PMAPIError.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -278,6 +285,7 @@
 				9E7DDF4B1C1A388400EA43AD /* APIManager.swift in Sources */,
 				9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */,
 				9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */,
+				9E139FA41C4EC82F00A764BD /* PMAPIError.m in Sources */,
 				9E4C77D11C3C9D25000FF8AC /* PMAPIManagerTaskStateBox.m in Sources */,
 				9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */,
 				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,

@@ -311,7 +311,8 @@ extension APIManager {
     ///   string. Default is `[:]`.
     /// - Returns: An `APIManagerDataRequest`, or `nil` if the `path`  cannot be
     ///   parsed by `NSURL`.
-    @nonobjc public func request(GET path: String, parameters: [String: String] = [:]) -> APIManagerDataRequest! {
+    @objc(requestForGET:parameters:)
+    public func request(GET path: String, parameters: [String: String] = [:]) -> APIManagerDataRequest! {
         return request(GET: path, parameters: parameters.map(NSURLQueryItem.init))
     }
     /// Creates a GET request.
@@ -321,7 +322,8 @@ extension APIManager {
     ///   string.
     /// - Returns: An `APIManagerDataRequest`, or `nil` if the `path`  cannot be
     ///   parsed by `NSURL`.
-    @nonobjc public func request(GET path: String, parameters: [NSURLQueryItem]) -> APIManagerDataRequest! {
+    @objc(requestForGET:queryItems:)
+    public func request(GET path: String, parameters: [NSURLQueryItem]) -> APIManagerDataRequest! {
         return constructRequest(path, f: { APIManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
     }
     
@@ -332,7 +334,8 @@ extension APIManager {
     ///   string. Default is `[:]`.
     /// - Returns: An `APIManagerDeleteRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
-    @nonobjc public func request(DELETE path: String, parameters: [String: String] = [:]) -> APIManagerDeleteRequest! {
+    @objc(requestForDELETE:parameters:)
+    public func request(DELETE path: String, parameters: [String: String] = [:]) -> APIManagerDeleteRequest! {
         return request(DELETE: path, parameters: parameters.map(NSURLQueryItem.init))
     }
     /// Creates a DELETE request.
@@ -342,7 +345,8 @@ extension APIManager {
     ///   string.
     /// - Returns: An `APIManagerDeleteRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
-    @nonobjc public func request(DELETE path: String, parameters: [NSURLQueryItem]) -> APIManagerDeleteRequest! {
+    @objc(requestForDELETE:queryItems:)
+    public func request(DELETE path: String, parameters: [NSURLQueryItem]) -> APIManagerDeleteRequest! {
         return constructRequest(path, f: { APIManagerDeleteRequest(apiManager: self, URL: $0, parameters: parameters) })
     }
     
@@ -353,7 +357,8 @@ extension APIManager {
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     /// - Returns: An `APIManagerUploadRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
-    @nonobjc public func request(POST path: String, parameters: [String: String] = [:]) -> APIManagerUploadRequest! {
+    @objc(requestForPOST:parameters:)
+    public func request(POST path: String, parameters: [String: String] = [:]) -> APIManagerUploadRequest! {
         return request(POST: path, parameters: parameters.map(NSURLQueryItem.init))
     }
     /// Creates a POST request.
@@ -363,7 +368,8 @@ extension APIManager {
     ///   `application/x-www-form-urlencoded`.
     /// - Returns: An `APIManagerUploadRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
-    @nonobjc public func request(POST path: String, parameters: [NSURLQueryItem]) -> APIManagerUploadRequest! {
+    @objc(requestForPOST:queryItems:)
+    public func request(POST path: String, parameters: [NSURLQueryItem]) -> APIManagerUploadRequest! {
         return constructRequest(path, f: { APIManagerUploadRequest(apiManager: self, URL: $0, parameters: parameters) })
     }
     /// Creates a POST request.

@@ -116,11 +116,9 @@ public class APIManagerRequest: NSObject, NSCopying {
         super.init()
     }
     
-    // MARK: Private
+    internal let apiManager: APIManager
     
-    private let apiManager: APIManager
-    
-    private let baseURL: NSURL
+    internal let baseURL: NSURL
     
     /// Implementation detail of `copyWithZone(_:)`.
     /// - Parameter request: Guaranteed to be the same type as `self`.
@@ -174,7 +172,7 @@ public class APIManagerRequest: NSObject, NSCopying {
         return request
     }
     
-    private func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
+    internal func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
         return nil
     }
 }
@@ -426,7 +424,7 @@ public class APIManagerNetworkRequest: APIManagerRequest, APIManagerRequestPerfo
         }
     }
     
-    private var uploadBody: UploadBody? {
+    internal var uploadBody: UploadBody? {
         return nil
     }
 }
@@ -599,7 +597,7 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
     private let _contentType: String
     private let uploadBody: UploadBody?
     
-    private init(request: APIManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
+    internal init(request: APIManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
         self.parseHandler = parseHandler
         prepareRequestHandler = request.prepareURLRequest()
         _contentType = request.contentType
@@ -628,7 +626,7 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
         super.init(__copyOfRequest: request)
     }
     
-    private override func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
+    internal override func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
         if !expectedContentTypes.isEmpty {
             return { [expectedContentTypes, prepareRequestHandler] request in
                 if request.allHTTPHeaderFields?["Accept"] == nil {
@@ -831,7 +829,7 @@ public final class APIManagerUploadRequest: APIManagerDataRequest {
     }
     
     private var multipartBodies: [MultipartBodyPart] = []
-    private override var uploadBody: UploadBody? {
+    internal override var uploadBody: UploadBody? {
         if !multipartBodies.isEmpty {
             return .MultipartMixed(parameters, multipartBodies)
         } else if !parameters.isEmpty {
@@ -905,7 +903,7 @@ public final class APIManagerUploadJSONRequest: APIManagerDataRequest {
         return request
     }
     
-    private override var uploadBody: UploadBody? {
+    internal override var uploadBody: UploadBody? {
         // TODO: implement me
         return nil
     }
