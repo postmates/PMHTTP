@@ -127,6 +127,15 @@ public final class APIManager: NSObject {
         }
     }
     
+    #if os(iOS)
+    /// Tracks a given `NSURLSessionTask` for the network activity indicator.
+    /// Only use this if you create a task yourself, any tasks created by
+    /// `APIManager` are automatically tracked (unless disabled by the request).
+    public static func trackNetworkActivityForTask(task: NSURLSessionTask) {
+        NetworkActivityManager.shared.trackTask(task)
+    }
+    #endif
+    
     /// Creates and returns a new `APIManager`.
     ///
     /// The returned `APIManager` needs its `environment` set, but is otherwise ready
