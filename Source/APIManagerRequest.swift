@@ -466,12 +466,12 @@ public class APIManagerDataRequest: APIManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseAsJSONWithHandler<T>(handler: (NSURLResponse, JSON) throws -> T) -> APIManagerParseRequest<T> {
+    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> APIManagerParseRequest<T> {
         return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
                 throw APIManagerError.UnexpectedNoContent
             }
-            return try handler(response, JSON.decode(data))
+            return try handler(response: response, json: JSON.decode(data))
         })
     }
     
@@ -486,7 +486,7 @@ public class APIManagerDataRequest: APIManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (NSURLResponse, NSData) throws -> T) -> APIManagerParseRequest<T> {
+    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> APIManagerParseRequest<T> {
         return APIManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
 }
@@ -694,13 +694,13 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseAsJSONWithHandler<T>(handler: (NSURLResponse, JSON) throws -> T) -> APIManagerParseRequest<T?> {
+    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> APIManagerParseRequest<T?> {
         return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
             } else {
-                return try handler(response, JSON.decode(data))
+                return try handler(response: response, json: JSON.decode(data))
             }
         })
     }
@@ -718,13 +718,13 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (NSURLResponse, NSData) throws -> T) -> APIManagerParseRequest<T?> {
+    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> APIManagerParseRequest<T?> {
         return APIManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
             } else {
-                return try handler(response, data)
+                return try handler(response: response, data: data)
             }
         })
     }
