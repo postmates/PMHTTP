@@ -1,5 +1,5 @@
 //
-//  APIObjectiveC.swift
+//  ObjectiveC.swift
 //  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 12/31/15.
@@ -7,66 +7,66 @@
 //
 
 // obj-c helpers
-extension APIManager {
-    /// The default `APIManager` instance.
-    @objc(defaultManager) public static var __objc_defaultManager: APIManager {
-        return API
+extension HTTPManager {
+    /// The default `HTTPManager` instance.
+    @objc(defaultManager) public static var __objc_defaultManager: HTTPManager {
+        return HTTP
     }
     
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON-compatible object to upload as the body of the request.
-    /// - Returns: An `APIManagerUploadJSONRequest`, or `nil` if the `path` cannot
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
     ///   be parsed by `NSURL` or `json` is not a JSON-compatible object.
     @objc(requestForPOST:json:)
-    public func __objc_requestForPOST(path: String, json object: AnyObject) -> APIManagerUploadJSONRequest! {
+    public func __objc_requestForPOST(path: String, json object: AnyObject) -> HTTPManagerUploadJSONRequest! {
         guard let json = try? JSON(plist: object) else { return nil }
         return request(POST: path, json: json)
     }
 }
 
-extension APIManagerError {
-    /// Returns an `NSError` using the PMAPIError constants for use by Objective-C.
+extension HTTPManagerError {
+    /// Returns an `NSError` using the PMHTTPError constants for use by Objective-C.
     /// The returned error cannot bridge back into Swift, but it contains a usable `userInfo`.
     internal func toNSError() -> NSError {
         switch self {
         case let .FailedResponse(statusCode, body):
             let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            return NSError(domain: PMAPIErrorDomain, code: PMAPIError.FailedResponse.rawValue, userInfo: [
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response indicated failure (\(statusCode) \(statusString))",
-                PMAPIStatusCodeErrorKey: statusCode,
-                PMAPIBodyDataErrorKey: body
+                PMHTTPStatusCodeErrorKey: statusCode,
+                PMHTTPBodyDataErrorKey: body
                 ])
         case let .UnexpectedContentType(contentType, body):
-            return NSError(domain: PMAPIErrorDomain, code: PMAPIError.UnexpectedContentType.rawValue, userInfo: [
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedContentType.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response had unexpected content type \(String(reflecting: contentType))",
-                PMAPIContentTypeErrorKey: contentType,
-                PMAPIBodyDataErrorKey: body
+                PMHTTPContentTypeErrorKey: contentType,
+                PMHTTPBodyDataErrorKey: body
                 ])
         case .UnexpectedNoContent:
-            return NSError(domain: PMAPIErrorDomain, code: PMAPIError.UnexpectedNoContent.rawValue, userInfo: [
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedNoContent.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response returned 204 No Content when an entity was expected"
                 ])
         case let .UnexpectedRedirect(statusCode, location, body):
             let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             var userInfo = [
                 NSLocalizedDescriptionKey: "HTTP response returned a redirection (\(statusCode) \(statusString)) when an entity was expected",
-                PMAPIStatusCodeErrorKey: statusCode,
-                PMAPIBodyDataErrorKey: body
+                PMHTTPStatusCodeErrorKey: statusCode,
+                PMHTTPBodyDataErrorKey: body
             ]
             if let location = location {
-                userInfo[PMAPILocationErrorKey] = location
+                userInfo[PMHTTPLocationErrorKey] = location
             }
-            return NSError(domain: PMAPIErrorDomain, code: PMAPIError.UnexpectedRedirect.rawValue, userInfo: userInfo)
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedRedirect.rawValue, userInfo: userInfo)
         }
     }
 }
 
 // MARK: - Result
 
-/// The results of an API request.
-public class PMAPIResult: NSObject, NSCopying {
+/// The results of an HTTP request.
+public class PMHTTPResult: NSObject, NSCopying {
     /// `true` iff the task finished successfully.
     public let isSuccess: Bool
     
@@ -98,7 +98,7 @@ public class PMAPIResult: NSObject, NSCopying {
     ///   return `nil` from both `value` and `error`.
     public let error: NSError?
     
-    /// Creates and returns a new `PMAPIResult` representing a successful result.
+    /// Creates and returns a new `PMHTTPResult` representing a successful result.
     public init(value: AnyObject?, response: NSURLResponse) {
         isSuccess = true
         self.value = value
@@ -107,7 +107,7 @@ public class PMAPIResult: NSObject, NSCopying {
         super.init()
     }
     
-    /// Creates and returns a new `PMAPIResult` representing a failed task.
+    /// Creates and returns a new `PMHTTPResult` representing a failed task.
     public init(error: NSError, response: NSURLResponse?) {
         isSuccess = false
         self.error = error
@@ -116,9 +116,9 @@ public class PMAPIResult: NSObject, NSCopying {
         super.init()
     }
     
-    /// Creates and returns a new `PMAPIResult` representing a canceled task.
-    public class func canceledResult() -> PMAPIResult {
-        return PMAPIResult(canceled: ())
+    /// Creates and returns a new `PMHTTPResult` representing a canceled task.
+    public class func canceledResult() -> PMHTTPResult {
+        return PMHTTPResult(canceled: ())
     }
     
     public func copyWithZone(zone: NSZone) -> AnyObject {
@@ -133,11 +133,11 @@ public class PMAPIResult: NSObject, NSCopying {
         super.init()
     }
     
-    private convenience init<T: AnyObject>(result: APIManagerTaskResult<T>) {
+    private convenience init<T: AnyObject>(result: HTTPManagerTaskResult<T>) {
         switch result {
         case let .Success(response, value):
             self.init(value: value, response: response)
-        case let .Error(response, error as APIManagerError):
+        case let .Error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
         case let .Error(response, error):
             self.init(error: error as NSError, response: response)
@@ -146,11 +146,11 @@ public class PMAPIResult: NSObject, NSCopying {
         }
     }
     
-    private convenience init<T: AnyObject>(result: APIManagerTaskResult<T?>) {
+    private convenience init<T: AnyObject>(result: HTTPManagerTaskResult<T?>) {
         switch result {
         case let .Success(response, value):
             self.init(value: value, response: response)
-        case let .Error(response, error as APIManagerError):
+        case let .Error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
         case let .Error(response, error):
             self.init(error: error as NSError, response: response)
@@ -160,8 +160,8 @@ public class PMAPIResult: NSObject, NSCopying {
     }
 }
 
-/// The results of an API request that returns an `NSData`.
-public final class PMAPIDataResult: PMAPIResult {
+/// The results of an HTTP request that returns an `NSData`.
+public final class PMHTTPDataResult: PMHTTPResult {
     /// If the task finished successfully, returns the resulting `NSData`, if any.
     /// Otherwise, returns `nil`.
     /// - Note: A successful result may still have a `nil` value if it's a DELETE
@@ -171,30 +171,30 @@ public final class PMAPIDataResult: PMAPIResult {
         return value as! NSData?
     }
     
-    /// Creates and returns a new `PMAPIDataResult` representing a successful result.
+    /// Creates and returns a new `PMHTTPDataResult` representing a successful result.
     public init(data: NSData?, response: NSURLResponse) {
         super.init(value: data, response: response)
     }
     
-    /// Creates and returns a new `PMAPIDataResult` representing a failed task.
+    /// Creates and returns a new `PMHTTPDataResult` representing a failed task.
     public override init(error: NSError, response: NSURLResponse?) {
         super.init(error: error, response: response)
     }
     
-    /// Creates and returns a new `PMAPIDataResult` representing a canceled task.
-    public override class func canceledResult() -> PMAPIDataResult {
-        return PMAPIDataResult(canceled: ())
+    /// Creates and returns a new `PMHTTPDataResult` representing a canceled task.
+    public override class func canceledResult() -> PMHTTPDataResult {
+        return PMHTTPDataResult(canceled: ())
     }
     
     private override init(canceled: ()) {
         super.init(canceled: ())
     }
     
-    private convenience init(result: APIManagerTaskResult<NSData>) {
+    private convenience init(result: HTTPManagerTaskResult<NSData>) {
         switch result {
         case let .Success(response, data):
             self.init(data: data, response: response)
-        case let .Error(response, error as APIManagerError):
+        case let .Error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
         case let .Error(response, error):
             self.init(error: error as NSError, response: response)
@@ -203,11 +203,11 @@ public final class PMAPIDataResult: PMAPIResult {
         }
     }
     
-    private convenience init(result: APIManagerTaskResult<NSData?>) {
+    private convenience init(result: HTTPManagerTaskResult<NSData?>) {
         switch result {
         case let .Success(response, data):
             self.init(data: data, response: response)
-        case let .Error(response, error as APIManagerError):
+        case let .Error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
         case let .Error(response, error):
             self.init(error: error as NSError, response: response)
@@ -219,7 +219,7 @@ public final class PMAPIDataResult: PMAPIResult {
 
 // MARK: - Request
 
-extension APIManagerRequest {
+extension HTTPManagerRequest {
     /// The request method.
     @objc(requestMethod) public var __objc_requestMethod: String {
         return requestMethod.rawValue
@@ -286,16 +286,16 @@ extension APIManagerRequest {
 
 // MARK: - Network Request
 
-extension APIManagerNetworkRequest {
+extension HTTPManagerNetworkRequest {
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
     /// - Parameter handler: The handler to call when the request is done. This
     ///   handler is not guaranteed to be called on any particular thread.
-    /// - Returns: An `APIManagerTask` that represents the operation.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
     @objc(performRequestWithCompletion:)
-    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: APIManagerTask, result: PMAPIDataResult) -> Void) -> APIManagerTask {
+    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
         return performRequestWithCompletion { task, result in
-            handler(task: task, result: PMAPIDataResult(result: result))
+            handler(task: task, result: PMHTTPDataResult(result: result))
         }
     }
     
@@ -304,23 +304,23 @@ extension APIManagerNetworkRequest {
     /// - Parameter queue: The queue to call the handler on.
     /// - Parameter handler: The handler to call when the request is done. This
     /// handler is called on *queue*.
-    /// - Returns: An `APIManagerTask` that represents the operation.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
     @objc(performRequestWithCompletionOnQueue:handler:)
-    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: @convention(block) (task: APIManagerTask, result: PMAPIDataResult) -> Void) -> APIManagerTask {
+    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
         return performRequestWithCompletionOnQueue(queue) { task, result in
-            handler(task: task, result: PMAPIDataResult(result: result))
+            handler(task: task, result: PMHTTPDataResult(result: result))
         }
     }
 }
 
 // MARK: - Data Request
 
-extension APIManagerDataRequest {
+extension HTTPManagerDataRequest {
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     @objc(parseAsJSON)
-    public func __objc_parseAsJSON() -> APIManagerObjectParseRequest {
+    public func __objc_parseAsJSON() -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false)
     }
     
@@ -328,10 +328,10 @@ extension APIManagerDataRequest {
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     @objc(parseAsJSONOmitNulls:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> APIManagerObjectParseRequest {
-        return APIManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
             return omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
         }))
     }
@@ -344,7 +344,7 @@ extension APIManagerDataRequest {
     ///   If the handler returns `nil`, then if `error` is filled in with an
     ///   error the parse is considered to have errored, otherwise the parse is
     ///   treated as successful but with a `nil` value.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
@@ -352,7 +352,7 @@ extension APIManagerDataRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
@@ -367,7 +367,7 @@ extension APIManagerDataRequest {
     ///   If the handler returns `nil`, then if `error` is filled in with an
     ///   error the parse is considered to have errored, otherwise the parse is
     ///   treated as successful but with a `nil` value.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
@@ -375,8 +375,8 @@ extension APIManagerDataRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
-        return APIManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
             var error: NSError?
             let jsonObject = omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
             if let object = handler(response: response, json: jsonObject, error: &error) {
@@ -396,7 +396,7 @@ extension APIManagerDataRequest {
     ///   If the handler returns `nil`, then if `error` is filled in with an
     ///   error the parse is considered to have errored, otherwise the parse is
     ///   treated as successful but with a `nil` value.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
@@ -404,8 +404,8 @@ extension APIManagerDataRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseWithHandler:)
-    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
-        return APIManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
+    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
             var error: NSError?
             if let object = handler(response: response, data: data, error: &error) {
                 return object
@@ -420,10 +420,10 @@ extension APIManagerDataRequest {
 
 // MARK: - Object Parse Request
 
-/// An HTTP API request that has a parse handler.
+/// An HTTP request that has a parse handler.
 ///
 /// - Note: This class is only meant to be used from Obj-C.
-public final class APIManagerObjectParseRequest: APIManagerRequest {
+public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
     // FIXME: Swift 2.2: Add - recommended: doc comment field
     
     // NB: All mutable properties need to be overridden here
@@ -493,7 +493,7 @@ public final class APIManagerObjectParseRequest: APIManagerRequest {
     /// response is a 204 No Content, the `Content-Type` is not checked. For all other 2xx
     /// responses, if at least one expected content type is provided, the `Content-Type`
     /// header must match one of them. If it doesn't match any, the parse handler will be
-    /// skipped and `APIManagerError.UnexpectedContentType` will be returned as the result.
+    /// skipped and `HTTPManagerError.UnexpectedContentType` will be returned as the result.
     ///
     /// - Note: An empty or missing `Content-Type` header is treated as matching.
     ///
@@ -515,10 +515,10 @@ public final class APIManagerObjectParseRequest: APIManagerRequest {
     /// done.
     /// - Parameter handler: The handler to call when the requeset is done. This
     ///   handler is not guaranteed to be called on any particular thread.
-    /// - Returns: An `APIManagerTask` that represents the operation.
-    public func performRequestWithCompletion(handler: @convention(block) (task: APIManagerTask, result: PMAPIResult) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
         return _request.performRequestWithCompletion{ task, result in
-            handler(task: task, result: PMAPIResult(result: result))
+            handler(task: task, result: PMHTTPResult(result: result))
         }
     }
     
@@ -527,23 +527,23 @@ public final class APIManagerObjectParseRequest: APIManagerRequest {
     /// - Parameter queue: The queue to call the handler on.
     /// - Parameter handler: The handler to call when the request is done. This
     /// handler is called on *queue*.
-    /// - Returns: An `APIManagerTask` that represents the operation.
-    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: @convention(block) (task: APIManagerTask, result: PMAPIResult) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
         return _request.performRequestWithCompletionOnQueue(queue) { task, result in
-            handler(task: task, result: PMAPIResult(result: result))
+            handler(task: task, result: PMHTTPResult(result: result))
         }
     }
     
-    private let _request: APIManagerParseRequest<AnyObject?>
+    private let _request: HTTPManagerParseRequest<AnyObject?>
     
-    private init(request: APIManagerParseRequest<AnyObject?>) {
+    private init(request: HTTPManagerParseRequest<AnyObject?>) {
         _request = request
         super.init(apiManager: request.apiManager, URL: request.baseURL, method: request.requestMethod, parameters: [])
     }
 
-    public required init(__copyOfRequest request: APIManagerRequest) {
-        let request: APIManagerObjectParseRequest = unsafeDowncast(request)
-        _request = APIManagerParseRequest(__copyOfRequest: request._request)
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
+        let request: HTTPManagerObjectParseRequest = unsafeDowncast(request)
+        _request = HTTPManagerParseRequest(__copyOfRequest: request._request)
         super.init(__copyOfRequest: request)
     }
     
@@ -554,15 +554,15 @@ public final class APIManagerObjectParseRequest: APIManagerRequest {
 
 // MARK: - Delete Request
 
-extension APIManagerDeleteRequest {
+extension HTTPManagerDeleteRequest {
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
     /// If the response is a 204 No Content, there is no data to parse.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If the response is a 204 No Content, the result object
     ///   will return `nil` for `value`.
     @objc(parseAsJSON)
-    public func __objc_parseAsJSON() -> APIManagerObjectParseRequest {
+    public func __objc_parseAsJSON() -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false)
     }
     
@@ -571,12 +571,12 @@ extension APIManagerDeleteRequest {
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If the response is a 204 No Content, the result object
     ///   will return `nil` for `value`.
     @objc(parseAsJSONOmitNulls:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> APIManagerObjectParseRequest {
-        return APIManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
             return omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
         }))
     }
@@ -588,7 +588,7 @@ extension APIManagerDeleteRequest {
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If the response is a 204 No Content, the result object
     ///   will return `nil` for `value`.
     /// - Note: If you need to parse on a particular thread, such as on the main
@@ -598,7 +598,7 @@ extension APIManagerDeleteRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
@@ -615,7 +615,7 @@ extension APIManagerDeleteRequest {
     ///   If the handler returns `nil`, then if `error` is filled in with an
     ///   error the parse is considered to have errored, otherwise the parse is
     ///   treated as successful but with a `nil` value.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
@@ -623,8 +623,8 @@ extension APIManagerDeleteRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
-        return APIManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
             var error: NSError?
             let jsonObject = omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
             if let object = handler(response: response, json: jsonObject, error: &error) {
@@ -643,7 +643,7 @@ extension APIManagerDeleteRequest {
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `APIManagerObjectParseRequest`.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
@@ -651,8 +651,8 @@ extension APIManagerDeleteRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseWithHandler:)
-    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> APIManagerObjectParseRequest {
-        return APIManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
+    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
             var error: NSError?
             if let object = handler(response: response, data: data, error: &error) {
                 return object
@@ -667,11 +667,11 @@ extension APIManagerDeleteRequest {
 
 // MARK: - Upload Request
 
-// It looks like APIManagerUploadRequest is already fully ObjC-compatible
+// It looks like HTTPManagerUploadRequest is already fully ObjC-compatible
 
 // MARK: - Upload JSON Request
 
-extension APIManagerUploadJSONRequest {
+extension HTTPManagerUploadJSONRequest {
     /// The JSON data to upload.
     /// - Requires: Values assigned to this property must be json-compatible.
     @objc(uploadJSON)

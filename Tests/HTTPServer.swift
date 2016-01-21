@@ -8,7 +8,7 @@
 
 import Foundation
 import CocoaAsyncSocket
-@testable import PMAPI
+@testable import PMHTTP
 
 /// A basic HTTP server that supports expectations.
 /// This server automatically listens on localhost with a random port when created.
@@ -16,7 +16,7 @@ import CocoaAsyncSocket
 /// **Thread Safety**:
 /// `HTTPServer` is thread-safe and all methods can be called on any thread.
 final class HTTPServer {
-    typealias HTTPHeaders = APIManagerRequest.HTTPHeaders
+    typealias HTTPHeaders = HTTPManagerRequest.HTTPHeaders
     
     /// Set this to `true` to cause HTTPServer to print debug logs with `NSLog`.
     static var enableDebugLogging: Bool = false

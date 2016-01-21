@@ -1,5 +1,5 @@
 //
-//  API.swift
+//  HTTPManager.swift
 //  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 12/10/15.
@@ -16,18 +16,18 @@ import Foundation
 #endif
 @exported import PMJSON
 
-/// The default `APIManager` instance.
-/// - SeeAlso: `APIManagerConfigurable`.
-public let API = APIManager(shared: true)
+/// The default `HTTPManager` instance.
+/// - SeeAlso: `HTTPManagerConfigurable`.
+public let HTTP = HTTPManager(shared: true)
 
 /// Manages access to a REST API.
 ///
 /// This class is thread-safe. Requests may be created and used from any thread.
-/// `APIManagerRequest`s support concurrent reading from multiple threads, but it is not safe to mutate
-/// a request while concurrently accessing it from another thread. `APIManagerTask`s are safe to access
+/// `HTTPManagerRequest`s support concurrent reading from multiple threads, but it is not safe to mutate
+/// a request while concurrently accessing it from another thread. `HTTPManagerTask`s are safe to access
 /// from any thread.
-public final class APIManager: NSObject {
-    public typealias Environment = APIManagerEnvironment
+public final class HTTPManager: NSObject {
+    public typealias Environment = HTTPManagerEnvironment
     
     /// The current environment. The default value is `nil`.
     ///
@@ -39,10 +39,10 @@ public final class APIManager: NSObject {
     /// value has no effect.
     ///
     /// - Important: If `environment` is `nil`, requests created with relative paths will fail,
-    ///   but requests created with absolute URLs will continue to work. See `APIManagerConfigurable`
-    ///   for how to configure the shared `APIManager` prior to first use.
+    ///   but requests created with absolute URLs will continue to work. See `HTTPManagerConfigurable`
+    ///   for how to configure the shared `HTTPManager` prior to first use.
     ///
-    /// - SeeAlso: `resetSession()`, `APIManagerConfigurable`.
+    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`.
     public var environment: Environment? {
         get {
             return inner.sync({ $0.environment })
@@ -58,7 +58,7 @@ public final class APIManager: NSObject {
     /// The URL session configuration.
     ///
     /// Changing mutable values within the configuration object has no effect on the
-    /// API manager, but you can reassign this property with the modified
+    /// HTTP manager, but you can reassign this property with the modified
     /// configuration object.
     ///
     /// Changing this property affects all newly-created tasks but does not cancel
@@ -73,7 +73,7 @@ public final class APIManager: NSObject {
         }
         set {
             let config = sessionConfiguration.copy() as! NSURLSessionConfiguration
-            inner.asyncBarrier { [value=APIManager.defaultUserAgent] in
+            inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] in
                 $0.sessionConfiguration = config
                 $0.setHeader("User-Agent", value: value, overwrite: false)
                 if $0.session != nil {
@@ -83,7 +83,7 @@ public final class APIManager: NSObject {
         }
     }
     
-    /// The credential to use for API requests.
+    /// The credential to use for HTTP requests.
     ///
     /// Individual requests may override this credential with their own credential.
     ///
@@ -99,7 +99,7 @@ public final class APIManager: NSObject {
         set {
             var newValue = newValue
             if let credential = newValue where credential.user == nil || !credential.hasPassword {
-                NSLog("[APIManager] Warning: Attempting to set default credential with a non-password-based credential")
+                NSLog("[HTTPManager] Warning: Attempting to set default credential with a non-password-based credential")
                 newValue = nil
             }
             inner.asyncBarrier {
@@ -112,7 +112,7 @@ public final class APIManager: NSObject {
     public var userAgent: String {
         return inner.sync({
             $0.sessionConfiguration.HTTPAdditionalHeaders?["User-Agent"] as? String
-        }) ?? APIManager.defaultUserAgent
+        }) ?? HTTPManager.defaultUserAgent
     }
     
     /// Invalidates all in-flight network operations and resets the URL session.
@@ -130,22 +130,22 @@ public final class APIManager: NSObject {
     #if os(iOS)
     /// Tracks a given `NSURLSessionTask` for the network activity indicator.
     /// Only use this if you create a task yourself, any tasks created by
-    /// `APIManager` are automatically tracked (unless disabled by the request).
+    /// `HTTPManager` are automatically tracked (unless disabled by the request).
     public static func trackNetworkActivityForTask(task: NSURLSessionTask) {
         NetworkActivityManager.shared.trackTask(task)
     }
     #endif
     
-    /// Creates and returns a new `APIManager`.
+    /// Creates and returns a new `HTTPManager`.
     ///
-    /// The returned `APIManager` needs its `environment` set, but is otherwise ready
+    /// The returned `HTTPManager` needs its `environment` set, but is otherwise ready
     /// for use.
     ///
-    /// - Important: Unlike the global `API` property, calling this initializer does
-    ///   not go through `APIManagerConfigurable`. The calling code must configure
-    ///   the returned `APIManager` instance as appropriate.
+    /// - Important: Unlike the global `HTTP` property, calling this initializer does
+    ///   not go through `HTTPManagerConfigurable`. The calling code must configure
+    ///   the returned `HTTPManager` instance as appropriate.
     ///
-    /// - SeeAlso: `API`.
+    /// - SeeAlso: `HTTP`.
     public override convenience init() {
         self.init(shared: false)
     }
@@ -168,25 +168,25 @@ public final class APIManager: NSObject {
         }
     }
     
-    private let inner: QueueConfined<Inner> = QueueConfined(label: "APIManager internal queue", value: Inner())
+    private let inner: QueueConfined<Inner> = QueueConfined(label: "HTTPManager internal queue", value: Inner())
     
     private init(shared: Bool) {
         super.init()
-        inner.unsafeDirectAccess { [value=APIManager.defaultUserAgent] in
+        inner.unsafeDirectAccess { [value=HTTPManager.defaultUserAgent] in
             $0.setHeader("User-Agent", value: value, overwrite: true)
         }
         if shared {
-            let setup: APIManagerConfigurable?
+            let setup: HTTPManagerConfigurable?
             #if os(OSX)
-                setup = NSApplication.sharedApplication().delegate as? APIManagerConfigurable
+                setup = NSApplication.sharedApplication().delegate as? HTTPManagerConfigurable
             #elseif os(iOS) || os(tvOS)
-                setup = UIApplication.sharedApplication().delegate as? APIManagerConfigurable
+                setup = UIApplication.sharedApplication().delegate as? HTTPManagerConfigurable
             #elseif os(watchOS)
-                setup = WKExtension.sharedExtension().delegate as? APIManagerConfigurable
+                setup = WKExtension.sharedExtension().delegate as? HTTPManagerConfigurable
             #endif
-            setup?.configureAPIManager(self)
+            setup?.configureHTTPManager(self)
         }
-        inner.asyncBarrier { [value=APIManager.defaultUserAgent] in
+        inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] in
             $0.setHeader("User-Agent", value: value, overwrite: false)
             self.resetSession($0, invalidate: false)
         }
@@ -217,28 +217,28 @@ public final class APIManager: NSObject {
     }
 }
 
-/// The environment for an `APIManager`.
+/// The environment for an `HTTPManager`.
 ///
 /// This class does not define any default environments. You can extend this class in your application
 /// to add environment definitions for convenient access. For example:
 ///
 /// ```
-/// extension APIManagerEnvironment {
+/// extension HTTPManagerEnvironment {
 ///     /// The Production environment.
-///     @nonobjc static let Production = APIManagerEnvironment(baseURL: NSURL(string: "https://example.com/api/v1")!)!
+///     @nonobjc static let Production = HTTPManagerEnvironment(baseURL: NSURL(string: "https://example.com/api/v1")!)!
 ///     /// The Staging environment.
-///     @nonobjc static let Staging = APIManagerEnvironment(baseURL: NSURL(string: "https://stage.example.com/api/v1")!)!
+///     @nonobjc static let Staging = HTTPManagerEnvironment(baseURL: NSURL(string: "https://stage.example.com/api/v1")!)!
 /// }
 /// ```
 ///
-/// You can also use `APIManagerConfigurable` to configure the initial environment on the shared `APIManager`.
-public final class APIManagerEnvironment: NSObject {
+/// You can also use `HTTPManagerConfigurable` to configure the initial environment on the shared `HTTPManager`.
+public final class HTTPManagerEnvironment: NSObject {
     /// The base URL for the environment.
     public let baseURL: NSURL
     
     /// Initializes an environment with a base URL.
     /// - Parameter baseURL: The base URL to use for the environment. Must be valid according to RFC 3986.
-    /// - Returns: An `APIManagerEnvironment` if the base URL is a valid absolute URL, `nil` otherwise.
+    /// - Returns: An `HTTPManagerEnvironment` if the base URL is a valid absolute URL, `nil` otherwise.
     ///
     /// - Note: If `baseURL` has a non-empty `path` that does not end in a slash, the path is modified to
     ///   include a trailing slash. If `baseURL` has a query or fragment component, these components are
@@ -252,7 +252,7 @@ public final class APIManagerEnvironment: NSObject {
     
     /// Initializes an environment with a URL string.
     /// - Parameter string: The URL string to use for the environment. Must be valid according to RFC 3986.
-    /// - Returns: An `APIManagerEnvironment` if the URL string is a valid absolute URL, `nil` otherwise.
+    /// - Returns: An `HTTPManagerEnvironment` if the URL string is a valid absolute URL, `nil` otherwise.
     ///
     /// - Note: If `string` represents a URL with a non-empty path that does not end in a slash, the path
     ///   is modified to include a trailing slash. If the URL has a query or fragment component, these
@@ -289,39 +289,39 @@ public final class APIManagerEnvironment: NSObject {
     }
     
     public override var description: String {
-        return "<APIManagerEnvironment: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) \(baseURL.absoluteString))>"
+        return "<HTTPManagerEnvironment: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) \(baseURL.absoluteString))>"
     }
     
     public override func isEqual(object: AnyObject?) -> Bool {
-        guard let other = object as? APIManagerEnvironment else { return false }
+        guard let other = object as? HTTPManagerEnvironment else { return false }
         return baseURL == other.baseURL
     }
 }
 
-/// A protocol that provides hooks for configuring the shared `APIManager`.
-/// If the application delegate conforms to this protocol, it will be asked to configure the shared `APIManager`.
-/// This will occur on first access to the global `API` property.
-@objc public protocol APIManagerConfigurable {
-    /// Invoked on first access to the global `API` property.
+/// A protocol that provides hooks for configuring the shared `HTTPManager`.
+/// If the application delegate conforms to this protocol, it will be asked to configure the shared `HTTPManager`.
+/// This will occur on first access to the global `HTTP` property.
+@objc public protocol HTTPManagerConfigurable {
+    /// Invoked on first access to the global `HTTP` property.
     ///
     /// - Note: You should not create any requests from within this method. Doing so is not
     ///   supported and will likely result in a misconfigured request.
     ///
-    /// - Important: You MUST NOT access the global `API` property from within this method.
+    /// - Important: You MUST NOT access the global `HTTP` property from within this method.
     ///   Any attempt to do so will deadlock as the property has not finished initializing.
-    func configureAPIManager(api: APIManager)
+    func configureHTTPManager(api: HTTPManager)
 }
 
-extension APIManager {
+extension HTTPManager {
     /// Creates a GET request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
-    /// - Returns: An `APIManagerDataRequest`, or `nil` if the `path`  cannot be
+    /// - Returns: An `HTTPManagerDataRequest`, or `nil` if the `path`  cannot be
     ///   parsed by `NSURL`.
     @objc(requestForGET:parameters:)
-    public func request(GET path: String, parameters: [String: AnyObject] = [:]) -> APIManagerDataRequest! {
+    public func request(GET path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerDataRequest! {
         return request(GET: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a GET request.
@@ -329,11 +329,11 @@ extension APIManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string.
-    /// - Returns: An `APIManagerDataRequest`, or `nil` if the `path`  cannot be
+    /// - Returns: An `HTTPManagerDataRequest`, or `nil` if the `path`  cannot be
     ///   parsed by `NSURL`.
     @objc(requestForGET:queryItems:)
-    public func request(GET path: String, parameters: [NSURLQueryItem]) -> APIManagerDataRequest! {
-        return constructRequest(path, f: { APIManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
+    public func request(GET path: String, parameters: [NSURLQueryItem]) -> HTTPManagerDataRequest! {
+        return constructRequest(path, f: { HTTPManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
     }
     
     /// Creates a DELETE request.
@@ -341,10 +341,10 @@ extension APIManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
-    /// - Returns: An `APIManagerDeleteRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerDeleteRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForDELETE:parameters:)
-    public func request(DELETE path: String, parameters: [String: AnyObject] = [:]) -> APIManagerDeleteRequest! {
+    public func request(DELETE path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerDeleteRequest! {
         return request(DELETE: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a DELETE request.
@@ -352,11 +352,11 @@ extension APIManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string.
-    /// - Returns: An `APIManagerDeleteRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerDeleteRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForDELETE:queryItems:)
-    public func request(DELETE path: String, parameters: [NSURLQueryItem]) -> APIManagerDeleteRequest! {
-        return constructRequest(path, f: { APIManagerDeleteRequest(apiManager: self, URL: $0, parameters: parameters) })
+    public func request(DELETE path: String, parameters: [NSURLQueryItem]) -> HTTPManagerDeleteRequest! {
+        return constructRequest(path, f: { HTTPManagerDeleteRequest(apiManager: self, URL: $0, parameters: parameters) })
     }
     
     /// Creates a POST request.
@@ -364,10 +364,10 @@ extension APIManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
-    /// - Returns: An `APIManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPOST:parameters:)
-    public func request(POST path: String, parameters: [String: AnyObject] = [:]) -> APIManagerUploadRequest! {
+    public func request(POST path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadRequest! {
         return request(POST: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a POST request.
@@ -375,23 +375,23 @@ extension APIManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
-    /// - Returns: An `APIManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPOST:queryItems:)
-    public func request(POST path: String, parameters: [NSURLQueryItem]) -> APIManagerUploadRequest! {
-        return constructRequest(path, f: { APIManagerUploadRequest(apiManager: self, URL: $0, parameters: parameters) })
+    public func request(POST path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, parameters: parameters) })
     }
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON data to upload as the body of the request.
-    /// - Returns: An `APIManagerUploadJSONRequest`, or `nil` if the `path` cannot
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
     ///   be parsed by `NSURL`.
-    @nonobjc public func request(POST path: String, json: JSON) -> APIManagerUploadJSONRequest! {
-        return constructRequest(path, f: { APIManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
+    @nonobjc public func request(POST path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
     }
     
-    private func constructRequest<T: APIManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
+    private func constructRequest<T: HTTPManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
         let (baseURL, credential) = inner.sync({ inner -> (NSURL?, NSURLCredential?) in
             return (inner.environment?.baseURL, inner.defaultCredential)
         })
@@ -402,10 +402,10 @@ extension APIManager {
     }
 }
 
-// MARK: APIManagerError
+// MARK: HTTPManagerError
 
-/// Errors returned by APIManager
-public enum APIManagerError: ErrorType, CustomStringConvertible, CustomDebugStringConvertible {
+/// Errors returned by HTTPManager
+public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStringConvertible {
     /// An HTTP response was returned that indicates failure.
     /// - Parameter statusCode: The HTTP status code. Any code outside of 2xx or 3xx indicates failure.
     /// - Parameter body: The body of the response, if any.
@@ -423,7 +423,7 @@ public enum APIManagerError: ErrorType, CustomStringConvertible, CustomDebugStri
     ///   the parse handler may choose to throw it.
     case UnexpectedNoContent
     /// A redirect was encountered while trying to parse a response that has redirects disabled.
-    /// This can only be returned if `APIManagerRequest.shouldFollowRedirects` is set to `false`
+    /// This can only be returned if `HTTPManagerRequest.shouldFollowRedirects` is set to `false`
     /// and the request is configured to parse the response.
     /// - Parameter statusCode: The 3xx HTTP status code.
     /// - Parameter location: The contents of the `"Location"` header, interpreted as a URL, or `nil` if
@@ -453,16 +453,16 @@ public enum APIManagerError: ErrorType, CustomStringConvertible, CustomDebugStri
         case let .FailedResponse(statusCode, body):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             let bodyText = describeData(body)
-            return "APIManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), body: \(bodyText))"
+            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), body: \(bodyText))"
         case let .UnexpectedContentType(contentType, body):
             let bodyText = describeData(body)
-            return "APIManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), body: \(bodyText))"
+            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), body: \(bodyText))"
         case .UnexpectedNoContent:
-            return "APIManagerError.UnexpectedNoContent"
+            return "HTTPManagerError.UnexpectedNoContent"
         case let .UnexpectedRedirect(statusCode, location, body):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             let bodyText = describeData(body)
-            return "APIManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), location: \(location as ImplicitlyUnwrappedOptional), body: \(bodyText))"
+            return "HTTPManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), location: \(location as ImplicitlyUnwrappedOptional), body: \(bodyText))"
         }
     }
 }
@@ -479,7 +479,7 @@ private func describeData(data: NSData) -> String {
 
 // MARK: - Private
 
-extension APIManager {
+extension HTTPManager {
     // MARK: Default User-Agent
     private static let defaultUserAgent: String = {
         let bundle = NSBundle.mainBundle()
@@ -538,11 +538,11 @@ extension APIManager {
 // MARK: -
 
 private class SessionDelegate: NSObject {
-    weak var apiManager: APIManager?
+    weak var apiManager: HTTPManager?
     
     var tasks: [TaskIdentifier: TaskInfo] = [:]
     
-    init(apiManager: APIManager) {
+    init(apiManager: HTTPManager) {
         self.apiManager = apiManager
         super.init()
     }
@@ -551,12 +551,12 @@ private class SessionDelegate: NSObject {
     typealias TaskIdentifier = Int
     
     struct TaskInfo {
-        let task: APIManagerTask
+        let task: HTTPManagerTask
         let uploadBody: UploadBody?
-        let processor: (APIManagerTask, APIManagerTaskResult<NSData>) -> Void
+        let processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void
         var data: NSMutableData? = nil
         
-        init(task: APIManagerTask, uploadBody: UploadBody? = nil, processor: (APIManagerTask, APIManagerTaskResult<NSData>) -> Void) {
+        init(task: HTTPManagerTask, uploadBody: UploadBody? = nil, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) {
             self.task = task
             self.uploadBody = uploadBody
             self.processor = processor
@@ -564,21 +564,21 @@ private class SessionDelegate: NSObject {
     }
 }
 
-extension APIManager {
-    /// Creates and returns an `APIManagerTask`.
+extension HTTPManager {
+    /// Creates and returns an `HTTPManagerTask`.
     /// - Parameter request: The request to create the task from.
     /// - Parameter uploadBody: The data to upload, if any.
     /// - Parameter processor: The processing block. This block must transition the task to the `.Completed` state
     ///   and must handle cancellation correctly.
-    /// - Returns: An `APIManagerTask`.
-    internal func createNetworkTaskWithRequest(request: APIManagerRequest, uploadBody: UploadBody?, processor: (APIManagerTask, APIManagerTaskResult<NSData>) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask`.
+    internal func createNetworkTaskWithRequest(request: HTTPManagerRequest, uploadBody: UploadBody?, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
         let urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
         if case .FormUrlEncoded(let queryItems)? = uploadBody {
             uploadBody = .Data(UploadBody.dataRepresentationForQueryItems(queryItems))
         }
         uploadBody?.evaluatePending()
-        let apiTask = inner.sync { inner -> APIManagerTask in
+        let apiTask = inner.sync { inner -> HTTPManagerTask in
             let networkTask: NSURLSessionTask
             if case .Data(let data)? = uploadBody {
                 uploadBody = nil
@@ -588,10 +588,10 @@ extension APIManager {
             } else {
                 networkTask = inner.session.dataTaskWithRequest(urlRequest)
             }
-            let apiTask = APIManagerTask(networkTask: networkTask, request: request)
+            let apiTask = HTTPManagerTask(networkTask: networkTask, request: request)
             let taskInfo = SessionDelegate.TaskInfo(task: apiTask, uploadBody: uploadBody, processor: processor)
             inner.session.delegateQueue.addOperationWithBlock { [sessionDelegate=inner.sessionDelegate] in
-                assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal APIManager error: tasks contains unknown taskInfo")
+                assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
                 sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
             }
             #if os(iOS)
@@ -629,7 +629,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
             completionHandler(.Cancel)
             return
         }
-        assert(taskInfo.task.networkTask === dataTask, "internal APIManager error: taskInfo out of sync")
+        assert(taskInfo.task.networkTask === dataTask, "internal HTTPManager error: taskInfo out of sync")
         if taskInfo.data != nil {
             taskInfo.data = nil
             tasks[dataTask.taskIdentifier] = taskInfo
@@ -639,7 +639,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
     
     @objc func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData data: NSData) {
         guard var taskInfo = tasks[dataTask.taskIdentifier] else { return }
-        assert(taskInfo.task.networkTask === dataTask, "internal APIManager error: taskInfo out of sync")
+        assert(taskInfo.task.networkTask === dataTask, "internal HTTPManager error: taskInfo out of sync")
         let taskData: NSMutableData
         if let data = taskInfo.data {
             taskData = data
@@ -666,7 +666,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
         
         guard let taskInfo = tasks.removeValueForKey(task.taskIdentifier) else { return }
         let apiTask = taskInfo.task
-        assert(apiTask.networkTask === task, "internal APIManager error: taskInfo out of sync")
+        assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
         let processor = taskInfo.processor
         
         #if os(iOS)
@@ -681,14 +681,14 @@ extension SessionDelegate: NSURLSessionDataDelegate {
             // cancel() on the NSURLSessionTask directly. In the latter case, treat it
             // as a cancellation anyway.
             let result = taskInfo.task.transitionStateTo(.Canceled)
-            assert(result.ok, "internal APIManager error: tried to cancel task that's already completed")
+            assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")
             dispatch_async(queue) {
                 processor(apiTask, .Canceled)
             }
         } else {
             let result = apiTask.transitionStateTo(.Processing)
             if result.ok {
-                assert(result.oldState == .Running, "internal APIManager error: tried to process task that's already processing")
+                assert(result.oldState == .Running, "internal HTTPManager error: tried to process task that's already processing")
                 dispatch_async(queue) { [data=taskInfo.data] in
                     if let error = error {
                         processor(apiTask, .Error(task.response, error))
@@ -701,7 +701,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
                     }
                 }
             } else {
-                assert(result.oldState == .Canceled, "internal APIManager error: tried to process task that's already completed")
+                assert(result.oldState == .Canceled, "internal HTTPManager error: tried to process task that's already completed")
                 // We must have canceled concurrently with the networking portion finishing
                 dispatch_async(queue) {
                     processor(apiTask, .Canceled)
@@ -715,7 +715,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
             completionHandler(request)
             return
         }
-        assert(taskInfo.task.networkTask === task, "internal APIManager error: taskInfo out of sync")
+        assert(taskInfo.task.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
         if taskInfo.task.followRedirects {
             completionHandler(request)
         } else {

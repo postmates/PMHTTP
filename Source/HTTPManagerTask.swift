@@ -1,5 +1,5 @@
 //
-//  APIManagerTask.swift
+//  HTTPManagerTask.swift
 //  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 1/4/16.
@@ -7,11 +7,11 @@
 //
 
 import Foundation
-import PMAPIPrivate
+import PMHTTPPrivate
 
-/// An initiated HTTP API operation.
-public final class APIManagerTask: NSObject {
-    public typealias State = APIManagerTaskState
+/// An initiated HTTP operation.
+public final class HTTPManagerTask: NSObject {
+    public typealias State = HTTPManagerTaskState
     
     /// The underlying `NSURLSessionTask`.
     public let networkTask: NSURLSessionTask
@@ -48,7 +48,7 @@ public final class APIManagerTask: NSObject {
     internal let trackingNetworkActivity: Bool
     #endif
     
-    internal init(networkTask: NSURLSessionTask, request: APIManagerRequest) {
+    internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
         self.networkTask = networkTask
         self.userInitiated = request.userInitiated
         self.followRedirects = request.shouldFollowRedirects
@@ -65,10 +65,10 @@ public final class APIManagerTask: NSObject {
         return (result.completed, State(result.oldState))
     }
     
-    private let _stateBox = PMAPIManagerTaskStateBox(state: State.Running.boxState)
+    private let _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState)
 }
 
-extension APIManagerTask : CustomDebugStringConvertible {
+extension HTTPManagerTask : CustomDebugStringConvertible {
     // NSObject already conforms to CustomStringConvertible
     
     public override var description: String {
@@ -80,7 +80,7 @@ extension APIManagerTask : CustomDebugStringConvertible {
     }
     
     private func getDescription(debug: Bool) -> String {
-        var s = "<APIManagerTask: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) (\(state))"
+        var s = "<HTTPManagerTask: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) (\(state))"
         if userInitiated {
             s += " userInitiated"
         }
@@ -100,9 +100,9 @@ extension APIManagerTask : CustomDebugStringConvertible {
     }
 }
 
-/// The state of an `APIManagerTask`.
-@objc public enum APIManagerTaskState: CUnsignedChar, CustomStringConvertible {
-    // Important: The constants here must match those defined in PMAPIManagerTaskStateBoxState
+/// The state of an `HTTPManagerTask`.
+@objc public enum HTTPManagerTaskState: CUnsignedChar, CustomStringConvertible {
+    // Important: The constants here must match those defined in PMHTTPManagerTaskStateBoxState
     
     /// The task is currently running.
     case Running = 0
@@ -124,24 +124,24 @@ extension APIManagerTask : CustomDebugStringConvertible {
         }
     }
     
-    private init(_ boxState: PMAPIManagerTaskStateBoxState) {
-        self = unsafeBitCast(boxState, APIManagerTaskState.self)
+    private init(_ boxState: PMHTTPManagerTaskStateBoxState) {
+        self = unsafeBitCast(boxState, HTTPManagerTaskState.self)
     }
     
-    private var boxState: PMAPIManagerTaskStateBoxState {
-        return unsafeBitCast(self, PMAPIManagerTaskStateBoxState.self)
+    private var boxState: PMHTTPManagerTaskStateBoxState {
+        return unsafeBitCast(self, PMHTTPManagerTaskStateBoxState.self)
     }
 }
 
-/// The results of an API request.
-public enum APIManagerTaskResult<Value> {
+/// The results of an HTTP request.
+public enum HTTPManagerTaskResult<Value> {
     /// The task finished successfully.
     case Success(NSURLResponse, Value)
     /// An error occurred, either during networking or while processing the
     /// data.
     ///
     /// The `ErrorType` may be `NSError` for errors returned by `NSURLSession`,
-    /// `APIManagerError` for errors returned by this class, or any error type
+    /// `HTTPManagerError` for errors returned by this class, or any error type
     /// thrown by a parse handler (including JSON errors returned by `PMJSON`).
     case Error(NSURLResponse?, ErrorType)
     /// The task was canceled before it completed.
@@ -200,7 +200,7 @@ public enum APIManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    public func map<T>(@noescape f: (NSURLResponse, Value) throws -> T) rethrows -> APIManagerTaskResult<T> {
+    public func map<T>(@noescape f: (NSURLResponse, Value) throws -> T) rethrows -> HTTPManagerTaskResult<T> {
         switch self {
         case let .Success(response, value): return .Success(response, try f(response, value))
         case let .Error(response, type): return .Error(response, type)
@@ -211,7 +211,7 @@ public enum APIManagerTaskResult<Value> {
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
     /// Errors thrown by the block are caught and turned into `.Error` results.
-    public func map<T>(@noescape `try` f: (NSURLResponse, Value) throws -> T) -> APIManagerTaskResult<T> {
+    public func map<T>(@noescape `try` f: (NSURLResponse, Value) throws -> T) -> HTTPManagerTaskResult<T> {
         switch self {
         case let .Success(response, value):
             do {
@@ -226,7 +226,7 @@ public enum APIManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    public func andThen<T>(@noescape f: (NSURLResponse, Value) throws -> APIManagerTaskResult<T>) rethrows -> APIManagerTaskResult<T> {
+    public func andThen<T>(@noescape f: (NSURLResponse, Value) throws -> HTTPManagerTaskResult<T>) rethrows -> HTTPManagerTaskResult<T> {
         switch self {
         case let .Success(response, value): return try f(response, value)
         case let .Error(response, type): return .Error(response, type)
@@ -237,7 +237,7 @@ public enum APIManagerTaskResult<Value> {
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
     /// Errors thrown by the block are caught and turned into `.Error` results.
-    public func andThen<T>(@noescape `try` f: (NSURLResponse, Value) throws -> APIManagerTaskResult<T>) -> APIManagerTaskResult<T> {
+    public func andThen<T>(@noescape `try` f: (NSURLResponse, Value) throws -> HTTPManagerTaskResult<T>) -> HTTPManagerTaskResult<T> {
         switch self {
         case let .Success(response, value):
             do {
@@ -251,7 +251,7 @@ public enum APIManagerTaskResult<Value> {
     }
 }
 
-extension APIManagerTaskResult : CustomDebugStringConvertible {
+extension HTTPManagerTaskResult : CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
         case let .Success(response, value):
@@ -264,14 +264,14 @@ extension APIManagerTaskResult : CustomDebugStringConvertible {
     }
 }
 
-public func ??<Value>(result: APIManagerTaskResult<Value>, @autoclosure defaultValue: () throws -> APIManagerTaskResult<Value>) rethrows -> APIManagerTaskResult<Value> {
+public func ??<Value>(result: HTTPManagerTaskResult<Value>, @autoclosure defaultValue: () throws -> HTTPManagerTaskResult<Value>) rethrows -> HTTPManagerTaskResult<Value> {
     switch result {
     case .Success: return result
     default: return try defaultValue()
     }
 }
 
-public func ??<Value>(result: APIManagerTaskResult<Value>, @autoclosure defaultValue: () throws -> Value) rethrows -> Value {
+public func ??<Value>(result: HTTPManagerTaskResult<Value>, @autoclosure defaultValue: () throws -> Value) rethrows -> Value {
     switch result {
     case .Success(_, let value): return value
     default: return try defaultValue()

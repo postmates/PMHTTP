@@ -8,7 +8,7 @@
 
 import Foundation
 import XCTest
-@testable import PMAPI // for QueueConfined
+@testable import PMHTTP // for QueueConfined
 
 extension XCTestCase {
     /// Installs a request handler on the HTTP server and returns an expectation that's fulfilled when the handler is invoked.
@@ -72,7 +72,7 @@ extension XCTestCase {
                 box.value.append((path: path, server: server, token: token, expectation: expectation))
             }
         } else {
-            let confined = QueueConfined(label: "PMAPITests outstanding request handlers queue", value: Box([(path: path, server: server, token: token, expectation: expectation)]))
+            let confined = QueueConfined(label: "PMHTTPTests outstanding request handlers queue", value: Box([(path: path, server: server, token: token, expectation: expectation)]))
             objc_setAssociatedObject(self, &kAssocContext, confined, .OBJC_ASSOCIATION_RETAIN)
         }
     }

@@ -1,5 +1,5 @@
 //
-//  APIManagerNetworkActivityManager.swift
+//  HTTPManagerNetworkActivityManager.swift
 //  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 1/6/16.

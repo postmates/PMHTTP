@@ -1,5 +1,5 @@
 //
-//  APIManagerRequest.swift
+//  HTTPManagerRequest.swift
 //  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 1/4/16.
@@ -9,11 +9,11 @@
 import Foundation
 @exported import PMJSON
 
-/// An HTTP API request.
+/// An HTTP request.
 ///
 /// **Thread safety:**
 /// This class can be safely read from concurrent threads, but any modifications require exclusive access.
-public class APIManagerRequest: NSObject, NSCopying {
+public class HTTPManagerRequest: NSObject, NSCopying {
     /// An HTTP method verb.
     public enum Method: String {
         case GET, POST, DELETE
@@ -25,7 +25,7 @@ public class APIManagerRequest: NSObject, NSCopying {
             return baseURL
         }
         guard let comps = NSURLComponents(URL: baseURL, resolvingAgainstBaseURL: false) else {
-            fatalError("APIManager: base URL cannot be parsed by NSURLComponents: \(baseURL.relativeString)")
+            fatalError("HTTPManager: base URL cannot be parsed by NSURLComponents: \(baseURL.relativeString)")
         }
         if var queryItems = comps.queryItems {
             queryItems.appendContentsOf(parameters)
@@ -52,14 +52,14 @@ public class APIManagerRequest: NSObject, NSCopying {
     public private(set) var parameters: [NSURLQueryItem]
     
     /// The credential to use for the request. Default is the value of
-    /// `APIManager.defaultCredential`.
+    /// `HTTPManager.defaultCredential`.
     ///
     /// - Note: Only password-based credentials are supported. It is an error to assign
     /// any other type of credential.
     public var credential: NSURLCredential? {
         didSet {
             if let credential = credential where credential.user == nil || !credential.hasPassword {
-                NSLog("[APIManager] Warning: Attempting to set request credential with a non-password-based credential")
+                NSLog("[HTTPManager] Warning: Attempting to set request credential with a non-password-based credential")
                 self.credential = nil
             }
         }
@@ -75,7 +75,7 @@ public class APIManagerRequest: NSObject, NSCopying {
     
     /// `true` iff redirects should be followed when processing the response.
     /// If `false`, network requests return a successful result containing the redirection
-    /// response, and parse requests return an error with `APIManagerError.UnexpectedRedirect()`.
+    /// response, and parse requests return an error with `HTTPManagerError.UnexpectedRedirect()`.
     /// Default is `true`.
     public var shouldFollowRedirects: Bool = true
     
@@ -108,7 +108,7 @@ public class APIManagerRequest: NSObject, NSCopying {
     
     // MARK: Internal
     
-    internal init(apiManager: APIManager, URL url: NSURL, method: Method, parameters: [NSURLQueryItem]) {
+    internal init(apiManager: HTTPManager, URL url: NSURL, method: Method, parameters: [NSURLQueryItem]) {
         self.apiManager = apiManager
         baseURL = url
         requestMethod = method
@@ -116,13 +116,13 @@ public class APIManagerRequest: NSObject, NSCopying {
         super.init()
     }
     
-    internal let apiManager: APIManager
+    internal let apiManager: HTTPManager
     
     internal let baseURL: NSURL
     
     /// Implementation detail of `copyWithZone(_:)`.
     /// - Parameter request: Guaranteed to be the same type as `self`.
-    public required init(__copyOfRequest request: APIManagerRequest) {
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
         apiManager = request.apiManager
         baseURL = request.baseURL
         requestMethod = request.requestMethod
@@ -177,7 +177,7 @@ public class APIManagerRequest: NSObject, NSCopying {
     }
 }
 
-extension APIManagerRequest {
+extension HTTPManagerRequest {
     /// A collection of HTTP header fields.
     ///
     /// Exposes a `Dictionary`-like interface but guarantees that all header names are normalized.
@@ -360,8 +360,8 @@ private let HTTPHeaderValidCharacterSet: NSCharacterSet = {
 
 // MARK: - Network Request
 
-/// An HTTP API request that does not yet have a parse handler.
-public class APIManagerNetworkRequest: APIManagerRequest, APIManagerRequestPerformable {
+/// An HTTP request that does not yet have a parse handler.
+public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPerformable {
     /// The request parameters, or `[]` if there are no parameters.
     /// The parameters are passed by default in the URL query string.
     /// Subclasses may override this behavior.
@@ -381,11 +381,11 @@ public class APIManagerNetworkRequest: APIManagerRequest, APIManagerRequestPerfo
     /// done.
     /// - Parameter handler: The handler to call when the request is done. This
     ///   handler is not guaranteed to be called on any particular thread.
-    /// - Returns: An `APIManagerTask` that represents the operation.
-    public func performRequestWithCompletion(handler: (task: APIManagerTask, result: APIManagerTaskResult<NSData>) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { task, result in
-            let result = APIManagerNetworkRequest.taskProcessor(task, result)
-            APIManagerNetworkRequest.taskCompletion(task, result, handler)
+            let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
+            HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
         })
     }
     
@@ -394,32 +394,32 @@ public class APIManagerNetworkRequest: APIManagerRequest, APIManagerRequestPerfo
     /// - Parameter queue: The queue to call the handler on.
     /// - Parameter handler: The handler to call when the request is done. This
     /// handler is called on *queue*.
-    /// - Returns: An `APIManagerTask` that represents the operation.
-    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: APIManagerTask, result: APIManagerTaskResult<NSData>) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { task, result in
-            let result = APIManagerNetworkRequest.taskProcessor(task, result)
+            let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
             queue.addOperationWithBlock {
-                APIManagerNetworkRequest.taskCompletion(task, result, handler)
+                HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
             }
         })
     }
     
-    private static func taskProcessor(task: APIManagerTask, _ result: APIManagerTaskResult<NSData>) -> APIManagerTaskResult<NSData> {
+    private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>) -> HTTPManagerTaskResult<NSData> {
         return result.map(`try`: { response, data in
             if let statusCode = (response as? NSHTTPURLResponse)?.statusCode where !(200...399).contains(statusCode) {
-                throw APIManagerError.FailedResponse(statusCode: statusCode, body: data)
+                throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data)
             }
             return data
         })
     }
     
-    private static func taskCompletion(task: APIManagerTask, _ result: APIManagerTaskResult<NSData>, _ handler: (APIManagerTask, APIManagerTaskResult<NSData>) -> Void) {
+    private static func taskCompletion(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>, _ handler: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) {
         let transition = task.transitionStateTo(.Completed)
         if transition.ok {
-            assert(transition.oldState != .Completed, "internal APIManager error: tried to complete task that's already completed")
+            assert(transition.oldState != .Completed, "internal HTTPManager error: tried to complete task that's already completed")
             handler(task, result)
         } else {
-            assert(transition.oldState == .Canceled, "internal APIManager error: tried to complete task that's not processing")
+            assert(transition.oldState == .Canceled, "internal HTTPManager error: tried to complete task that's not processing")
             handler(task, .Canceled)
         }
     }
@@ -429,24 +429,24 @@ public class APIManagerNetworkRequest: APIManagerRequest, APIManagerRequestPerfo
     }
 }
 
-/// A protocol for `APIManagerRequest`s that can be performed.
-public protocol APIManagerRequestPerformable {
+/// A protocol for `HTTPManagerRequest`s that can be performed.
+public protocol HTTPManagerRequestPerformable {
     typealias ResultValue
     
-    func performRequestWithCompletion(handler: (task: APIManagerTask, result: APIManagerTaskResult<ResultValue>) -> Void) -> APIManagerTask
-    func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: APIManagerTask, result: APIManagerTaskResult<ResultValue>) -> Void) -> APIManagerTask
+    func performRequestWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
 }
 
 // MARK: - Data Request
 
 /// An HTTP GET or POST request that does not yet have a parse handler.
-public class APIManagerDataRequest: APIManagerNetworkRequest {
+public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
-    /// - Returns: An `APIManagerParseRequest`.
-    public func parseAsJSON() -> APIManagerParseRequest<JSON> {
-        return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+    /// - Returns: An `HTTPManagerParseRequest`.
+    public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
-                throw APIManagerError.UnexpectedNoContent
+                throw HTTPManagerError.UnexpectedNoContent
             }
             return try JSON.decode(data)
         })
@@ -457,17 +457,17 @@ public class APIManagerDataRequest: APIManagerNetworkRequest {
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `APIManagerParseRequest`.
+    /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> APIManagerParseRequest<T> {
-        return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
-                throw APIManagerError.UnexpectedNoContent
+                throw HTTPManagerError.UnexpectedNoContent
             }
             return try handler(response: response, json: JSON.decode(data))
         })
@@ -477,22 +477,22 @@ public class APIManagerDataRequest: APIManagerNetworkRequest {
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `APIManagerParseRequest`.
+    /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> APIManagerParseRequest<T> {
-        return APIManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
+    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> HTTPManagerParseRequest<T> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
 }
 
 // MARK: - Parse Request
 
-/// An HTTP API request that has a parse handler.
-public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerRequestPerformable {
+/// An HTTP request that has a parse handler.
+public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRequestPerformable {
     public override var url: NSURL {
         return baseURL
     }
@@ -512,7 +512,7 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
     /// response is a 204 No Content, the `Content-Type` is not checked. For all other 2xx
     /// responses, if at least one expected content type is provided, the `Content-Type`
     /// header must match one of them. If it doesn't match any, the parse handler will be
-    /// skipped and `APIManagerError.UnexpectedContentType` will be returned as the result.
+    /// skipped and `HTTPManagerError.UnexpectedContentType` will be returned as the result.
     ///
     /// - Note: An empty or missing `Content-Type` header is treated as matching.
     ///
@@ -531,11 +531,11 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
     /// done.
     /// - Parameter handler: The handler to call when the requeset is done. This
     ///   handler is not guaranteed to be called on any particular thread.
-    /// - Returns: An `APIManagerTask` that represents the operation.
-    public func performRequestWithCompletion(handler: (task: APIManagerTask, result: APIManagerTaskResult<T>) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler] task, result in
-            let result = APIManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
-            APIManagerParseRequest<T>.taskCompletion(task, result, handler)
+            let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
+            HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
         })
     }
     
@@ -544,17 +544,17 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
     /// - Parameter queue: The queue to call the handler on.
     /// - Parameter handler: The handler to call when the request is done. This
     /// handler is called on *queue*.
-    /// - Returns: An `APIManagerTask` that represents the operation.
-    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: APIManagerTask, result: APIManagerTaskResult<T>) -> Void) -> APIManagerTask {
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler] task, result in
-            let result = APIManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
+            let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
             queue.addOperationWithBlock {
-                APIManagerParseRequest<T>.taskCompletion(task, result, handler)
+                HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
             }
         })
     }
     
-    private static func taskProcessor(task: APIManagerTask, _ result: APIManagerTaskResult<NSData>, _ expectedContentTypes: [String], _ parseHandler: (NSURLResponse, NSData) throws -> T) -> APIManagerTaskResult<T> {
+    private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>, _ expectedContentTypes: [String], _ parseHandler: (NSURLResponse, NSData) throws -> T) -> HTTPManagerTaskResult<T> {
         // check for cancellation before processing
         if task.state == .Canceled {
             return .Canceled
@@ -566,14 +566,14 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
                 if (300...399).contains(statusCode) {
                     // parsed results can't accept redirects
                     let location = (response.allHeaderFields["Location"] as? String).flatMap({NSURL(string: $0)})
-                    throw APIManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, body: data)
+                    throw HTTPManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, body: data)
                 } else if !(200...299).contains(statusCode) {
-                    throw APIManagerError.FailedResponse(statusCode: statusCode, body: data)
+                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data)
                 } else if statusCode != 204 && !expectedContentTypes.isEmpty, let contentType = response.allHeaderFields["Content-Type"] as? String {
                     // Not a 204 No Content, check the Content-Type against the list
                     let typeSubtype = MediaType(contentType).typeSubtype
                     if !typeSubtype.isEmpty && !expectedContentTypes.contains({ MediaType($0).typeSubtype.caseInsensitiveCompare(typeSubtype) == .OrderedSame }) {
-                        throw APIManagerError.UnexpectedContentType(contentType: contentType, body: data)
+                        throw HTTPManagerError.UnexpectedContentType(contentType: contentType, body: data)
                     }
                 }
             }
@@ -581,13 +581,13 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
         })
     }
     
-    private static func taskCompletion(task: APIManagerTask, _ result: APIManagerTaskResult<T>, _ handler: (APIManagerTask, APIManagerTaskResult<T>) -> Void) {
+    private static func taskCompletion(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>, _ handler: (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) {
         let transition = task.transitionStateTo(.Completed)
         if transition.ok {
-            assert(transition.oldState != .Completed, "internal APIManager error: tried to complete task that's already completed")
+            assert(transition.oldState != .Completed, "internal HTTPManager error: tried to complete task that's already completed")
             handler(task, result)
         } else {
-            assert(transition.oldState == .Canceled, "internal APIManager error: tried to complete task that's not processing")
+            assert(transition.oldState == .Canceled, "internal HTTPManager error: tried to complete task that's not processing")
             handler(task, .Canceled)
         }
     }
@@ -597,7 +597,7 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
     private let _contentType: String
     private let uploadBody: UploadBody?
     
-    internal init(request: APIManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
+    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
         self.parseHandler = parseHandler
         prepareRequestHandler = request.prepareURLRequest()
         _contentType = request.contentType
@@ -616,8 +616,8 @@ public final class APIManagerParseRequest<T>: APIManagerRequest, APIManagerReque
         headerFields = request.headerFields
     }
     
-    public required init(__copyOfRequest request: APIManagerRequest) {
-        let request: APIManagerParseRequest<T> = unsafeDowncast(request)
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
+        let request: HTTPManagerParseRequest<T> = unsafeDowncast(request)
         parseHandler = request.parseHandler
         prepareRequestHandler = request.prepareRequestHandler
         _contentType = request._contentType
@@ -661,14 +661,14 @@ private func acceptHeaderValueForContentTypes(contentTypes: [String]) -> String 
 
 /// An HTTP DELETE request that does not yet have a parse handler.
 ///
-/// Similar to an `APIManagerDataRequest` except that it handles a 204 (No Content)
+/// Similar to an `HTTPManagerDataRequest` except that it handles a 204 (No Content)
 /// response by skipping the parse and the resulting response value may be `nil`.
-public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
+public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
     /// If the response is a 204 (No Content), there is no data to parse.
-    /// - Returns: An `APIManagerParseRequest`.
-    public func parseAsJSON() -> APIManagerParseRequest<JSON?> {
-        return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+    /// - Returns: An `HTTPManagerParseRequest`.
+    public func parseAsJSON() -> HTTPManagerParseRequest<JSON?> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
@@ -685,15 +685,15 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `APIManagerParseRequest`.
+    /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T?) -> APIManagerParseRequest<T?> {
-        return APIManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T?) -> HTTPManagerParseRequest<T?> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
@@ -709,15 +709,15 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `APIManagerParseRequest`.
+    /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
     ///   thread, you should just use `performRequestWithCompletion(_:)`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T?) -> APIManagerParseRequest<T?> {
-        return APIManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: { response, data in
+    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T?) -> HTTPManagerParseRequest<T?> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
@@ -727,11 +727,11 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
         })
     }
     
-    internal init(apiManager: APIManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
+    internal init(apiManager: HTTPManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
         super.init(apiManager: apiManager, URL: url, method: .DELETE, parameters: parameters)
     }
     
-    public required init(__copyOfRequest request: APIManagerRequest) {
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
         super.init(__copyOfRequest: request)
     }
 }
@@ -740,11 +740,11 @@ public final class APIManagerDeleteRequest: APIManagerNetworkRequest {
 
 /// An HTTP POST request that does not yet have a parse handler.
 ///
-/// By default, any request parameters (see `APIManagerRequest.parameters`) are
+/// By default, any request parameters (see `HTTPManagerRequest.parameters`) are
 /// passed as `application/x-www-form-urlencoded`. Adding any multipart bodies
 /// passes everything as `multipart/form-data` instead. When mixing *parameters*
 /// and multipart bodies, the *parameters* are sent prior to any multipart bodies.
-public final class APIManagerUploadRequest: APIManagerDataRequest {
+public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
     public override var url: NSURL {
         return baseURL
     }
@@ -818,13 +818,13 @@ public final class APIManagerUploadRequest: APIManagerDataRequest {
     ///   of the upload data up-front.
     ///
     /// - Parameter block: The block that provides the multipart bodies. This block is
-    ///   invoked on an arbitrary background thread. The `APIManagerUploadMultipart`
+    ///   invoked on an arbitrary background thread. The `HTTPManagerUploadMultipart`
     ///   parameter can be used to add multipart bodies to the request. This object is
     ///   only valid for the duration of the block's execution.
     ///
     /// - SeeAlso: `addMultipartData(_:withName:mimeType:filename:)`,
     ///   `addMultipartText(_:withName:)`.
-    public func addMultipartBodyWithBlock(block: APIManagerUploadMultipart -> Void) {
+    public func addMultipartBodyWithBlock(block: HTTPManagerUploadMultipart -> Void) {
         multipartBodies.append(.Pending(.init(block)))
     }
     
@@ -839,17 +839,17 @@ public final class APIManagerUploadRequest: APIManagerDataRequest {
         }
     }
     
-    internal init(apiManager: APIManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
+    internal init(apiManager: HTTPManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
         super.init(apiManager: apiManager, URL: url, method: .POST, parameters: parameters)
     }
     
-    public required init(__copyOfRequest request: APIManagerRequest) {
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
         super.init(__copyOfRequest: request)
     }
 }
 
-/// Helper class for `APIManagerUploadRequest.addMultipartBodyWithBlock(_:)`.
-public final class APIManagerUploadMultipart: NSObject {
+/// Helper class for `HTTPManagerUploadRequest.addMultipartBodyWithBlock(_:)`.
+public final class HTTPManagerUploadMultipart: NSObject {
     /// Specifies a named multipart body for this request.
     ///
     /// Calling this method sets the request's overall Content-Type to
@@ -891,7 +891,7 @@ public final class APIManagerUploadMultipart: NSObject {
 ///
 /// The body of this request is a JSON blob. Any `parameters` are passed in the
 /// query string.
-public final class APIManagerUploadJSONRequest: APIManagerDataRequest {
+public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
     /// The JSON data to upload.
     public var uploadJSON: JSON
     
@@ -910,13 +910,13 @@ public final class APIManagerUploadJSONRequest: APIManagerDataRequest {
         return nil
     }
     
-    internal init(apiManager: APIManager, URL url: NSURL, method: Method, json: JSON) {
+    internal init(apiManager: HTTPManager, URL url: NSURL, method: Method, json: JSON) {
         uploadJSON = json
         super.init(apiManager: apiManager, URL: url, method: method, parameters: [])
     }
     
-    public required init(__copyOfRequest request: APIManagerRequest) {
-        let request: APIManagerUploadJSONRequest = unsafeDowncast(request)
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
+        let request: HTTPManagerUploadJSONRequest = unsafeDowncast(request)
         uploadJSON = request.uploadJSON
         super.init(__copyOfRequest: request)
     }

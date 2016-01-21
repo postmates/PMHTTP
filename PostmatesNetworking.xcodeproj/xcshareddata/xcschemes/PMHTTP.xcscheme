@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
-               BuildableName = "PMAPI.framework"
-               BlueprintName = "PMAPI"
+               BuildableName = "PMHTTP.framework"
+               BlueprintName = "PMHTTP"
                ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -33,8 +33,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9E7DDF2A1C18F2B600EA43AD"
-               BuildableName = "PMAPITests.xctest"
-               BlueprintName = "PMAPITests"
+               BuildableName = "PMHTTPTests.xctest"
+               BlueprintName = "PMHTTPTests"
                ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -43,8 +43,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
-            BuildableName = "PMAPI.framework"
-            BlueprintName = "PMAPI"
+            BuildableName = "PMHTTP.framework"
+            BlueprintName = "PMHTTP"
             ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -65,8 +65,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
-            BuildableName = "PMAPI.framework"
-            BlueprintName = "PMAPI"
+            BuildableName = "PMHTTP.framework"
+            BlueprintName = "PMHTTP"
             ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -83,8 +83,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
-            BuildableName = "PMAPI.framework"
-            BlueprintName = "PMAPI"
+            BuildableName = "PMHTTP.framework"
+            BlueprintName = "PMHTTP"
             ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

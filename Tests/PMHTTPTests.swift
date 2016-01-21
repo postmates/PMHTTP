@@ -1,5 +1,5 @@
 //
-//  PMAPITests.swift
+//  PMHTTPTests.swift
 //  PostmatesNetworking
 //
 //  Created by Kevin Ballard on 12/9/15.
@@ -8,9 +8,9 @@
 
 import XCTest
 import PMJSON
-@testable import PMAPI
+@testable import PMHTTP
 
-final class PMAPITests: XCTestCase {
+final class PMHTTPTests: XCTestCase {
     private static var httpServer: HTTPServer!
     
     class override func setUp() {
@@ -21,28 +21,28 @@ final class PMAPITests: XCTestCase {
     class override func tearDown() {
         httpServer.invalidate()
         httpServer = nil
-        API.resetSession()
+        HTTP.resetSession()
         super.tearDown()
     }
     
     override func setUp() {
         super.setUp()
         httpServer.reset()
-        API.environment = APIManagerEnvironment(string: "http://\(httpServer.address)")!
-        API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+        HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)")!
+        HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
     }
     
     override func tearDown() {
         httpServer.reset()
-        API.resetSession()
+        HTTP.resetSession()
         super.tearDown()
     }
     
     private var httpServer: HTTPServer! {
-        return PMAPITests.httpServer
+        return PMHTTPTests.httpServer
     }
     
-    private let expectationTasks: Locked<[APIManagerTask]> = Locked([])
+    private let expectationTasks: Locked<[HTTPManagerTask]> = Locked([])
     
     @available(*, unavailable)
     override func waitForExpectationsWithTimeout(timeout: NSTimeInterval, handler: XCWaitCompletionHandler?) {
@@ -78,10 +78,10 @@ final class PMAPITests: XCTestCase {
         }
     }
     
-    func expectationForRequestSuccess<Request: APIManagerRequest where Request: APIManagerRequestPerformable>(
+    func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
         request: Request, file: String = __FILE__, line: UInt = __LINE__,
-        completion: (task: APIManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void
-        ) -> APIManagerTask
+        completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void
+        ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
         let task = request.performRequestWithCompletion { [expectationTasks] task, result in
@@ -106,10 +106,10 @@ final class PMAPITests: XCTestCase {
         return task
     }
     
-    func expectationForRequestFailure<Request: APIManagerRequest where Request: APIManagerRequestPerformable>(
+    func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
         request: Request, file: String = __FILE__, line: UInt = __LINE__,
-        completion: (task: APIManagerTask, response: NSURLResponse?, error: ErrorType) -> Void
-        ) -> APIManagerTask
+        completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void
+        ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
         return request.performRequestWithCompletion { [expectationTasks] task, result in
@@ -134,7 +134,7 @@ final class PMAPITests: XCTestCase {
     
     func testSimpleGET() {
         let address = httpServer.address
-        let req = API.request(GET: "/foo")
+        let req = HTTP.request(GET: "/foo")
         XCTAssertEqual(req.url.absoluteString, "http://\(address)/foo")
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             XCTAssertEqual(request.method, HTTPServer.Method.GET)
@@ -154,9 +154,9 @@ final class PMAPITests: XCTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .BadRequest, text: "bar"))
         }
-        expectationForRequestFailure(API.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 400)
-            if case let APIManagerError.FailedResponse(statusCode, body) = error {
+            if case let HTTPManagerError.FailedResponse(statusCode, body) = error {
                 XCTAssertEqual(statusCode, 400)
                 XCTAssertEqual(String(data: body, encoding: NSUTF8StringEncoding) ?? "(not utf8)", "bar")
             } else {
@@ -171,7 +171,7 @@ final class PMAPITests: XCTestCase {
         defer {
             newServer.invalidate()
         }
-        let req = API.request(GET: "http://\(newServer.address)/foo")
+        let req = HTTP.request(GET: "http://\(newServer.address)/foo")
         XCTAssertEqual(req.url.absoluteString, "http://\(newServer.address)/foo")
         let serverExpectation = expectationForHTTPRequest(newServer, path: "/foo") { [address=newServer.address] request, completionHandler in
             XCTAssertEqual(request.headers["Host"], address)
@@ -215,7 +215,7 @@ final class PMAPITests: XCTestCase {
             }
         }
         setupServer()
-        expectationForRequestSuccess(API.request(POST: "/submit", parameters: queryItems)) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(POST: "/submit", parameters: queryItems)) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok")
         }
@@ -226,7 +226,7 @@ final class PMAPITests: XCTestCase {
             parameters[item.name] = item.value
         }
         setupServer()
-        expectationForRequestSuccess(API.request(POST: "/submit", parameters: parameters)) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(POST: "/submit", parameters: parameters)) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok")
         }
@@ -239,7 +239,7 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
         }
-        expectationForRequestSuccess(API.request(GET: "/foo").parseAsJSON()) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, value in
             if let response = response as? NSHTTPURLResponse {
                 XCTAssertEqual(response.statusCode, 200, "response status code")
                 XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "application/json", "response Content-Type header")
@@ -257,7 +257,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
             }
-            let req = API.request(GET: "/foo").parseAsJSONWithHandler({ response, json -> Int in
+            let req = HTTP.request(GET: "/foo").parseAsJSONWithHandler({ response, json -> Int in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "response content type")
                 XCTAssertEqual(response.MIMEType, "application/json", "response MIME type")
                 let ok = json["ok"]?.bool
@@ -283,7 +283,7 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, text: "foobar"))
             }
             struct InvalidUTF8Error: ErrorType {}
-            let req = API.request(GET: "/foo").parseWithHandler({ response, data -> String in
+            let req = HTTP.request(GET: "/foo").parseWithHandler({ response, data -> String in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "response Content-Type header")
                 XCTAssertEqual(response.MIMEType, "text/plain", "response MIME type")
                 guard let str = String(data: data, encoding: NSUTF8StringEncoding) else {
@@ -311,7 +311,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json, text/plain;q=0.9, text/html;q=0.8, */*;q=0.7", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, text: "{ \"ok\": true }"))
             }
-            let req = API.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "/foo").parseAsJSON()
             XCTAssertEqual(req.expectedContentTypes, ["application/json"], "request expected content types")
             req.expectedContentTypes += ["text/plain", "text/html", "*/*"]
             expectationForRequestSuccess(req) { task, response, json in
@@ -327,7 +327,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain;q=0.5, text/html;level=1;q=0.9, text/html;level=2;q=0.2, application/json;q=0.8", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, text: "{ \"ok\": true }"))
             }
-            let req = API.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "/foo").parseAsJSON()
             req.expectedContentTypes = ["text/plain;q=0.5", "text/html;level=1", "text/html;level=2;q=0.2", "application/json"]
             expectationForRequestSuccess(req) { task, response, json in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "response content type header")
@@ -345,21 +345,21 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .NoContent))
             }
         }
-        expectationForRequestFailure(API.request(GET: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
-            case APIManagerError.UnexpectedNoContent: break
+            case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestFailure(API.request(GET: "/foo").parseAsJSONWithHandler({ _ in 42 })) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSONWithHandler({ _ in 42 })) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
-            case APIManagerError.UnexpectedNoContent: break
+            case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestSuccess(API.request(GET: "/foo").parseWithHandler({ _ in 42 })) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseWithHandler({ _ in 42 })) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual(value, 42, "response body parse value")
         }
@@ -371,21 +371,21 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .NoContent))
             }
         }
-        expectationForRequestFailure(API.request(POST: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(POST: "/foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
-            case APIManagerError.UnexpectedNoContent: break
+            case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestFailure(API.request(POST: "/foo").parseAsJSONWithHandler({ _ in true })) { task, response, error in
+        expectationForRequestFailure(HTTP.request(POST: "/foo").parseAsJSONWithHandler({ _ in true })) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
-            case APIManagerError.UnexpectedNoContent: break
+            case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestSuccess(API.request(POST: "/foo").parseWithHandler({ _ in 42 })) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(POST: "/foo").parseWithHandler({ _ in 42 })) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual(value, 42, "response body parse value")
         }
@@ -399,7 +399,7 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .OK, body: "{ \"ok\": true }"))
         }
-        expectationForRequestSuccess(API.request(GET: "/foo").parseAsJSON()) { task, response, json in
+        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, json in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
             let header = (response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String
             XCTAssertNil(header, "response content type header")
@@ -415,14 +415,14 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "text/html"], body: "{ \"ok\": true }"))
             }
-            let req = API.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "/foo").parseAsJSON()
             XCTAssertEqual(req.expectedContentTypes, ["application/json"], "request expected content types")
             expectationForRequestFailure(req) { task, response, error in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
                 switch error {
-                case let APIManagerError.UnexpectedContentType(contentType, body):
+                case let HTTPManagerError.UnexpectedContentType(contentType, body):
                     XCTAssertEqual(contentType, "text/html", "error content type")
                     if let str = String(data: body, encoding: NSUTF8StringEncoding) {
                         XCTAssertEqual(str, "{ \"ok\": true }", "error body")
@@ -442,7 +442,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "text/html"], body: "Hello world"))
             }
-            let req = API.request(GET: "/foo").parseWithHandler({ _ -> Int in
+            let req = HTTP.request(GET: "/foo").parseWithHandler({ _ -> Int in
                 XCTFail("parse handler unexpectedly called")
                 return 42
             })
@@ -453,7 +453,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
                 switch error {
-                case let APIManagerError.UnexpectedContentType(contentType, body):
+                case let HTTPManagerError.UnexpectedContentType(contentType, body):
                     XCTAssertEqual(contentType, "text/html", "error content type")
                     if let str = String(data: body, encoding: NSUTF8StringEncoding) {
                         XCTAssertEqual(str, "Hello world", "error body")
@@ -473,12 +473,12 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .NoContent, headers: ["Content-Type": "text/html"]))
         }
-        expectationForRequestFailure(API.request(GET: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
             XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
             switch error {
-            case APIManagerError.UnexpectedNoContent: break
+            case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
@@ -492,7 +492,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .NoContent, headers: ["Content-Type": "text/html"]))
             }
-            let req = API.request(GET: "/foo").parseWithHandler({ response, data -> Int in
+            let req = HTTP.request(GET: "/foo").parseWithHandler({ response, data -> Int in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response.MIMEType, "text/html", "response MIME type")
@@ -515,7 +515,7 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .NoContent, headers: ["Content-Type": "text/html"]))
         }
-        expectationForRequestSuccess(API.request(DELETE: "/foo").parseAsJSON()) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(DELETE: "/foo").parseAsJSON()) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
             XCTAssertEqual(response.MIMEType, "text/html", "response MIME type")
@@ -528,7 +528,7 @@ final class PMAPITests: XCTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "[1, 2"))
         }
-        expectationForRequestFailure(API.request(GET: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
             XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
             // we only care that it's a JSON error, not specifically what the error is
@@ -541,7 +541,7 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "[1, 2"))
             }
             struct CantBeThrownError: ErrorType {}
-            let req = API.request(GET: "/foo").parseAsJSONWithHandler({ (response, json) -> Int in
+            let req = HTTP.request(GET: "/foo").parseAsJSONWithHandler({ (response, json) -> Int in
                 throw CantBeThrownError()
             })
             expectationForRequestFailure(req) { task, response, error in
@@ -555,11 +555,11 @@ final class PMAPITests: XCTestCase {
     }
     
     func testEnvironmentWithPath() {
-        API.environment = APIManager.Environment(string: "http://\(httpServer.address)/api/v1")!
+        HTTP.environment = HTTPManager.Environment(string: "http://\(httpServer.address)/api/v1")!
         expectationForHTTPRequest(httpServer, path: "/api/v1/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .OK))
         }
-        expectationForRequestSuccess(API.request(GET: "foo")) { [address=httpServer.address] (task, response, value) -> Void in
+        expectationForRequestSuccess(HTTP.request(GET: "foo")) { [address=httpServer.address] (task, response, value) -> Void in
             XCTAssertEqual(response.URL?.absoluteString, "http://\(address)/api/v1/foo", "response url does not match")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code is not OK")
         }
@@ -567,15 +567,15 @@ final class PMAPITests: XCTestCase {
     }
     
     func testEnvironmentURLs() {
-        XCTAssertEqual(APIManager.Environment(string: "http://apple.com")?.baseURL.absoluteString, "http://apple.com")
-        XCTAssertEqual(APIManager.Environment(string: "http://apple.com/")?.baseURL.absoluteString, "http://apple.com/")
-        XCTAssertEqual(APIManager.Environment(string: "http://apple.com/foo")?.baseURL.absoluteString, "http://apple.com/foo/")
-        XCTAssertEqual(APIManager.Environment(string: "http://apple.com/foo/")?.baseURL.absoluteString, "http://apple.com/foo/")
-        XCTAssertEqual(APIManager.Environment(string: "http://apple.com/foo?bar=baz")?.baseURL.absoluteString, "http://apple.com/foo/")
-        XCTAssertEqual(APIManager.Environment(string: "http://apple.com/foo#bar")?.baseURL.absoluteString, "http://apple.com/foo/")
+        XCTAssertEqual(HTTPManager.Environment(string: "http://apple.com")?.baseURL.absoluteString, "http://apple.com")
+        XCTAssertEqual(HTTPManager.Environment(string: "http://apple.com/")?.baseURL.absoluteString, "http://apple.com/")
+        XCTAssertEqual(HTTPManager.Environment(string: "http://apple.com/foo")?.baseURL.absoluteString, "http://apple.com/foo/")
+        XCTAssertEqual(HTTPManager.Environment(string: "http://apple.com/foo/")?.baseURL.absoluteString, "http://apple.com/foo/")
+        XCTAssertEqual(HTTPManager.Environment(string: "http://apple.com/foo?bar=baz")?.baseURL.absoluteString, "http://apple.com/foo/")
+        XCTAssertEqual(HTTPManager.Environment(string: "http://apple.com/foo#bar")?.baseURL.absoluteString, "http://apple.com/foo/")
         
-        XCTAssertEqual(APIManager.Environment(baseURL: NSURL(string: "http://apple.com/foo")!)?.baseURL.absoluteString, "http://apple.com/foo/")
-        XCTAssertEqual(APIManager.Environment(baseURL: NSURL(string: "foo", relativeToURL: NSURL(string: "http://apple.com"))!)?.baseURL.absoluteString, "http://apple.com/foo/")
+        XCTAssertEqual(HTTPManager.Environment(baseURL: NSURL(string: "http://apple.com/foo")!)?.baseURL.absoluteString, "http://apple.com/foo/")
+        XCTAssertEqual(HTTPManager.Environment(baseURL: NSURL(string: "foo", relativeToURL: NSURL(string: "http://apple.com"))!)?.baseURL.absoluteString, "http://apple.com/foo/")
     }
     
     func testRequestPaths() {
@@ -585,7 +585,7 @@ final class PMAPITests: XCTestCase {
             expectationForHTTPRequest(httpServer, path: serverPath ?? urlPath) { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK))
             }
-            let request = API.request(GET: requestPath)
+            let request = HTTP.request(GET: requestPath)
             XCTAssertEqual(request.url.absoluteString, "http://\(httpServer.address)\(urlPath)", "request url does not match", file: file, line: line)
             expectationForRequestSuccess(request) { [address=httpServer.address] task, response, value in
                 XCTAssertEqual(response.URL?.absoluteString, "http://\(address)\(serverPath ?? urlPath)", "response url does not match", file: file, line: line)
@@ -607,14 +607,14 @@ final class PMAPITests: XCTestCase {
         runTest("/foo/bar", urlPath: "/foo/bar")
         runTest("foo/bar", urlPath: "/foo/bar")
         
-        API.environment = APIManager.Environment(string: "http://\(httpServer.address)/")!
+        HTTP.environment = HTTPManager.Environment(string: "http://\(httpServer.address)/")!
         runTest("/foo", urlPath: "/foo")
         runTest("foo", urlPath: "/foo")
         runTest("foo/", urlPath: "/foo/")
         runTest("/", urlPath: "/")
         runTest("", urlPath: "/")
         
-        API.environment = APIManager.Environment(string: "http://\(httpServer.address)/api/v1/")!
+        HTTP.environment = HTTPManager.Environment(string: "http://\(httpServer.address)/api/v1/")!
         runTest("/foo", urlPath: "/foo")
         runTest("foo", urlPath: "/api/v1/foo")
         runTest("foo/", urlPath: "/api/v1/foo/")
@@ -635,12 +635,12 @@ final class PMAPITests: XCTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo/two") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .OK))
         }
-        expectationForRequestSuccess(API.request(GET: "one")) { [address=httpServer.address] task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "one")) { [address=httpServer.address] task, response, value in
             XCTAssertEqual(response.URL?.absoluteString, "http://\(address)/one")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
         }
-        API.environment = APIManager.Environment(string: "http://\(httpServer.address)/foo")!
-        expectationForRequestSuccess(API.request(GET: "two")) { [address=httpServer.address] task, response, value in
+        HTTP.environment = HTTPManager.Environment(string: "http://\(httpServer.address)/foo")!
+        expectationForRequestSuccess(HTTP.request(GET: "two")) { [address=httpServer.address] task, response, value in
             XCTAssertEqual(response.URL?.absoluteString, "http://\(address)/foo/two")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
         }
@@ -653,7 +653,7 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["X-Foo"], "bar", "X-Foo header")
             completionHandler(HTTPServer.Response(status: .OK, headers: ["X-Baz": "qux"]))
         }
-        let req = API.request(GET: "foo")
+        let req = HTTP.request(GET: "foo")
         req.headerFields["X-Foo"] = "bar"
         expectationForRequestSuccess(req) { task, response, data in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["X-Baz"] as? String, "qux", "X-Baz header")
@@ -668,7 +668,7 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ok\": true }"))
         }
-        expectationForRequestSuccess(API.request(DELETE: "foo").parseAsJSON()) { task, response, json in
+        expectationForRequestSuccess(HTTP.request(DELETE: "foo").parseAsJSON()) { task, response, json in
             XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, "DELETE", "current request method")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
             XCTAssertEqual(json, ["ok": true], "response body json")
@@ -681,7 +681,7 @@ final class PMAPITests: XCTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
             }
-            let req = API.request(DELETE: "foo").parseAsJSONWithHandler({ (response, json) -> Int in
+            let req = HTTP.request(DELETE: "foo").parseAsJSONWithHandler({ (response, json) -> Int in
                 return Int(try json.getArray("ary") { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) })
             })
             expectationForRequestSuccess(req) { task, response, value in
@@ -698,7 +698,7 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, text: "foobar"))
             }
             struct DecodeError: ErrorType {}
-            let req = API.request(DELETE: "foo").parseWithHandler({ response, data -> String in
+            let req = HTTP.request(DELETE: "foo").parseWithHandler({ response, data -> String in
                 guard let str = String(data: data, encoding: NSUTF8StringEncoding) else {
                     throw DecodeError()
                 }
@@ -718,7 +718,7 @@ final class PMAPITests: XCTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .NoContent))
         }
-        expectationForRequestSuccess(API.request(DELETE: "foo").parseAsJSON()) { task, response, json in
+        expectationForRequestSuccess(HTTP.request(DELETE: "foo").parseAsJSON()) { task, response, json in
             XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, "DELETE", "current request method")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertNil(json, "response body json")
@@ -733,7 +733,7 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .NoContent))
             }
             struct UnexpectedCallError: ErrorType {}
-            let req = API.request(DELETE: "foo").parseAsJSONWithHandler({ response, json -> Int in
+            let req = HTTP.request(DELETE: "foo").parseAsJSONWithHandler({ response, json -> Int in
                 throw UnexpectedCallError()
             })
             expectationForRequestSuccess(req) { task, response, json in
@@ -751,7 +751,7 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .NoContent))
             }
             struct UnexpectedCallError: ErrorType {}
-            let req = API.request(DELETE: "foo").parseWithHandler({ response, data -> String in
+            let req = HTTP.request(DELETE: "foo").parseWithHandler({ response, data -> String in
                 throw UnexpectedCallError()
             })
             expectationForRequestSuccess(req) { task, response, json in
@@ -776,7 +776,7 @@ final class PMAPITests: XCTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, body: request.body))
             }
         }
-        func addSuccessHandler(request: APIManagerNetworkRequest, redirectMethod: APIManagerRequest.Method? = nil, body: String = "", file: String = __FILE__, line: UInt = __LINE__) {
+        func addSuccessHandler(request: HTTPManagerNetworkRequest, redirectMethod: HTTPManagerRequest.Method? = nil, body: String = "", file: String = __FILE__, line: UInt = __LINE__) {
             expectationForRequestSuccess(request) { task, response, data in
                 XCTAssertEqual(task.networkTask.originalRequest?.URL?.absoluteString, "http://\(address)/foo", "original request url", file: file, line: line)
                 XCTAssertEqual(task.networkTask.originalRequest?.HTTPMethod, String(request.requestMethod), "original request HTTP method", file: file, line: line)
@@ -796,15 +796,15 @@ final class PMAPITests: XCTestCase {
         func runTest(status: HTTPServer.Status, preserveMethodOnRedirect: Bool, file: String = __FILE__, line: UInt = __LINE__) {
             // GET
             addEchoRequestHandlers(.GET, status: status, file: file, line: line)
-            addSuccessHandler(API.request(GET: "foo"), file: file, line: line)
+            addSuccessHandler(HTTP.request(GET: "foo"), file: file, line: line)
             waitForExpectationsWithTimeout(5, file: file, line: line, handler: nil)
-            API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+            HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
             
             // POST
             addEchoRequestHandlers(.POST, status: status, redirectMethod: preserveMethodOnRedirect ? .POST : .GET, file: file, line: line)
-            addSuccessHandler(API.request(POST: "foo", parameters: ["baz": "qux"]), redirectMethod: preserveMethodOnRedirect ? .POST : .GET, body: preserveMethodOnRedirect ? "baz=qux" : "", file: file, line: line)
+            addSuccessHandler(HTTP.request(POST: "foo", parameters: ["baz": "qux"]), redirectMethod: preserveMethodOnRedirect ? .POST : .GET, body: preserveMethodOnRedirect ? "baz=qux" : "", file: file, line: line)
             waitForExpectationsWithTimeout(5, file: file, line: line, handler: nil)
-            API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+            HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
             
             // JSON parsing
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
@@ -813,11 +813,11 @@ final class PMAPITests: XCTestCase {
             expectationForHTTPRequest(httpServer, path: "/bar") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{\"foo\": \"bar\", \"baz\": true, \"ary\": [1,2,3]}"))
             }
-            expectationForRequestSuccess(API.request(GET: "foo").parseAsJSON()) { task, response, json in
+            expectationForRequestSuccess(HTTP.request(GET: "foo").parseAsJSON()) { task, response, json in
                 XCTAssertEqual(json, ["foo": "bar", "baz": true, "ary": [1,2,3]], "json response", file: file, line: line)
             }
             waitForExpectationsWithTimeout(5, file: file, line: line, handler: nil)
-            API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+            HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
         }
         
         // test basic redirections
@@ -839,7 +839,7 @@ final class PMAPITests: XCTestCase {
                 XCTFail("Unexpected request for path /bar")
                 completionHandler(HTTPServer.Response(status: .NotFound))
             }
-            let req = API.request(GET: "foo")
+            let req = HTTP.request(GET: "foo")
             req.shouldFollowRedirects = false
             expectationForRequestSuccess(req) { task, response, data in
                 XCTAssertEqual(task.networkTask.originalRequest?.URL?.absoluteString, "http://\(address)/foo", "original request url")
@@ -850,17 +850,17 @@ final class PMAPITests: XCTestCase {
             }
             waitForExpectationsWithTimeout(5, handler: nil)
             httpServer.unregisterRequestCallback(token)
-            API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+            HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
         }
         
-        func addFailureExpectation(request: APIManagerParseRequest<JSON>, file: String = __FILE__, line: UInt = __LINE__) {
+        func addFailureExpectation(request: HTTPManagerParseRequest<JSON>, file: String = __FILE__, line: UInt = __LINE__) {
             expectationForRequestFailure(request) { task, response, error in
                 XCTAssertEqual(task.networkTask.originalRequest?.URL?.absoluteString, "http://\(address)/foo", "original request url", file: file, line: line)
                 XCTAssertEqual(task.networkTask.currentRequest?.URL?.absoluteString, "http://\(address)/foo", "current request url", file: file, line: line)
                 XCTAssertEqual(response?.URL?.absoluteString, "http://\(address)/foo", "response url", file: file, line: line)
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 301, "status code", file: file, line: line)
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Location"] as? String, "http://\(address)/bar", "Location header", file: file, line: line)
-                if case let APIManagerError.UnexpectedRedirect(statusCode, location, body) = error {
+                if case let HTTPManagerError.UnexpectedRedirect(statusCode, location, body) = error {
                     XCTAssertEqual(statusCode, 301, "error status code", file: file, line: line)
                     XCTAssertEqual(location?.absoluteString, "http://\(address)/bar", "error location", file: file, line: line)
                     if let str = String(data: body, encoding: NSUTF8StringEncoding) {
@@ -882,12 +882,12 @@ final class PMAPITests: XCTestCase {
                 XCTFail("Unexpected request for path /bar")
                 completionHandler(HTTPServer.Response(status: .NotFound))
             }
-            let req = API.request(GET: "foo")
+            let req = HTTP.request(GET: "foo")
             req.shouldFollowRedirects = false
             addFailureExpectation(req.parseAsJSON())
             waitForExpectationsWithTimeout(5, handler: nil)
             httpServer.unregisterRequestCallback(token)
-            API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+            HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
         }
         
         do {
@@ -898,18 +898,18 @@ final class PMAPITests: XCTestCase {
                 XCTFail("Unexpected request for path /bar")
                 completionHandler(HTTPServer.Response(status: .NotFound))
             }
-            let req = API.request(GET: "foo").parseAsJSON()
+            let req = HTTP.request(GET: "foo").parseAsJSON()
             req.shouldFollowRedirects = false
             addFailureExpectation(req)
             waitForExpectationsWithTimeout(5, handler: nil)
             httpServer.unregisterRequestCallback(token)
-            API.sessionConfiguration.URLCache?.removeAllCachedResponses()
+            HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
         }
     }
     
     func testNoEnvironment() {
-        API.environment = nil
-        expectationForRequestFailure(API.request(GET: "/foo")) { task, response, error in
+        HTTP.environment = nil
+        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
             XCTAssert(task.networkTask.error === error as NSError, "network task error")
             XCTAssertEqual((error as NSError).domain, NSURLErrorDomain, "error domain")
             XCTAssertEqual((error as NSError).code, NSURLErrorUnsupportedURL, "error code")
@@ -919,7 +919,7 @@ final class PMAPITests: XCTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
         }
-        expectationForRequestSuccess(API.request(GET: "http://\(httpServer.address)/foo")) { [address=httpServer.address] task, response, data in
+        expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.address)/foo")) { [address=httpServer.address] task, response, data in
             XCTAssertEqual(response.URL?.absoluteString, "http://\(address)/foo", "response URL")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
             if let str = String(data: data, encoding: NSUTF8StringEncoding) {

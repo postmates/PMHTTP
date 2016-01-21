@@ -100,7 +100,7 @@ internal enum MultipartBodyPart {
     }
     
     final class Deferred {
-        init(_ block: APIManagerUploadMultipart -> Void) {
+        init(_ block: HTTPManagerUploadMultipart -> Void) {
             self.block = block
         }
         
@@ -109,7 +109,7 @@ internal enum MultipartBodyPart {
         func evaluate() {
             dispatch_barrier_async(queue) {
                 guard self.value == nil else { return }
-                let helper = APIManagerUploadMultipart()
+                let helper = HTTPManagerUploadMultipart()
                 self.block(helper)
                 self.value = helper.multipartData
             }
@@ -124,14 +124,14 @@ internal enum MultipartBodyPart {
                 value = self.value
             }
             guard let value_ = value else {
-                fatalError("APIManager error: invoked wait() on Deferred without invoking evaluate()")
+                fatalError("HTTPManager error: invoked wait() on Deferred without invoking evaluate()")
             }
             return value_
         }
         
-        private let queue = dispatch_queue_create("APIManager MultipartBodyPart Deferred queue", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_CONCURRENT, QOS_CLASS_UTILITY, 0))
+        private let queue = dispatch_queue_create("HTTPManager MultipartBodyPart Deferred queue", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_CONCURRENT, QOS_CLASS_UTILITY, 0))
         private var value: [Data]?
-        private let block: APIManagerUploadMultipart -> Void
+        private let block: HTTPManagerUploadMultipart -> Void
     }
     
     /// Returns the length of the body part, in bytes, or `nil` if no length is known.
