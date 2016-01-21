@@ -321,8 +321,8 @@ extension APIManager {
     /// - Returns: An `APIManagerDataRequest`, or `nil` if the `path`  cannot be
     ///   parsed by `NSURL`.
     @objc(requestForGET:parameters:)
-    public func request(GET path: String, parameters: [String: String] = [:]) -> APIManagerDataRequest! {
-        return request(GET: path, parameters: parameters.map(NSURLQueryItem.init))
+    public func request(GET path: String, parameters: [String: AnyObject] = [:]) -> APIManagerDataRequest! {
+        return request(GET: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a GET request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -344,8 +344,8 @@ extension APIManager {
     /// - Returns: An `APIManagerDeleteRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForDELETE:parameters:)
-    public func request(DELETE path: String, parameters: [String: String] = [:]) -> APIManagerDeleteRequest! {
-        return request(DELETE: path, parameters: parameters.map(NSURLQueryItem.init))
+    public func request(DELETE path: String, parameters: [String: AnyObject] = [:]) -> APIManagerDeleteRequest! {
+        return request(DELETE: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a DELETE request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -367,8 +367,8 @@ extension APIManager {
     /// - Returns: An `APIManagerUploadRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPOST:parameters:)
-    public func request(POST path: String, parameters: [String: String] = [:]) -> APIManagerUploadRequest! {
-        return request(POST: path, parameters: parameters.map(NSURLQueryItem.init))
+    public func request(POST path: String, parameters: [String: AnyObject] = [:]) -> APIManagerUploadRequest! {
+        return request(POST: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
