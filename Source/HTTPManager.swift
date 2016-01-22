@@ -309,7 +309,7 @@ public final class HTTPManagerEnvironment: NSObject {
     ///
     /// - Important: You MUST NOT access the global `HTTP` property from within this method.
     ///   Any attempt to do so will deadlock as the property has not finished initializing.
-    func configureHTTPManager(api: HTTPManager)
+    func configureHTTPManager(httpManager: HTTPManager)
 }
 
 extension HTTPManager {
