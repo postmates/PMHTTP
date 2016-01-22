@@ -49,8 +49,10 @@ public final class HTTPManager: NSObject {
         }
         set {
             inner.asyncBarrier {
-                $0.environment = newValue
-                $0.defaultCredential = nil
+                if $0.environment != newValue {
+                    $0.environment = newValue
+                    $0.defaultCredential = nil
+                }
             }
         }
     }
@@ -295,6 +297,10 @@ public final class HTTPManagerEnvironment: NSObject {
     public override func isEqual(object: AnyObject?) -> Bool {
         guard let other = object as? HTTPManagerEnvironment else { return false }
         return baseURL == other.baseURL
+    }
+    
+    public override var hash: Int {
+        return baseURL.hash &+ 1
     }
 }
 
