@@ -22,6 +22,7 @@
 		9E7DDF2C1C18F2B600EA43AD /* PMHTTP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E7DDF211C18F2B500EA43AD /* PMHTTP.framework */; };
 		9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */; };
 		9E7DDF4B1C1A388400EA43AD /* HTTPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */; };
+		9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */; };
 		9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */; };
 		9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */; };
 /* End PBXBuildFile section */
@@ -57,6 +58,7 @@
 		9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PMHTTPTests.swift; sourceTree = "<group>"; };
 		9E7DDF321C18F2B600EA43AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManager.swift; sourceTree = "<group>"; };
+		9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPTestCase.swift; sourceTree = "<group>"; };
 		9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
 		9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTest+HTTPServerExpectation.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -134,6 +136,7 @@
 			isa = PBXGroup;
 			children = (
 				9EC8F0D11C408F1400297FC5 /* HTTP Server */,
+				9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */,
 				9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
 			);
@@ -298,6 +301,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */,
 				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
 				9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */,
 				9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */,
