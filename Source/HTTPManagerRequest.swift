@@ -407,7 +407,11 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>) -> HTTPManagerTaskResult<NSData> {
         return result.map(`try`: { response, data in
             if let statusCode = (response as? NSHTTPURLResponse)?.statusCode where !(200...399).contains(statusCode) {
-                throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data)
+                if response.MIMEType.map(MediaType.init)?.typeSubtype == "application/json", let json = try? JSON.decode(data) {
+                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: json)
+                } else {
+                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: nil)
+                }
             }
             return data
         })
@@ -568,7 +572,11 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     let location = (response.allHeaderFields["Location"] as? String).flatMap({NSURL(string: $0)})
                     throw HTTPManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, body: data)
                 } else if !(200...299).contains(statusCode) {
-                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data)
+                    if response.MIMEType.map(MediaType.init)?.typeSubtype == "application/json", let json = try? JSON.decode(data) {
+                        throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: json)
+                    } else {
+                        throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: nil)
+                    }
                 } else if statusCode != 204 && !expectedContentTypes.isEmpty, let contentType = response.allHeaderFields["Content-Type"] as? String {
                     // Not a 204 No Content, check the Content-Type against the list
                     let typeSubtype = MediaType(contentType).typeSubtype

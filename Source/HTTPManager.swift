@@ -415,7 +415,10 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
     /// An HTTP response was returned that indicates failure.
     /// - Parameter statusCode: The HTTP status code. Any code outside of 2xx or 3xx indicates failure.
     /// - Parameter body: The body of the response, if any.
-    case FailedResponse(statusCode: Int, body: NSData)
+    /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
+    ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
+    ///   `bodyJson` is `nil`.
+    case FailedResponse(statusCode: Int, body: NSData, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.
     /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
@@ -439,13 +442,15 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
     
     public var description: String {
         switch self {
-        case let .FailedResponse(statusCode, body):
+        case let .FailedResponse(statusCode, body, json):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            let bodyText = describeData(body)
-            return "FailedResponse(\(statusCode) \(statusText), body: \(bodyText)"
+            if let json = json {
+                return "FailedResponse(\(statusCode) \(statusText), bodyJson: \(json))"
+            } else {
+                return "FailedResponse(\(statusCode) \(statusText), body: \(describeData(body))"
+            }
         case let .UnexpectedContentType(contentType, body):
-            let bodyText = describeData(body)
-            return "UnexpectedContentType(\(String(reflecting: contentType)), body: \(bodyText))"
+            return "UnexpectedContentType(\(String(reflecting: contentType)), body: \(describeData(body)))"
         case .UnexpectedNoContent:
             return "UnexpectedNoContent"
         case let .UnexpectedRedirect(statusCode, location, _):
@@ -456,13 +461,11 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
     
     public var debugDescription: String {
         switch self {
-        case let .FailedResponse(statusCode, body):
+        case let .FailedResponse(statusCode, body, json):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            let bodyText = describeData(body)
-            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), body: \(bodyText))"
+            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .UnexpectedContentType(contentType, body):
-            let bodyText = describeData(body)
-            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), body: \(bodyText))"
+            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), body: \(describeData(body)))"
         case .UnexpectedNoContent:
             return "HTTPManagerError.UnexpectedNoContent"
         case let .UnexpectedRedirect(statusCode, location, body):

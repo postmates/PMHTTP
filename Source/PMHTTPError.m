@@ -12,5 +12,6 @@ NSString * const PMHTTPErrorDomain = @"PMHTTP.HTTPManagerError";
 
 NSString * const PMHTTPStatusCodeErrorKey = @"statusCode";
 NSString * const PMHTTPBodyDataErrorKey = @"body";
+NSString * const PMHTTPBodyJSONErrorKey = @"json";
 NSString * const PMHTTPContentTypeErrorKey = @"contentType";
 NSString * const PMHTTPLocationErrorKey = @"location";

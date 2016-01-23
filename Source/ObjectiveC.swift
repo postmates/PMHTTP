@@ -31,13 +31,17 @@ extension HTTPManagerError {
     /// The returned error cannot bridge back into Swift, but it contains a usable `userInfo`.
     internal func toNSError() -> NSError {
         switch self {
-        case let .FailedResponse(statusCode, body):
+        case let .FailedResponse(statusCode, body, json):
             let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: [
+            var userInfo: [NSObject: AnyObject] = [
                 NSLocalizedDescriptionKey: "HTTP response indicated failure (\(statusCode) \(statusString))",
                 PMHTTPStatusCodeErrorKey: statusCode,
                 PMHTTPBodyDataErrorKey: body
-                ])
+            ]
+            if let jsonObject = json?.object {
+                userInfo[PMHTTPBodyJSONErrorKey] = jsonObject.plistNoNull
+            }
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: userInfo)
         case let .UnexpectedContentType(contentType, body):
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedContentType.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response had unexpected content type \(String(reflecting: contentType))",

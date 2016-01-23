@@ -35,9 +35,10 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 400)
-            if case let HTTPManagerError.FailedResponse(statusCode, body) = error {
+            if case let HTTPManagerError.FailedResponse(statusCode, body, json) = error {
                 XCTAssertEqual(statusCode, 400)
                 XCTAssertEqual(String(data: body, encoding: NSUTF8StringEncoding) ?? "(not utf8)", "bar")
+                XCTAssertNil(json)
             } else {
                 XCTFail("Unexpected error: \(error)")
             }
@@ -428,6 +429,122 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
                 // we only care that it's a JSON error, not specifically what the error is
                 XCTAssert(error is JSONParserError, "expected JSONParserError, found \(error)")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+    }
+    
+    func testJSONErrors() {
+        // Error with JSON response
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: "{ \"error\": \"You sent a bad request\" }"))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+            XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
+            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+                XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
+            } else {
+                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+            }
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        // Error with declared JSON type but invalid JSON body
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: "{ error: \"You sent a bad request\" }"))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+            XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
+            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+                XCTAssertNil(json, "error body json")
+            } else {
+                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+            }
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        // Error with no declared Content-Type and valid JSON body
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            completionHandler(HTTPServer.Response(status: .BadRequest, body: "{ \"error\": \"You sent a bad request\" }"))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+            // NSURLResponse.MIMEType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
+            // Just assume it won't ever auto-detect JSON.
+            XCTAssertNotEqual(response?.MIMEType, "application/json", "response MIME type")
+            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+                XCTAssertNil(json, "error body json")
+            } else {
+                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+            }
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        // Error with explicitly-declared non-JSON Content-Type and valid JSON body
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "text/html"], body: "{ \"error\": \"You sent a bad request\" }"))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+            XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
+            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+                XCTAssertNil(json, "error body json")
+            } else {
+                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+            }
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+    }
+    
+    func testObjCJSONErrors() {
+        // test to make sure that converting JSON errors into ObjC strips nulls from the JSON
+        do {
+            let data = "{ \"ok\": false, \"title\": null, \"elts\": [null, 1, null, 2] }".dataUsingEncoding(NSUTF8StringEncoding)!
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: data))
+            }
+            expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+                XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
+                if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, body, json) = error {
+                    // check the Swift error first
+                    XCTAssertEqual(statusCode, 400, "error status code")
+                    XCTAssertEqual(body, data, "error body data")
+                    XCTAssertEqual(json, ["ok": false, "title": nil, "elts": [nil, 1, nil, 2]], "error body json")
+                    // Now check the converted version
+                    let nserror = error.toNSError()
+                    XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
+                    XCTAssertEqual(nserror.code, PMHTTPError.FailedResponse.rawValue, "NSError code")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
+                } else {
+                    XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                }
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        // test to make sure that the JSON value is always a dictionary
+        do {
+            let data = "[1, 2, 3]".dataUsingEncoding(NSUTF8StringEncoding)
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: data))
+            }
+            expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+                XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
+                if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, body, json) = error {
+                    // check the Swift error first
+                    XCTAssertEqual(statusCode, 400, "error status code")
+                    XCTAssertEqual(body, data, "error body data")
+                    XCTAssertEqual(json, [1, 2, 3], "error body json")
+                    // Now check the converted version
+                    let nserror = error.toNSError()
+                    XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
+                    XCTAssertEqual(nserror.code, PMHTTPError.FailedResponse.rawValue, "NSError code")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
+                    XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
+                } else {
+                    XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                }
             }
             waitForExpectationsWithTimeout(5, handler: nil)
         }
