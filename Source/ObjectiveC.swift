@@ -486,26 +486,35 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
         set { _request.headerFields = newValue }
     }
     
-    /// The expected Content-Type of the response. Defaults to `["application/json"]` for
-    /// JSON parse requests, or `[]` for requests created with `parseWithHandler()`.
+    /// The expected MIME type of the response. Defaults to `["application/json"]` for
+    /// JSON parse requests, or `[]` for requests created with `-parseWithHandler:`.
     ///
     /// This property is used to generate the `Accept` header, if not otherwise specified by
     /// the request. If multiple values are provided, they're treated as a priority list
     /// for the purposes of the `Accept` header.
     ///
-    /// This property is also used to validate the `Content-Type` of the response. If the
-    /// response is a 204 No Content, the `Content-Type` is not checked. For all other 2xx
-    /// responses, if at least one expected content type is provided, the `Content-Type`
-    /// header must match one of them. If it doesn't match any, the parse handler will be
+    /// This property is also used to validate the MIME type of the response. If the
+    /// response is a 204 No Content, the MIME type is not checked. For all other 2xx
+    /// responses, if at least one expected content type is provided, the MIME type
+    /// must match one of them. If it doesn't match any, the parse handler will be
     /// skipped and `HTTPManagerError.UnexpectedContentType` will be returned as the result.
     ///
-    /// - Note: An empty or missing `Content-Type` header is treated as matching.
+    /// - Note: The MIME type is only tested if the response includes a `Content-Type` header.
+    ///   If the `Content-Type` header is missing, the response will always be assumed to be
+    ///   valid. The value is tested against both the `Content-Type` header and, if it differs,
+    ///   the `NSURLResponse` property `MIMEType`. This is to account for cases where the
+    ///   protocol implementation detects a different content type than the server declared.
     ///
     /// Each media type in the list may include parameters. These parameters will be included
     /// in the `Accept` header, but will be ignored for the purposes of comparing against the
-    /// resulting `Content-Type` header. If the media type includes a parameter named `q`,
-    /// this parameter should be last, as it will be interpreted by the `Accept` header as
-    /// the priority instead of as a parameter of the media type.
+    /// resulting MIME type. If the media type includes a parameter named `q`, this parameter
+    /// should be last, as it will be interpreted by the `Accept` header as the priority
+    /// instead of as a parameter of the media type.
+    ///
+    /// - Note: Changing the `expectedContentTypes` does not affect the behavior of the parse
+    ///   handler. If you create a request using `-parseAsJSON` and then change the
+    ///   `expectedContentTypes` to `["text/plain"]`, if the server returns a `"text/plain"`
+    ///   response, the parse handler will still assume it's JSON and attempt to decode it.
     ///
     /// - Important: The media types in this list will not be checked for validity. They must
     ///   follow the rules for well-formed media types, otherwise the server may handle the

@@ -114,6 +114,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testParse() {
+        // parseAsJSON
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             XCTAssertEqual(request.method, HTTPServer.Method.GET)
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
@@ -131,6 +132,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
         
+        // parseAsJSONWithHandler
         do {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 XCTAssertEqual(request.method, HTTPServer.Method.GET, "request method")
@@ -157,6 +159,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             waitForExpectationsWithTimeout(5, handler: nil)
         }
         
+        // parseWithHandler
         do {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 XCTAssertEqual(request.method, HTTPServer.Method.GET, "request method")
@@ -180,6 +183,89 @@ final class PMHTTPTests: PMHTTPTestCase {
                 }
                 XCTAssertEqual(response.MIMEType, "text/plain", "response MIME type")
                 XCTAssertEqual(value, "raboof", "response body value")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        // parseAsJSON, no Content-Type in response
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            XCTAssertEqual(request.method, HTTPServer.Method.GET)
+            XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
+            completionHandler(HTTPServer.Response(status: .OK, body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, value in
+            if let response = response as? NSHTTPURLResponse {
+                XCTAssertEqual(response.statusCode, 200, "response status code")
+                let contentType = response.allHeaderFields["Content-Type"]
+                XCTAssertNil(contentType, "response Content-Type header")
+            } else {
+                XCTFail("Non–HTTP Response found: \(response)")
+            }
+            XCTAssertEqual(value, ["array": [1,2,3], "ok": true])
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        // parse for */*
+        do {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                XCTAssertEqual(request.method, HTTPServer.Method.GET)
+                XCTAssertEqual(request.headers["Accept"], "*/*", "request accept header")
+                completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "text/plain"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
+            }
+            let req = HTTP.request(GET: "/foo").parseAsJSON()
+            req.expectedContentTypes = ["*/*"]
+            expectationForRequestSuccess(req) { task, response, value in
+                if let response = response as? NSHTTPURLResponse {
+                    XCTAssertEqual(response.statusCode, 200, "response status code")
+                    XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "text/plain", "response Content-Type header")
+                } else {
+                    XCTFail("Non–HTTP Response found: \(response)")
+                }
+                XCTAssertEqual(response.MIMEType, "text/plain", "response MIME type")
+                XCTAssertEqual(value, ["array": [1,2,3], "ok": true], "response json value")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        // parse for text/*, both success and failure
+        do {
+            let data = "Hello world".dataUsingEncoding(NSUTF8StringEncoding)!
+            for _ in 0..<2 {
+                expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                    XCTAssertEqual(request.headers["Accept"], "text/*", "request accept header")
+                    let contentType = request.headers["X-ResultContentType"] ?? "text/plain"
+                    completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": contentType], body: data))
+                }
+            }
+            let req = HTTP.request(GET: "/foo").parseWithHandler { response, data -> Int in
+                return data.length
+            }
+            req.expectedContentTypes = ["text/*"]
+            expectationForRequestSuccess(req) { task, response, value in
+                if let response = response as? NSHTTPURLResponse {
+                    XCTAssertEqual(response.statusCode, 200, "response status code")
+                    XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "text/plain", "response Content-Type header")
+                } else {
+                    XCTFail("Non–HTTP Response found: \(response)")
+                }
+                XCTAssertEqual(response.MIMEType, "text/plain", "response MIME type")
+                XCTAssertEqual(value, 11, "response parsed value")
+            }
+            req.headerFields["X-ResultContentType"] = "application/json"
+            expectationForRequestFailure(req) { task, response, error in
+                if let response = response as? NSHTTPURLResponse {
+                    XCTAssertEqual(response.statusCode, 200, "response status code")
+                    XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "application/json", "response Content-Type header")
+                } else {
+                    XCTFail("Non–HTTP Response found: \(response)")
+                }
+                XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
+                if case let HTTPManagerError.UnexpectedContentType(contentType, body) = error {
+                    XCTAssertEqual(contentType, "application/json", "error content type")
+                    XCTAssertEqual(body, data, "error body")
+                } else {
+                    XCTFail("expected HTTPManagerError.UnexpectedContentType; found \(error)")
+                }
             }
             waitForExpectationsWithTimeout(5, handler: nil)
         }

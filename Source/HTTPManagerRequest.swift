@@ -40,7 +40,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     public let requestMethod: Method
     
     /// The Content-Type for the request.
-    /// If no data is being submitted in the request body, the *contentType*
+    /// If no data is being submitted in the request body, the `contentType`
     /// will be empty.
     public var contentType: String {
         return ""
@@ -505,26 +505,35 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         return _contentType
     }
     
-    /// The expected Content-Type of the response. Defaults to `["application/json"]` for
-    /// JSON parse requests, or `[]` for requests created with `parseWithHandler()`.
+    /// The expected MIME type of the response. Defaults to `["application/json"]` for
+    /// JSON parse requests, or `[]` for requests created with `parseWithHandler(_:)`.
     ///
     /// This property is used to generate the `Accept` header, if not otherwise specified by
     /// the request. If multiple values are provided, they're treated as a priority list
     /// for the purposes of the `Accept` header.
     ///
-    /// This property is also used to validate the `Content-Type` of the response. If the
-    /// response is a 204 No Content, the `Content-Type` is not checked. For all other 2xx
-    /// responses, if at least one expected content type is provided, the `Content-Type`
-    /// header must match one of them. If it doesn't match any, the parse handler will be
+    /// This property is also used to validate the MIME type of the response. If the
+    /// response is a 204 No Content, the MIME type is not checked. For all other 2xx
+    /// responses, if at least one expected content type is provided, the MIME type
+    /// must match one of them. If it doesn't match any, the parse handler will be
     /// skipped and `HTTPManagerError.UnexpectedContentType` will be returned as the result.
     ///
-    /// - Note: An empty or missing `Content-Type` header is treated as matching.
+    /// - Note: The MIME type is only tested if the response includes a `Content-Type` header.
+    ///   If the `Content-Type` header is missing, the response will always be assumed to be
+    ///   valid. The value is tested against both the `Content-Type` header and, if it differs,
+    ///   the `NSURLResponse` property `MIMEType`. This is to account for cases where the
+    ///   protocol implementation detects a different content type than the server declared.
     ///
     /// Each media type in the list may include parameters. These parameters will be included
     /// in the `Accept` header, but will be ignored for the purposes of comparing against the
-    /// resulting `Content-Type` header. If the media type includes a parameter named `q`,
-    /// this parameter should be last, as it will be interpreted by the `Accept` header as
-    /// the priority instead of as a parameter of the media type.
+    /// resulting MIME type. If the media type includes a parameter named `q`, this parameter
+    /// should be last, as it will be interpreted by the `Accept` header as the priority
+    /// instead of as a parameter of the media type.
+    ///
+    /// - Note: Changing the `expectedContentTypes` does not affect the behavior of the parse
+    ///   handler. If you create a request using `parseAsJSON()` and then change the
+    ///   `expectedContentTypes` to `["text/plain"]`, if the server returns a `"text/plain"`
+    ///   response, the parse handler will still assume it's JSON and attempt to decode it.
     ///
     /// - Important: The media types in this list will not be checked for validity. They must
     ///   follow the rules for well-formed media types, otherwise the server may handle the
@@ -577,11 +586,21 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     } else {
                         throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: nil)
                     }
-                } else if statusCode != 204 && !expectedContentTypes.isEmpty, let contentType = response.allHeaderFields["Content-Type"] as? String {
-                    // Not a 204 No Content, check the Content-Type against the list
-                    let typeSubtype = MediaType(contentType).typeSubtype
-                    if !typeSubtype.isEmpty && !expectedContentTypes.contains({ MediaType($0).typeSubtype.caseInsensitiveCompare(typeSubtype) == .OrderedSame }) {
-                        throw HTTPManagerError.UnexpectedContentType(contentType: contentType, body: data)
+                } else if statusCode != 204 && !expectedContentTypes.isEmpty, let contentType = (response.allHeaderFields["Content-Type"] as? String).map(MediaType.init) where !contentType.typeSubtype.isEmpty {
+                    // Not a 204 No Content, check the MIME type against the list
+                    // As per the doc comment on expectedContentTypes, we check both the response MIMEType and, if it's different, the Content-Type header.
+                    var mimeType = response.MIMEType.map(MediaType.init)
+                    if mimeType?.typeSubtype == contentType.typeSubtype {
+                        mimeType = nil
+                    }
+                    let valid = expectedContentTypes.contains({
+                        // ignore the parameters from expectedContentTypes
+                        let pattern = MediaType(MediaType($0).typeSubtype)
+                        if let mimeType = mimeType where pattern ~= mimeType { return true }
+                        return pattern ~= contentType
+                    })
+                    if !valid {
+                        throw HTTPManagerError.UnexpectedContentType(contentType: (mimeType ?? contentType).rawValue, body: data)
                     }
                 }
             }

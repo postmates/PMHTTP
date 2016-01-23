@@ -24,13 +24,17 @@ internal func trimLWS(str: String) -> String {
 }
 
 /// Helper class for manipulating media types.
-internal struct MediaType: CustomStringConvertible, CustomDebugStringConvertible {
+internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     /// The portion of the media type before any parameters, with LWS trimmed off.
     /// Values are of the form `"text/plain"` or `"application/json"`.
     let typeSubtype: String
-    // The parameter portion of the media type, if any.
+    /// The type portion of the media type, e.g. `"text"` for `"text/plain"`.
+    let type: String
+    /// The subtype portion of the media type, e.g. `"plain"` for `"text/plain"`.
+    let subtype: String
+    // The parameter portion of the media type. May be empty.
     let params: Parameters
-    /// The raw value that was used to initialize the `MediaType`.
+    /// The raw value that was used to initialize the `MediaType`, with surrounding LWS removed.
     let rawValue: String
     
     var description: String {
@@ -42,7 +46,19 @@ internal struct MediaType: CustomStringConvertible, CustomDebugStringConvertible
     }
     
     /// Constructs a `MediaType` from a string like `"text/plain"` or `"text/html; level=1; q=0.9"`.
+    ///
+    /// The expected format of the string is
+    /// ```
+    /// media-type = *LWS type "/" subtype *( *LWS ";" *LWS name "=" value ) *LWS
+    /// type = token | "*"
+    /// subtype = token | "*"
+    /// name = token
+    /// value = token | quoted-string
+    /// ```
+    ///
+    /// - Bug: This does not currently perform any validation of the media type syntax.
     init(_ rawValue: String) {
+        let rawValue = trimLWS(rawValue)
         self.rawValue = rawValue
         if let idx = rawValue.unicodeScalars.indexOf(";") {
             typeSubtype = trimLWS(String(rawValue.unicodeScalars.prefixUpTo(idx)))
@@ -50,6 +66,13 @@ internal struct MediaType: CustomStringConvertible, CustomDebugStringConvertible
         } else {
             typeSubtype = trimLWS(rawValue)
             params = Parameters("")
+        }
+        if let slashIdx = typeSubtype.unicodeScalars.indexOf("/") {
+            type = String(typeSubtype.unicodeScalars.prefixUpTo(slashIdx))
+            subtype = String(typeSubtype.unicodeScalars.suffixFrom(slashIdx.successor()))
+        } else {
+            type = typeSubtype
+            subtype = ""
         }
     }
     
@@ -71,7 +94,7 @@ internal struct MediaType: CustomStringConvertible, CustomDebugStringConvertible
         /// - Parameter rawValue: A string like `"level=1"` or `"level=1; q=0.9"`.
         ///   The string must match the following syntax:
         ///   ```
-        ///   params = name "=" value *( *LWS ";" *LWS name "=" value)
+        ///   params = name "=" value *( *LWS ";" *LWS name "=" value )
         ///   name = token
         ///   value = token | quoted-string
         ///   ```
@@ -152,4 +175,38 @@ internal struct MediaType: CustomStringConvertible, CustomDebugStringConvertible
             }
         }
     }
+}
+
+/// Compares two `MediaType`s for equality, ignoring any LWS.
+/// The type, subtype, and parameter names are case-insensitive, but the parameter values are case-sensitive.
+/// - Note: The order of parameters is considered significant.
+func ==(lhs: MediaType, rhs: MediaType) -> Bool {
+    return lhs.typeSubtype.caseInsensitiveCompare(rhs.typeSubtype) == .OrderedSame
+        && lhs.params.elementsEqual(rhs.params, isEquivalent: { $0.0.caseInsensitiveCompare($1.0) == .OrderedSame && $0.1 == $1.1 })
+}
+
+/// Returns `true` iff `pattern` is equal to `value`, where a `type` or `subtype` of `*`
+/// in `pattern` is treated as matching all strings, and where `value` may contain parameters
+/// that `pattern` does not have. Any parameters in `pattern` are treated as required.
+/// The type, subtype, and parameter names are case-insensitive, but the parameter values are case-sensitive.
+/// - Note: The order of parameters is considered significant. The `value` may contain
+///   parameters that `pattern` does not have, but any parameters in `pattern` must occur in
+///   the same order in `value` (possibly with other parameters interspersed).
+func ~=(pattern: MediaType, value: MediaType) -> Bool {
+    if pattern.type != "*" && pattern.type.caseInsensitiveCompare(value.type) != .OrderedSame { return false }
+    if pattern.subtype != "*" && pattern.subtype.caseInsensitiveCompare(value.subtype) != .OrderedSame { return false }
+    if !pattern.params.rawValue.isEmpty {
+        var pgen = pattern.params.generate()
+        var vgen = value.params.generate()
+        outer: while let pparam = pgen.next() {
+            while let vparam = vgen.next() {
+                if pparam.0.caseInsensitiveCompare(vparam.0) == .OrderedSame && pparam.1 == vparam.1 {
+                    continue outer
+                }
+            }
+            // we ran out of value parameters
+            return false
+        }
+    }
+    return true
 }
