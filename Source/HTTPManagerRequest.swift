@@ -672,7 +672,7 @@ private func acceptHeaderValueForContentTypes(contentTypes: [String]) -> String 
     var priority = 9
     for contentType in contentTypes.dropFirst() {
         let mediaType = MediaType(contentType)
-        if mediaType.params.contains({ $0.0.caseInsensitiveCompare("q") == .OrderedSame }) {
+        if mediaType.params.contains({ $0.0.caseInsensitiveCompare("q") == .OrderedSame && $0.1 != nil }) {
             value += ", \(contentType)"
         } else {
             value += ", \(contentType);q=0.\(priority)"

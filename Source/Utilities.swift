@@ -23,6 +23,122 @@ internal func trimLWS(str: String) -> String {
     return String(scalars[(start ?? scalars.startIndex)..<(end ?? scalars.endIndex)])
 }
 
+/// Parameters separated by a single character (typically comma or semicolon).
+/// Acts as a sequence of `(name, value?)` pairs. The value is provided as-is, without any unquoting.
+/// LWS is allowed around the delimiter character, but is not allowed around the =.
+/// The accepted syntax is:
+/// ```
+/// params = OWS *( *( delim OWS ) token [ "=" ( token / quoted-string ) ] OWS ) *( delim OWS )
+/// OWS = <OWS, see [RFC7230], Section 3.2.3> ; optional white-space
+/// token = <token, see [RFC7230], Section 3.2.6>
+/// quoted-string = <quoted-string, see [RFC7230], Section 3.2.6>
+/// delim = <provided to the initializer, anything besides SP, HTAB, "=", or '"'>
+/// ```
+/// - Bug: Does not actually validate the whole syntax. Invalid sequences will still be yielded
+///   as written, e.g. `"\"baz\"=foo bar"` will yield `("\"baz\"", "foo bar")`.
+struct DelimitedParameters : SequenceType, CustomStringConvertible {
+    /// The raw value that was used to initialize the `DelimitedParameters`.
+    let rawValue: String
+    /// The delimiter that separates the elements in the raw value.
+    let delimiter: UnicodeScalar
+    
+    var description: String {
+        return rawValue
+    }
+    
+    func generate() -> Generator {
+        return Generator(scalars: rawValue.unicodeScalars, delimiter: delimiter)
+    }
+    
+    /// Constructs a `DelimitedParameters` from a given string.
+    /// - Parameter rawValue: A string containing the delimited parameters.
+    ///   For example, if the delimiter is `";"`, the raw value might be `"level=1"` or `"level=1; q=0.9"`.
+    /// - Parameter delimiter: The delimiter that separates the parameters in the raw value. Default is `","`.
+    /// - Requires: `delimiter` must not be `" "`, `"\t"`, `"="`, or `"\""`.
+    init(_ rawValue: String, delimiter: UnicodeScalar = ",") {
+        self.rawValue = rawValue
+        self.delimiter = delimiter
+        switch delimiter {
+        case " ", "\t", "=", "\"":
+            fatalError("cannot initialize DelimitedParameters with a scalar value \(String(reflecting: delimiter))")
+        default: break
+        }
+    }
+    
+    struct Generator : GeneratorType {
+        private var scalars: String.UnicodeScalarView
+        private let delimiter: UnicodeScalar
+        
+        mutating func next() -> (String,String?)? {
+            /// Skips a quoted-string that starts at `start`. Returns the index of the first scalar
+            /// past the end of the quoted-string, or `scalars.endIndex` if the string never ends.
+            func skipQuotedStringAt(start: String.UnicodeScalarIndex, scalars: String.UnicodeScalarView) -> String.UnicodeScalarIndex {
+                // we already know start contains a dquote, don't bother looking at it.
+                var gen = (start.successor()..<scalars.endIndex).generate()
+                while let idx = gen.next() {
+                    switch scalars[idx] {
+                    case "\"": return idx.successor()
+                    case "\\": _ = gen.next()
+                    default: break
+                    }
+                }
+                return scalars.endIndex
+            }
+            
+            top: while true { // loop in case of empty parameters
+                guard let startIdx = scalars.indexOf({ !isLWS($0) }) else { return nil }
+                var equalIdx_: String.UnicodeScalarIndex?
+                loop: for idx in startIdx..<scalars.endIndex {
+                    switch scalars[idx] {
+                    case "=":
+                        equalIdx_ = idx
+                        break loop
+                    case delimiter:
+                        // token with no value
+                        defer { scalars = scalars.suffixFrom(idx.successor()) }
+                        if idx == startIdx { // empty parameter, loop again
+                            continue top
+                        } else {
+                            return (String(scalars[startIdx..<idx]), nil)
+                        }
+                    default:
+                        break
+                    }
+                }
+                guard let equalIdx = equalIdx_ else {
+                    // final parameter has no value
+                    defer { scalars = String.UnicodeScalarView() }
+                    return (String(scalars.suffixFrom(startIdx)), nil)
+                }
+                let valueIdx = equalIdx.successor()
+                var nextIdx = valueIdx
+                if valueIdx != scalars.endIndex && scalars[valueIdx] == "\"" {
+                    // skip the quoted-string
+                    nextIdx = skipQuotedStringAt(valueIdx, scalars: scalars)
+                    // there shouldn't be anything besides LWS before the next delimiter, but we'll just fall back
+                    // to the non-quoted-string parse in case it is invalid.
+                }
+                var trailingLWSIdx: String.UnicodeScalarIndex?
+                for idx in nextIdx..<scalars.endIndex {
+                    switch scalars[idx] {
+                    case delimiter:
+                        defer { scalars = scalars.suffixFrom(idx.successor()) }
+                        return (String(scalars[startIdx..<equalIdx]), String(scalars[valueIdx..<(trailingLWSIdx ?? idx)]))
+                    case let us where isLWS(us):
+                        if trailingLWSIdx == nil {
+                            trailingLWSIdx = idx
+                        }
+                    default:
+                        trailingLWSIdx = nil
+                    }
+                }
+                defer { scalars = String.UnicodeScalarView() }
+                return (String(scalars[startIdx..<equalIdx]), String(scalars[valueIdx..<(trailingLWSIdx ?? scalars.endIndex)]))
+            }
+        }
+    }
+}
+
 /// Helper class for manipulating media types.
 internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     /// The portion of the media type before any parameters, with LWS trimmed off.
@@ -33,7 +149,7 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
     /// The subtype portion of the media type, e.g. `"plain"` for `"text/plain"`.
     let subtype: String
     // The parameter portion of the media type. May be empty.
-    let params: Parameters
+    let params: DelimitedParameters
     /// The raw value that was used to initialize the `MediaType`, with surrounding LWS removed.
     let rawValue: String
     
@@ -62,10 +178,10 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
         self.rawValue = rawValue
         if let idx = rawValue.unicodeScalars.indexOf(";") {
             typeSubtype = trimLWS(String(rawValue.unicodeScalars.prefixUpTo(idx)))
-            params = Parameters(String(rawValue.unicodeScalars.suffixFrom(idx.successor())))
+            params = DelimitedParameters(String(rawValue.unicodeScalars.suffixFrom(idx.successor())), delimiter: ";")
         } else {
             typeSubtype = trimLWS(rawValue)
-            params = Parameters("")
+            params = DelimitedParameters("", delimiter: ";")
         }
         if let slashIdx = typeSubtype.unicodeScalars.indexOf("/") {
             type = String(typeSubtype.unicodeScalars.prefixUpTo(slashIdx))
@@ -76,105 +192,6 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
         }
     }
     
-    /// Parameters from a media type. Acts as a sequence of `(name, value)` pairs.
-    /// The value is provided as-is, without any unquoting.
-    struct Parameters : SequenceType, CustomStringConvertible {
-        /// The raw value that was used to initialize the `Parameters`.
-        let rawValue: String
-        
-        var description: String {
-            return rawValue
-        }
-        
-        func generate() -> Generator {
-            return Generator(scalars: rawValue.unicodeScalars)
-        }
-        
-        /// Constructs a `Parameters` from the parameter portion of a media type string.
-        /// - Parameter rawValue: A string like `"level=1"` or `"level=1; q=0.9"`.
-        ///   The string must match the following syntax:
-        ///   ```
-        ///   params = name "=" value *( *LWS ";" *LWS name "=" value )
-        ///   name = token
-        ///   value = token | quoted-string
-        ///   ```
-        ///   The definitions of `LWS`, `token`, and `quoted-string` come from RFC 2616.
-        init(_ rawValue: String) {
-            self.rawValue = rawValue
-        }
-        
-        struct Generator : GeneratorType {
-            var scalars: String.UnicodeScalarView
-            
-            mutating func next() -> (String,String)? {
-                /// Skips a quoted-string that starts at `start`. Returns the index of the first scalar
-                /// past the end of the quoted-string, or `scalars.endIndex` if the string never ends.
-                func skipQuotedStringAt(start: String.UnicodeScalarIndex, scalars: String.UnicodeScalarView) -> String.UnicodeScalarIndex {
-                    // we already know start contains a dquote, don't bother looking at it.
-                    var gen = (start.successor()..<scalars.endIndex).generate()
-                    while let idx = gen.next() {
-                        switch scalars[idx] {
-                        case "\"": return idx.successor()
-                        case "\\": _ = gen.next()
-                        default: break
-                        }
-                    }
-                    return scalars.endIndex
-                }
-                
-                top: while true { // loop in case of empty parameters (which aren't legal anyway)
-                    guard let startIdx = scalars.indexOf({ !isLWS($0) }) else { return nil }
-                    var equalIdx_: String.UnicodeScalarIndex?
-                    loop: for idx in startIdx..<scalars.endIndex {
-                        switch scalars[idx] {
-                        case "=":
-                            equalIdx_ = idx
-                            break loop
-                        case ";":
-                            // parameter with no value; not legal, but we'll handle it anyway
-                            defer { scalars = scalars.suffixFrom(idx.successor()) }
-                            if idx == startIdx { // empty parameter, loop again
-                                continue top
-                            } else {
-                                return (String(scalars[startIdx..<idx]), "")
-                            }
-                        default:
-                            break
-                        }
-                    }
-                    guard let equalIdx = equalIdx_ else {
-                        // final parameter has no value
-                        defer { scalars = String.UnicodeScalarView() }
-                        return (String(scalars.suffixFrom(startIdx)), "")
-                    }
-                    let valueIdx = equalIdx.successor()
-                    var nextIdx = valueIdx
-                    if valueIdx != scalars.endIndex && scalars[valueIdx] == "\"" {
-                        // skip the quoted-string
-                        nextIdx = skipQuotedStringAt(valueIdx, scalars: scalars)
-                        // there shouldn't be anything besides LWS before the next semi, but we'll just fall back
-                        // to the non-quoted-string parse in case it is invalid.
-                    }
-                    var trailingLWSIdx: String.UnicodeScalarIndex?
-                    for idx in nextIdx..<scalars.endIndex {
-                        switch scalars[idx] {
-                        case ";":
-                            defer { scalars = scalars.suffixFrom(idx.successor()) }
-                            return (String(scalars[startIdx..<equalIdx]), String(scalars[valueIdx..<(trailingLWSIdx ?? idx)]))
-                        case let us where isLWS(us):
-                            if trailingLWSIdx == nil {
-                                trailingLWSIdx = idx
-                            }
-                        default:
-                            trailingLWSIdx = nil
-                        }
-                    }
-                    defer { scalars = String.UnicodeScalarView() }
-                    return (String(scalars[startIdx..<equalIdx]), String(scalars[valueIdx..<(trailingLWSIdx ?? scalars.endIndex)]))
-                }
-            }
-        }
-    }
 }
 
 /// Compares two `MediaType`s for equality, ignoring any LWS.
