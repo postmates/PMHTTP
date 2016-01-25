@@ -209,6 +209,18 @@ final class HTTPServer {
         }
     }
     
+    private static let httpDateFormatter: NSDateFormatter = {
+        let formatter = NSDateFormatter()
+        let locale = NSLocale(localeIdentifier: "en_US_POSIX")
+        let calendar = NSCalendar(identifier: NSCalendarIdentifierGregorian)!
+        calendar.locale = locale
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.timeZone = NSTimeZone(abbreviation: "GMT")!
+        formatter.dateFormat = "EEE, dd MMM yyyy HH':'mm':'ss 'GMT'"
+        return formatter
+    }()
+    
     // MARK: Status
     
     /// An HTTP status code.
@@ -320,6 +332,10 @@ final class HTTPServer {
             self.status = status
             self.headers = headers
             self.body = body
+            // If the headers don't include Date, let's set it automatically
+            if self.headers.indexForKey("Date") == nil {
+                self.headers["Date"] = HTTPServer.httpDateFormatter.stringFromDate(NSDate())
+            }
         }
         
         init(status: Status, headers: HTTPHeaders = [:], body: String) {
