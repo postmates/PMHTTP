@@ -23,6 +23,91 @@ internal func trimLWS(str: String) -> String {
     return String(scalars[(start ?? scalars.startIndex)..<(end ?? scalars.endIndex)])
 }
 
+/// A `String` newtype that supports case-insensitive hashing and equality comparisons.
+///
+/// This type only works properly with ASCII strings. Strings with non-ASCII scalars will compare
+/// using string scalar equality, without even taking NFD form into account. This means that
+/// `"t\u{E9}st"` and `"te\u{301}st"` compare as non-equal even though the `String` versions
+/// will compare as equal.
+/// - Note: The `hashValue` of `CaseInsensitiveString` will not match the `hashValue` of `String`
+///   even when the wrapped string is already lowercase.
+internal struct CaseInsensitiveASCIIString: Hashable, StringLiteralConvertible, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    /// The wrapped string.
+    let string: String
+    
+    /// Creates a new `CaseInsensitiveString` that wraps a given string.
+    init(_ string: String) {
+        self.string = string
+    }
+    
+    init(stringLiteral: String) {
+        string = stringLiteral
+    }
+    
+    init(extendedGraphemeClusterLiteral value: String) {
+        self.string = value
+    }
+    
+    init(unicodeScalarLiteral value: String) {
+        self.string = value
+    }
+    
+    /// A 128-element array of the lowercase codepoint for all ASCII values 0-127.
+    private static let lowercaseTable: ContiguousArray<UInt8> = ContiguousArray(((0 as UInt8)...127).lazy.map({ x in
+        if x >= 0x41 && x <= 0x5a { // A-Z
+            return x + 0x20
+        } else {
+            return x
+        }
+    }))
+    
+    var hashValue: Int {
+        var hasher = SipHasher()
+        CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
+            for x in string.utf16 {
+                if _fastPath(x <= 127) {
+                    hasher.write(table[Int(x)])
+                } else {
+                    hasher.write(x)
+                }
+            }
+        }
+        return Int(truncatingBitPattern: hasher.finish())
+    }
+    
+    var description: String {
+        return string
+    }
+    
+    var debugDescription: String {
+        return String(reflecting: string)
+    }
+    
+    func customMirror() -> Mirror {
+        return Mirror(reflecting: string)
+    }
+}
+
+func ==(lhs: CaseInsensitiveASCIIString, rhs: CaseInsensitiveASCIIString) -> Bool {
+    return CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
+        var (lhsGen, rhsGen) = (lhs.string.utf16.generate(), rhs.string.utf16.generate())
+        while true {
+            switch (lhsGen.next(), rhsGen.next()) {
+            case let (a?, b?):
+                if _fastPath(a <= 127 && b <= 127) {
+                    if table[Int(a)] != table[Int(b)] {
+                        return false
+                    }
+                } else if a != b {
+                    return false
+                }
+            case (_?, nil), (nil, _?): return false
+            case (nil, nil): return true
+            }
+        }
+    }
+}
+
 /// Parameters separated by a single character (typically comma or semicolon).
 /// Acts as a sequence of `(name, value?)` pairs. The value is provided as-is, without any unquoting.
 /// LWS is allowed around the delimiter character, but is not allowed around the =.
