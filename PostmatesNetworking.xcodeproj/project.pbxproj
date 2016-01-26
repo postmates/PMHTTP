@@ -18,6 +18,8 @@
 		9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */; };
 		9E4C77D01C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E4C77CE1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h */; };
 		9E4C77D11C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CF1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m */; };
+		9E681CB81C56EB1000422CE4 /* SipHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E681CB71C56EB1000422CE4 /* SipHash.swift */; };
+		9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E681CB91C56FBF100422CE4 /* SipHashTests.swift */; };
 		9E7DDF251C18F2B600EA43AD /* PMHTTP.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E7DDF241C18F2B600EA43AD /* PMHTTP.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9E7DDF2C1C18F2B600EA43AD /* PMHTTP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E7DDF211C18F2B500EA43AD /* PMHTTP.framework */; };
 		9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */; };
@@ -51,6 +53,8 @@
 		9E4C77CE1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
 		9E4C77CF1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPManagerTaskStateBox.m; sourceTree = "<group>"; };
 		9E4C77D51C3C9D90000FF8AC /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		9E681CB71C56EB1000422CE4 /* SipHash.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SipHash.swift; sourceTree = "<group>"; };
+		9E681CB91C56FBF100422CE4 /* SipHashTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SipHashTests.swift; sourceTree = "<group>"; };
 		9E7DDF211C18F2B500EA43AD /* PMHTTP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PMHTTP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E7DDF241C18F2B600EA43AD /* PMHTTP.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMHTTP.h; sourceTree = "<group>"; };
 		9E7DDF261C18F2B600EA43AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -125,6 +129,7 @@
 				9E139FA51C4EC83800A764BD /* PMHTTPError.h */,
 				9E139FA31C4EC82F00A764BD /* PMHTTPError.m */,
 				9E4C77821C2B792A000FF8AC /* QueueConfined.swift */,
+				9E681CB71C56EB1000422CE4 /* SipHash.swift */,
 				9E4C77D41C3C9D7F000FF8AC /* Private */,
 				9E7DDF261C18F2B600EA43AD /* Info.plist */,
 			);
@@ -138,6 +143,7 @@
 				9EC8F0D11C408F1400297FC5 /* HTTP Server */,
 				9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */,
 				9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */,
+				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
 			);
 			name = PMHTTPTests;
@@ -289,6 +295,7 @@
 				9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */,
 				9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */,
 				9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */,
+				9E681CB81C56EB1000422CE4 /* SipHash.swift in Sources */,
 				9E4C77D11C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m in Sources */,
 				9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */,
 				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,
@@ -302,6 +309,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */,
+				9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */,
 				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
 				9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */,
 				9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */,
