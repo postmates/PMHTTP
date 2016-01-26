@@ -1012,4 +1012,82 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
     }
+    
+    func testCacheStoragePolicy() {
+        guard let cache = HTTP.sessionConfiguration.URLCache else {
+            XCTFail("No cache configured on the session")
+            return
+        }
+        // no caching headers
+        do {
+            cache.removeAllCachedResponses()
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
+            }
+            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
+            expectationForRequestSuccess(req) { _ in }
+            waitForExpectationsWithTimeout(5, handler: nil)
+            if let response = cache.cachedResponseForRequest(req.preparedURLRequest) {
+                XCTAssert(response.storagePolicy == .Allowed, "cached response storage policy")
+            } else {
+                XCTFail("couldn't find cached response")
+            }
+        }
+        do {
+            cache.removeAllCachedResponses()
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
+            }
+            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            req.defaultResponseCacheStoragePolicy = .AllowedInMemoryOnly
+            expectationForRequestSuccess(req) { _ in }
+            waitForExpectationsWithTimeout(5, handler: nil)
+            if let response = cache.cachedResponseForRequest(req.preparedURLRequest) {
+                XCTAssert(response.storagePolicy == .AllowedInMemoryOnly, "cached response storage policy")
+            } else {
+                XCTFail("couldn't find cached response")
+            }
+        }
+        do {
+            cache.removeAllCachedResponses()
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
+            }
+            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            req.defaultResponseCacheStoragePolicy = .NotAllowed
+            expectationForRequestSuccess(req) { _ in }
+            waitForExpectationsWithTimeout(5, handler: nil)
+            XCTAssert(cache.cachedResponseForRequest(req.preparedURLRequest) == nil, "cached response")
+        }
+        // caching headers
+        for policy in [NSURLCacheStoragePolicy.Allowed, .AllowedInMemoryOnly, .NotAllowed] {
+            cache.removeAllCachedResponses()
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .OK, headers: ["Cache-Control": "max-age=60"], text: "Hello world"))
+            }
+            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            req.defaultResponseCacheStoragePolicy = policy
+            expectationForRequestSuccess(req) { _ in }
+            waitForExpectationsWithTimeout(5, handler: nil)
+            if let response = cache.cachedResponseForRequest(req.preparedURLRequest) {
+                XCTAssert(response.storagePolicy == .Allowed, "cached response storage policy")
+            } else {
+                XCTFail("couldn't find cached response")
+            }
+        }
+        // parse requests
+        do {
+            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
+            XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .NotAllowed, "json parse request cache storage policy")
+            XCTAssert(req.parseAsJSONWithHandler({ $1 }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
+        }
+        do {
+            let req = HTTP.request(DELETE: "http://\(httpServer.address)/foo")
+            XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
+            XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .NotAllowed, "json parse request cache storage policy")
+            XCTAssert(req.parseAsJSONWithHandler({ $1 }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
+        }
+    }
 }

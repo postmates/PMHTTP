@@ -73,6 +73,19 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// is used. Default is `nil`.
     public var cachePolicy: NSURLRequestCachePolicy?
     
+    /// The default cache storage policy to use for the response if the response does not
+    /// include appropriate caching headers. If the response does include appropriate headers
+    /// such as `Cache-Control` or `Expires`, this property is ignored.
+    ///
+    /// This property only establishes an upper bound on the cache storage allowed. If the
+    /// URL session proposes to store the cached response in-memory only and the default policy
+    /// is set to `.Allowed`, the response will still be stored in-memory only, and if the URL
+    /// session proposes to not cache the response at all, the response will not be cached.
+    ///
+    /// The default value is `.Allowed` for most requests, and `.NotAllowed` for parse requests
+    /// created from `parseAsJSON()` or `parseAsJSONWithHandler()`.
+    public var defaultResponseCacheStoragePolicy: NSURLCacheStoragePolicy = .Allowed
+    
     /// `true` iff redirects should be followed when processing the response.
     /// If `false`, network requests return a successful result containing the redirection
     /// response, and parse requests return an error with `HTTPManagerError.UnexpectedRedirect()`.
@@ -131,6 +144,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         timeoutInterval = request.timeoutInterval
         cachePolicy = request.cachePolicy
         shouldFollowRedirects = request.shouldFollowRedirects
+        defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
         #if os(iOS)
@@ -448,7 +462,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
             guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
                 throw HTTPManagerError.UnexpectedNoContent
             }
@@ -469,7 +483,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
             guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
                 throw HTTPManagerError.UnexpectedNoContent
             }
@@ -624,7 +638,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     private let _contentType: String
     private let uploadBody: UploadBody?
     
-    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
+    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, defaultResponseCacheStoragePolicy: NSURLCacheStoragePolicy? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
         self.parseHandler = parseHandler
         prepareRequestHandler = request.prepareURLRequest()
         _contentType = request.contentType
@@ -635,6 +649,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         timeoutInterval = request.timeoutInterval
         cachePolicy = request.cachePolicy
         shouldFollowRedirects = request.shouldFollowRedirects
+        self.defaultResponseCacheStoragePolicy = defaultResponseCacheStoragePolicy ?? request.defaultResponseCacheStoragePolicy
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
         #if os(iOS)
@@ -695,7 +710,7 @@ public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
     /// If the response is a 204 (No Content), there is no data to parse.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON?> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
@@ -720,7 +735,7 @@ public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T?) -> HTTPManagerParseRequest<T?> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
             if (response as? NSHTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil

@@ -719,6 +719,46 @@ extension SessionDelegate: NSURLSessionDataDelegate {
         }
     }
     
+    private static let cacheControlValues: Set<CaseInsensitiveASCIIString> = ["no-cache", "no-store", "max-age", "s-maxage"]
+    
+    @objc func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, willCacheResponse proposedResponse: NSCachedURLResponse, completionHandler: (NSCachedURLResponse?) -> Void) {
+        guard var taskInfo = tasks[dataTask.taskIdentifier] else {
+            completionHandler(proposedResponse)
+            return
+        }
+        assert(taskInfo.task.networkTask === dataTask, "internal HTTPManager error: taskInfo out of sync")
+        func hasCachingHeaders(response: NSURLResponse) -> Bool {
+            guard let response = response as? NSHTTPURLResponse else { return false }
+            if response.allHeaderFields["Expires"] != nil { return true }
+            if let cacheControl = response.allHeaderFields["Cache-Control"] as? String {
+                // Only treat certain directives as affecting caching.
+                // Directives like `public` don't actually change whether something is cached.
+                for (key, _) in DelimitedParameters(cacheControl, delimiter: ",") {
+                    if SessionDelegate.cacheControlValues.contains(CaseInsensitiveASCIIString(key)) {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+        switch (taskInfo.task.defaultResponseCacheStoragePolicy, proposedResponse.storagePolicy) {
+        case (.AllowedInMemoryOnly, .Allowed):
+            if hasCachingHeaders(proposedResponse.response) {
+                completionHandler(proposedResponse)
+            } else {
+                completionHandler(NSCachedURLResponse(response: proposedResponse.response, data: proposedResponse.data, userInfo: proposedResponse.userInfo, storagePolicy: .AllowedInMemoryOnly))
+            }
+        case (.NotAllowed, .Allowed), (.NotAllowed, .AllowedInMemoryOnly):
+            if hasCachingHeaders(proposedResponse.response) {
+                completionHandler(proposedResponse)
+            } else {
+                completionHandler(nil)
+            }
+        default:
+            completionHandler(proposedResponse)
+        }
+    }
+
     @objc func URLSession(session: NSURLSession, task: NSURLSessionTask, willPerformHTTPRedirection response: NSHTTPURLResponse, newRequest request: NSURLRequest, completionHandler: (NSURLRequest?) -> Void) {
         guard let taskInfo = tasks[task.taskIdentifier] else {
             completionHandler(request)
