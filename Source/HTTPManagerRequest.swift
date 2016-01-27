@@ -420,12 +420,13 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     
     private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>) -> HTTPManagerTaskResult<NSData> {
         return result.map(`try`: { response, data in
-            if let statusCode = (response as? NSHTTPURLResponse)?.statusCode where !(200...399).contains(statusCode) {
-                if response.MIMEType.map(MediaType.init)?.typeSubtype == "application/json", let json = try? JSON.decode(data) {
-                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: json)
-                } else {
-                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: nil)
+            if let response = response as? NSHTTPURLResponse, case let statusCode = response.statusCode where !(200...399).contains(statusCode) {
+                let json: JSON?
+                switch response.MIMEType.map(MediaType.init) {
+                case MediaType("application/json")?: json = try? JSON.decode(data)
+                default: json = nil
                 }
+                throw HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
             }
             return data
         })
@@ -463,8 +464,8 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
-            guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
-                throw HTTPManagerError.UnexpectedNoContent
+            if let response = response as? NSHTTPURLResponse where response.statusCode == 204 {
+                throw HTTPManagerError.UnexpectedNoContent(response: response)
             }
             return try JSON.decode(data)
         })
@@ -484,8 +485,8 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   the event of a cancelation.
     public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
-            guard (response as? NSHTTPURLResponse)?.statusCode != 204 else {
-                throw HTTPManagerError.UnexpectedNoContent
+            if let response = response as? NSHTTPURLResponse where response.statusCode == 204 {
+                throw HTTPManagerError.UnexpectedNoContent(response: response)
             }
             return try handler(response: response, json: JSON.decode(data))
         })
@@ -593,18 +594,19 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                 if (300...399).contains(statusCode) {
                     // parsed results can't accept redirects
                     let location = (response.allHeaderFields["Location"] as? String).flatMap({NSURL(string: $0)})
-                    throw HTTPManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, body: data)
+                    throw HTTPManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, response: response, body: data)
                 } else if !(200...299).contains(statusCode) {
-                    if response.MIMEType.map(MediaType.init)?.typeSubtype == "application/json", let json = try? JSON.decode(data) {
-                        throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: json)
-                    } else {
-                        throw HTTPManagerError.FailedResponse(statusCode: statusCode, body: data, bodyJson: nil)
+                    let json: JSON?
+                    switch response.MIMEType.map(MediaType.init) {
+                    case MediaType("application/json")?: json = try? JSON.decode(data)
+                    default: json = nil
                     }
+                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
                 } else if statusCode != 204 && !expectedContentTypes.isEmpty, let contentType = (response.allHeaderFields["Content-Type"] as? String).map(MediaType.init) where !contentType.typeSubtype.isEmpty {
                     // Not a 204 No Content, check the MIME type against the list
                     // As per the doc comment on expectedContentTypes, we check both the response MIMEType and, if it's different, the Content-Type header.
                     var mimeType = response.MIMEType.map(MediaType.init)
-                    if mimeType?.typeSubtype == contentType.typeSubtype {
+                    if mimeType?.rawValue == contentType.rawValue {
                         mimeType = nil
                     }
                     let valid = expectedContentTypes.contains({
@@ -614,7 +616,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                         return pattern ~= contentType
                     })
                     if !valid {
-                        throw HTTPManagerError.UnexpectedContentType(contentType: (mimeType ?? contentType).rawValue, body: data)
+                        throw HTTPManagerError.UnexpectedContentType(contentType: (mimeType ?? contentType).rawValue, response: response, body: data)
                     }
                 }
             }

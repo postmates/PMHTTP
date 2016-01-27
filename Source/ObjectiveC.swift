@@ -31,37 +31,37 @@ extension HTTPManagerError {
     /// The returned error cannot bridge back into Swift, but it contains a usable `userInfo`.
     internal func toNSError() -> NSError {
         switch self {
-        case let .FailedResponse(statusCode, body, json):
+        case let .FailedResponse(statusCode, response, body, json):
             let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             var userInfo: [NSObject: AnyObject] = [
                 NSLocalizedDescriptionKey: "HTTP response indicated failure (\(statusCode) \(statusString))",
+                PMHTTPURLResponseErrorKey: response,
                 PMHTTPStatusCodeErrorKey: statusCode,
                 PMHTTPBodyDataErrorKey: body
             ]
-            if let jsonObject = json?.object {
-                userInfo[PMHTTPBodyJSONErrorKey] = jsonObject.plistNoNull
-            }
+            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.plistNoNull
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: userInfo)
-        case let .UnexpectedContentType(contentType, body):
+        case let .UnexpectedContentType(contentType, response, body):
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedContentType.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response had unexpected content type \(String(reflecting: contentType))",
+                PMHTTPURLResponseErrorKey: response,
                 PMHTTPContentTypeErrorKey: contentType,
                 PMHTTPBodyDataErrorKey: body
                 ])
-        case .UnexpectedNoContent:
+        case let .UnexpectedNoContent(response):
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedNoContent.rawValue, userInfo: [
-                NSLocalizedDescriptionKey: "HTTP response returned 204 No Content when an entity was expected"
+                NSLocalizedDescriptionKey: "HTTP response returned 204 No Content when an entity was expected",
+                PMHTTPURLResponseErrorKey: response
                 ])
-        case let .UnexpectedRedirect(statusCode, location, body):
+        case let .UnexpectedRedirect(statusCode, location, response, body):
             let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             var userInfo = [
                 NSLocalizedDescriptionKey: "HTTP response returned a redirection (\(statusCode) \(statusString)) when an entity was expected",
+                PMHTTPURLResponseErrorKey: response,
                 PMHTTPStatusCodeErrorKey: statusCode,
                 PMHTTPBodyDataErrorKey: body
             ]
-            if let location = location {
-                userInfo[PMHTTPLocationErrorKey] = location
-            }
+            userInfo[PMHTTPLocationErrorKey] = location
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedRedirect.rawValue, userInfo: userInfo)
         }
     }

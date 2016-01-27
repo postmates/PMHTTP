@@ -34,11 +34,12 @@ final class PMHTTPTests: PMHTTPTestCase {
             completionHandler(HTTPServer.Response(status: .BadRequest, text: "bar"))
         }
         expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
-            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 400)
-            if case let HTTPManagerError.FailedResponse(statusCode, body, json) = error {
-                XCTAssertEqual(statusCode, 400)
-                XCTAssertEqual(String(data: body, encoding: NSUTF8StringEncoding) ?? "(not utf8)", "bar")
-                XCTAssertNil(json)
+            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 400, "response status code")
+            if case let HTTPManagerError.FailedResponse(statusCode, response_, body, json) = error {
+                XCTAssert(response === response_, "error response")
+                XCTAssertEqual(statusCode, 400, "error status code")
+                XCTAssertEqual(String(data: body, encoding: NSUTF8StringEncoding) ?? "(not utf8)", "bar", "error body")
+                XCTAssertNil(json, "error json")
             } else {
                 XCTFail("Unexpected error: \(error)")
             }
@@ -260,7 +261,8 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTFail("Non–HTTP Response found: \(response)")
                 }
                 XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
-                if case let HTTPManagerError.UnexpectedContentType(contentType, body) = error {
+                if case let HTTPManagerError.UnexpectedContentType(contentType, response_, body) = error {
+                    XCTAssert(response === response_, "error response")
                     XCTAssertEqual(contentType, "application/json", "error content type")
                     XCTAssertEqual(body, data, "error body")
                 } else {
@@ -388,7 +390,8 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
                 switch error {
-                case let HTTPManagerError.UnexpectedContentType(contentType, body):
+                case let HTTPManagerError.UnexpectedContentType(contentType, response_, body):
+                    XCTAssert(response === response_, "error response")
                     XCTAssertEqual(contentType, "text/html", "error content type")
                     if let str = String(data: body, encoding: NSUTF8StringEncoding) {
                         XCTAssertEqual(str, "{ \"ok\": true }", "error body")
@@ -419,7 +422,8 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
                 switch error {
-                case let HTTPManagerError.UnexpectedContentType(contentType, body):
+                case let HTTPManagerError.UnexpectedContentType(contentType, response_, body):
+                    XCTAssert(response === response_, "error response")
                     XCTAssertEqual(contentType, "text/html", "error content type")
                     if let str = String(data: body, encoding: NSUTF8StringEncoding) {
                         XCTAssertEqual(str, "Hello world", "error body")
@@ -527,7 +531,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
             XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
-            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+            if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {
                 XCTFail("expected APIManagerError.FailedResponse, found \(error)")
@@ -541,7 +545,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
             XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
-            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+            if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
                 XCTFail("expected APIManagerError.FailedResponse, found \(error)")
@@ -557,7 +561,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             // NSURLResponse.MIMEType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
             // Just assume it won't ever auto-detect JSON.
             XCTAssertNotEqual(response?.MIMEType, "application/json", "response MIME type")
-            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+            if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
                 XCTFail("expected APIManagerError.FailedResponse, found \(error)")
@@ -571,7 +575,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
             XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
-            if case let HTTPManagerError.FailedResponse(_, _, json) = error {
+            if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
                 XCTFail("expected APIManagerError.FailedResponse, found \(error)")
@@ -589,8 +593,9 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
                 XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
-                if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, body, json) = error {
+                if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, response_, body, json) = error {
                     // check the Swift error first
+                    XCTAssert(response === response_, "error response")
                     XCTAssertEqual(statusCode, 400, "error status code")
                     XCTAssertEqual(body, data, "error body data")
                     XCTAssertEqual(json, ["ok": false, "title": nil, "elts": [nil, 1, nil, 2]], "error body json")
@@ -598,6 +603,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     let nserror = error.toNSError()
                     XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
                     XCTAssertEqual(nserror.code, PMHTTPError.FailedResponse.rawValue, "NSError code")
+                    XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] === response_, "NSError response")
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
@@ -616,8 +622,9 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
                 XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
-                if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, body, json) = error {
+                if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, response_, body, json) = error {
                     // check the Swift error first
+                    XCTAssert(response === response_, "error response")
                     XCTAssertEqual(statusCode, 400, "error status code")
                     XCTAssertEqual(body, data, "error body data")
                     XCTAssertEqual(json, [1, 2, 3], "error body json")
@@ -625,6 +632,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     let nserror = error.toNSError()
                     XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
                     XCTAssertEqual(nserror.code, PMHTTPError.FailedResponse.rawValue, "NSError code")
+                    XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] === response_, "NSError response")
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
                     XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
@@ -942,7 +950,8 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(response?.URL?.absoluteString, "http://\(address)/foo", "response url", file: file, line: line)
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 301, "status code", file: file, line: line)
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Location"] as? String, "http://\(address)/bar", "Location header", file: file, line: line)
-                if case let HTTPManagerError.UnexpectedRedirect(statusCode, location, body) = error {
+                if case let HTTPManagerError.UnexpectedRedirect(statusCode, location, response_, body) = error {
+                    XCTAssert(response === response_, "error response")
                     XCTAssertEqual(statusCode, 301, "error status code", file: file, line: line)
                     XCTAssertEqual(location?.absoluteString, "http://\(address)/bar", "error location", file: file, line: line)
                     if let str = String(data: body, encoding: NSUTF8StringEncoding) {

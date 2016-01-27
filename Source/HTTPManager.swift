@@ -414,64 +414,78 @@ extension HTTPManager {
 public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStringConvertible {
     /// An HTTP response was returned that indicates failure.
     /// - Parameter statusCode: The HTTP status code. Any code outside of 2xx or 3xx indicates failure.
+    /// - Parameter response: The `NSHTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
     /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
     ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
     ///   `bodyJson` is `nil`.
-    case FailedResponse(statusCode: Int, body: NSData, bodyJson: JSON?)
+    case FailedResponse(statusCode: Int, response: NSHTTPURLResponse, body: NSData, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.
     /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
     /// - Parameter contentType: The Content-Type header of the HTTP response.
+    /// - Parameter response: The `NSHTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
-    case UnexpectedContentType(contentType: String, body: NSData)
+    case UnexpectedContentType(contentType: String, response: NSHTTPURLResponse, body: NSData)
     /// An HTTP response returned a 204 No Content where an entity was expected.
     /// This is only thrown from parse requests with methods other than DELETE.
     /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
-    case UnexpectedNoContent
+    /// - Parameter response: The `NSHTTPURLResponse` object.
+    case UnexpectedNoContent(response: NSHTTPURLResponse)
     /// A redirect was encountered while trying to parse a response that has redirects disabled.
     /// This can only be returned if `HTTPManagerRequest.shouldFollowRedirects` is set to `false`
     /// and the request is configured to parse the response.
     /// - Parameter statusCode: The 3xx HTTP status code.
     /// - Parameter location: The contents of the `"Location"` header, interpreted as a URL, or `nil` if
+    /// - Parameter response: The `NSHTTPURLResponse` object.
     ///   the header is missing or cannot be parsed.
     /// - Parameter body: The body of the response, if any.
-    case UnexpectedRedirect(statusCode: Int, location: NSURL?, body: NSData)
+    case UnexpectedRedirect(statusCode: Int, location: NSURL?, response: NSHTTPURLResponse, body: NSData)
     
     public var description: String {
         switch self {
-        case let .FailedResponse(statusCode, body, json):
+        case let .FailedResponse(statusCode, response, body, json):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
+            var s = "FailedResponse(\(statusCode) \(statusText), \(response.URL?.relativeString ?? "nil"), "
             if let json = json {
-                return "FailedResponse(\(statusCode) \(statusText), bodyJson: \(json))"
+                s += "bodyJson: \(json))"
             } else {
-                return "FailedResponse(\(statusCode) \(statusText), body: \(describeData(body))"
+                s += "body: \(describeData(body)))"
             }
-        case let .UnexpectedContentType(contentType, body):
-            return "UnexpectedContentType(\(String(reflecting: contentType)), body: \(describeData(body)))"
-        case .UnexpectedNoContent:
-            return "UnexpectedNoContent"
-        case let .UnexpectedRedirect(statusCode, location, _):
+            return s
+        case let .UnexpectedContentType(contentType, response, body):
+            return "UnexpectedContentType(\(String(reflecting: contentType)), \(response.URL?.relativeString ?? "nil"), body: \(describeData(body)))"
+        case let .UnexpectedNoContent(response):
+            return "UnexpectedNoContent(\(response.URL?.relativeString ?? "nil"))"
+        case let .UnexpectedRedirect(statusCode, location, response, _):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            return "UnexpectedRedirect(\(statusCode) \(statusText), location: \(location as ImplicitlyUnwrappedOptional))"
+            return "UnexpectedRedirect(\(statusCode) \(statusText), \(response.URL?.relativeString ?? "nil"), location: \(location as ImplicitlyUnwrappedOptional))"
         }
     }
     
     public var debugDescription: String {
         switch self {
-        case let .FailedResponse(statusCode, body, json):
+        case let .FailedResponse(statusCode, response, body, json):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
-        case let .UnexpectedContentType(contentType, body):
-            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), body: \(describeData(body)))"
-        case .UnexpectedNoContent:
-            return "HTTPManagerError.UnexpectedNoContent"
-        case let .UnexpectedRedirect(statusCode, location, body):
+            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), "
+                + "response: \(response), "
+                + "body: \(describeData(body)), "
+                + "bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+        case let .UnexpectedContentType(contentType, response, body):
+            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), "
+                + "response: \(response), "
+                + "body: \(describeData(body)))"
+        case let .UnexpectedNoContent(response):
+            return "HTTPManagerError.UnexpectedNoContent(response: \(response))"
+        case let .UnexpectedRedirect(statusCode, location, response, body):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             let bodyText = describeData(body)
-            return "HTTPManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), location: \(location as ImplicitlyUnwrappedOptional), body: \(bodyText))"
+            return "HTTPManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), "
+                + "location: \(location as ImplicitlyUnwrappedOptional), "
+                + "response: \(response), "
+                + "body: \(bodyText))"
         }
     }
 }

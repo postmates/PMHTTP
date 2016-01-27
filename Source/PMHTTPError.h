@@ -14,15 +14,16 @@ extern NSString * const PMHTTPErrorDomain;
 /// Error codes for \c HTTPManager errors.
 typedef NS_ENUM(NSInteger, PMHTTPError) {
     /// An HTTP response was returned that indicates failure.
-    /// @see <tt>PMHTTPStatusCodeErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
+    /// @see <tt>PMHTTPStatusCodeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
     PMHTTPErrorFailedResponse = 1,
     /// An HTTP response was returned that had an incorrect Content-Type header.
-    /// @see <tt>PMHTTPContentTypeErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>
+    /// @see <tt>PMHTTPContentTypeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>
     PMHTTPErrorUnexpectedContentType,
     /// An HTTP response returned a 204 No Content where an entity was expected.
+    /// @see <tt>PMHTTPURLResponseErrorKey</tt>.
     PMHTTPErrorUnexpectedNoContent,
     /// A redirect was encountered while trying to parse a response that has redirects disabled.
-    /// @see <tt>PMHTTPStatusCodeErrorKey</tt>, <tt>PMHTTPLocationErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>.
+    /// @see <tt>PMHTTPStatusCodeErrorKey</tt>, <tt>PMHTTPLocationErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>.
     PMHTTPErrorUnexpectedRedirect
 };
 
@@ -31,6 +32,10 @@ typedef NS_ENUM(NSInteger, PMHTTPError) {
 /// The corresponding value is an \c NSNumber with the status code of the response.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>, <tt>PMHTTPErrorUnexpectedRedirect</tt>.
 extern NSString * const PMHTTPStatusCodeErrorKey;
+/// The corresponding value is the \c NSHTTPURLResponse that represents the response.
+/// This key is provided for all errors in the <tt>PMHTTPErrorDomain</tt> domain.
+/// @see <tt>PMHTTPError</tt>.
+extern NSString * const PMHTTPURLResponseErrorKey;
 /// The corresponding value is a \c NSData with the body of the response.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>, <tt>PMHTTPErrorUnexpectedContentType</tt>, <tt>PMHTTPErrorUnexpectedRedirect</tt>.
 extern NSString * const PMHTTPBodyDataErrorKey;
