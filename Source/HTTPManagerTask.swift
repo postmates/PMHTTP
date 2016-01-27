@@ -109,6 +109,8 @@ extension HTTPManagerTask : CustomDebugStringConvertible {
     }
 }
 
+// MARK: HTTPManagerTaskState
+
 /// The state of an `HTTPManagerTask`.
 @objc public enum HTTPManagerTaskState: CUnsignedChar, CustomStringConvertible {
     // Important: The constants here must match those defined in PMHTTPManagerTaskStateBoxState
@@ -141,6 +143,8 @@ extension HTTPManagerTask : CustomDebugStringConvertible {
         return unsafeBitCast(self, PMHTTPManagerTaskStateBoxState.self)
     }
 }
+
+// MARK: - HTTPManagerTaskResult
 
 /// The results of an HTTP request.
 public enum HTTPManagerTaskResult<Value> {
