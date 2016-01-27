@@ -567,10 +567,14 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
 
 /// An HTTP request that has a parse handler.
 public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRequestPerformable {
+    /// The URL for the request, including any query items as appropriate.
     public override var url: NSURL {
         return baseURL
     }
     
+    /// The Content-Type for the request.
+    /// If no data is being submitted in the request body, the `contentType`
+    /// will be empty.
     public override var contentType: String {
         return _contentType
     }
@@ -882,10 +886,14 @@ public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
 /// passes everything as `multipart/form-data` instead. When mixing *parameters*
 /// and multipart bodies, the *parameters* are sent prior to any multipart bodies.
 public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
+    /// The URL for the request, including any query items as appropriate.
     public override var url: NSURL {
         return baseURL
     }
     
+    /// The Content-Type for the request.
+    /// - Returns: Either `"application/x-www-form-urlencoded"` or `"multipart/form-data"`
+    ///   depending on the nature of the upload.
     public override var contentType: String {
         if multipartBodies.isEmpty {
             return "application/x-www-form-urlencoded"
@@ -894,6 +902,8 @@ public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
         }
     }
     
+    /// Creates and returns an `NSURLRequest` object from the properties of `self`.
+    /// The request will include the `HTTPBody` or `HTTPBodyStream` as appropriate.
     public override var preparedURLRequest: NSURLRequest {
         let request = _preparedURLRequest
         switch uploadBody {
@@ -1049,10 +1059,14 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
     /// The JSON data to upload.
     public var uploadJSON: JSON
     
+    /// The Content-Type for the request.
+    /// - Returns: `"application/json"`.
     public override var contentType: String {
         return "application/json"
     }
     
+    /// Creates and returns an `NSURLRequest` object from the properties of `self`.
+    /// The request will include the `HTTPBody` value.
     public override var preparedURLRequest: NSURLRequest {
         let request = _preparedURLRequest
         // TODO: set request HTTPBody
