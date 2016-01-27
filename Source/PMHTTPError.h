@@ -16,6 +16,9 @@ typedef NS_ENUM(NSInteger, PMHTTPError) {
     /// An HTTP response was returned that indicates failure.
     /// @see <tt>PMHTTPStatusCodeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
     PMHTTPErrorFailedResponse = 1,
+    /// A 401 Unauthorized HTTP response was returned.
+    /// @see <tt>PMHTTPCredentialErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
+    PMHTTPErrorUnauthorized,
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// @see <tt>PMHTTPContentTypeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>
     PMHTTPErrorUnexpectedContentType,
@@ -45,6 +48,9 @@ extern NSString * const PMHTTPBodyDataErrorKey;
 /// The dictionary does not include any \c NSNull values.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>.
 extern NSString * const PMHTTPBodyJSONErrorKey;
+/// The corresponding value is the \c NSURLCredential that was used in the request, if any.
+/// @see <tt>PMHTTPErrorUnauthorized</tt>.
+extern NSString * const PMHTTPCredentialErrorKey;
 /// The corresponding value is a \c NSString with the Content-Type of the response.
 /// @see <tt>PMHTTPErrorUnexpectedContentType</tt>.
 extern NSString * const PMHTTPContentTypeErrorKey;

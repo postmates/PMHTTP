@@ -16,6 +16,9 @@ public final class HTTPManagerTask: NSObject {
     /// The underlying `NSURLSessionTask`.
     public let networkTask: NSURLSessionTask
     
+    /// The `NSURLCredential` used to authenticate the request, if any.
+    public let credential: NSURLCredential?
+    
     /// The current state of the task.
     /// - Note: This property is thread-safe and may be accessed concurrently.
     /// - Note: This property supports KVO. The KVO notifications will execute
@@ -51,6 +54,7 @@ public final class HTTPManagerTask: NSObject {
     
     internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
         self.networkTask = networkTask
+        self.credential = request.credential
         self.userInitiated = request.userInitiated
         self.followRedirects = request.shouldFollowRedirects
         self.defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
@@ -83,6 +87,9 @@ extension HTTPManagerTask : CustomDebugStringConvertible {
     
     private func getDescription(debug: Bool) -> String {
         var s = "<HTTPManagerTask: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) (\(state))"
+        if let user = credential?.user {
+            s += " user=\(String(reflecting: user))"
+        }
         if userInitiated {
             s += " userInitiated"
         }

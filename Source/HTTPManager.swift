@@ -419,7 +419,17 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
     /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
     ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
     ///   `bodyJson` is `nil`.
+    /// - Note: 401 Unauthorized errors are represented by `HTTPManagerError.Unauthorized` instead of
+    ///   `FailedResponse`.
     case FailedResponse(statusCode: Int, response: NSHTTPURLResponse, body: NSData, bodyJson: JSON?)
+    /// A 401 Unauthorized HTTP response was returned.
+    /// - Parameter credential: The `NSURLCredential` that was used in the request, if any.
+    /// - Parameter response: The `NSHTTPURLResponse` object.
+    /// - Parameter body: The body of the response, if any.
+    /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
+    ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
+    ///   `bodyJson` is `nil`.
+    case Unauthorized(credential: NSURLCredential?, response: NSHTTPURLResponse, body: NSData, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.
     /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
@@ -455,6 +465,27 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
                 s += "body: \(describeData(body)))"
             }
             return s
+        case let .Unauthorized(credential, response, body, json):
+            var s = "Unauthorized("
+            if let credential = credential {
+                if let user = credential.user {
+                    s += "user: \(String(reflecting: user))"
+                    if !credential.hasPassword {
+                        s += " (no password)"
+                    }
+                } else {
+                    s += "invalid credential"
+                }
+            } else {
+                s += "no credential"
+            }
+            s += ", \(response.URL?.relativeString ?? "nil"), "
+            if let json = json {
+                s += "bodyJson: \(json))"
+            } else {
+                s += "body: \(describeData(body)))"
+            }
+            return s
         case let .UnexpectedContentType(contentType, response, body):
             return "UnexpectedContentType(\(String(reflecting: contentType)), \(response.URL?.relativeString ?? "nil"), body: \(describeData(body)))"
         case let .UnexpectedNoContent(response):
@@ -470,6 +501,11 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
         case let .FailedResponse(statusCode, response, body, json):
             let statusText = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
             return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), "
+                + "response: \(response), "
+                + "body: \(describeData(body)), "
+                + "bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+        case let .Unauthorized(credential, response, body, json):
+            return "HTTPManagerError.Unauthorized(credential: \(credential.map({String(reflecting: $0)}) ?? "nil"), "
                 + "response: \(response), "
                 + "body: \(describeData(body)), "
                 + "bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"

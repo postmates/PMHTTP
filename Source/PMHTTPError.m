@@ -14,5 +14,6 @@ NSString * const PMHTTPStatusCodeErrorKey = @"statusCode";
 NSString * const PMHTTPURLResponseErrorKey = @"response";
 NSString * const PMHTTPBodyDataErrorKey = @"body";
 NSString * const PMHTTPBodyJSONErrorKey = @"json";
+NSString * const PMHTTPCredentialErrorKey = @"credential";
 NSString * const PMHTTPContentTypeErrorKey = @"contentType";
 NSString * const PMHTTPLocationErrorKey = @"location";

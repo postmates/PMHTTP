@@ -41,6 +41,15 @@ extension HTTPManagerError {
             ]
             userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.plistNoNull
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: userInfo)
+        case let .Unauthorized(credential, response, body, json):
+            var userInfo: [NSObject: AnyObject] = [
+                NSLocalizedDescriptionKey: "401 Unauthorized HTTP response",
+                PMHTTPURLResponseErrorKey: response,
+                PMHTTPBodyDataErrorKey: body
+            ]
+            userInfo[PMHTTPCredentialErrorKey] = credential
+            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.plistNoNull
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.Unauthorized.rawValue, userInfo: userInfo)
         case let .UnexpectedContentType(contentType, response, body):
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedContentType.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response had unexpected content type \(String(reflecting: contentType))",

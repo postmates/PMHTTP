@@ -1099,4 +1099,55 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssert(req.parseAsJSONWithHandler({ $1 }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
         }
     }
+    
+    func testCredentials() {
+        func basicAuthentication(user user: String, password: String) -> String {
+            let data = "\(user):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
+            let encoded = data.base64EncodedStringWithOptions([])
+            return "Basic \(encoded)"
+        }
+        do {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                XCTAssertNil(request.headers["Authorization"], "request authorization header")
+                completionHandler(HTTPServer.Response(status: .OK))
+            }
+            let req = HTTP.request(GET: "foo")
+            XCTAssertNil(req.credential, "request object credential")
+            expectationForRequestSuccess(req) { _ in }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        do {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                XCTAssertEqual(request.headers["Authorization"], basicAuthentication(user: "alice", password: "secure"), "request authorization header")
+                completionHandler(HTTPServer.Response(status: .OK))
+            }
+            HTTP.defaultCredential = NSURLCredential(user: "alice", password: "secure", persistence: .None)
+            let req = HTTP.request(GET: "foo")
+            HTTP.defaultCredential = nil
+            XCTAssertEqual(req.credential?.user, "alice", "request object credential user")
+            XCTAssertEqual(req.credential?.password, "secure", "request object credential password")
+            expectationForRequestSuccess(req) { _ in }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        do {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                XCTAssertEqual(request.headers["Authorization"], basicAuthentication(user: "alice", password: "secure"), "request authorization header")
+                completionHandler(HTTPServer.Response(status: .Unauthorized, headers: ["Content-Type": "application/json"], body: "{ \"error\": \"unauthorized\" }"))
+            }
+            let req = HTTP.request(GET: "foo")
+            req.credential = NSURLCredential(user: "alice", password: "secure", persistence: .None)
+            expectationForRequestFailure(req) { task, response, error in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 401, "response status code")
+                if case let HTTPManagerError.Unauthorized(credential, response_, _, json) = error {
+                    XCTAssert(response === response_, "error response")
+                    XCTAssertEqual(credential?.user, "alice", "error credential user")
+                    XCTAssertEqual(credential?.password, "secure", "error credential password")
+                    XCTAssertEqual(json, ["error": "unauthorized"], "error body json")
+                } else {
+                    XCTFail("expected HTTPManagerError.Unauthorized, found \(error)")
+                }
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+    }
 }

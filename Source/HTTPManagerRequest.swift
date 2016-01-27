@@ -426,7 +426,11 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
                 case MediaType("application/json")?: json = try? JSON.decode(data)
                 default: json = nil
                 }
-                throw HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
+                if statusCode == 401 { // Unauthorized
+                    throw HTTPManagerError.Unauthorized(credential: task.credential, response: response, body: data, bodyJson: json)
+                } else {
+                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
+                }
             }
             return data
         })
@@ -601,7 +605,11 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     case MediaType("application/json")?: json = try? JSON.decode(data)
                     default: json = nil
                     }
-                    throw HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
+                    if statusCode == 401 { // Unauthorized
+                        throw HTTPManagerError.Unauthorized(credential: task.credential, response: response, body: data, bodyJson: json)
+                    } else {
+                        throw HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
+                    }
                 } else if statusCode != 204 && !expectedContentTypes.isEmpty, let contentType = (response.allHeaderFields["Content-Type"] as? String).map(MediaType.init) where !contentType.typeSubtype.isEmpty {
                     // Not a 204 No Content, check the MIME type against the list
                     // As per the doc comment on expectedContentTypes, we check both the response MIMEType and, if it's different, the Content-Type header.
