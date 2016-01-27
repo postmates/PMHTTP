@@ -13,7 +13,7 @@ import PMJSON
 final class PMHTTPTests: PMHTTPTestCase {
     func testSimpleGET() {
         let address = httpServer.address
-        let req = HTTP.request(GET: "/foo")
+        let req = HTTP.request(GET: "foo")
         XCTAssertEqual(req.url.absoluteString, "http://\(address)/foo")
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             XCTAssertEqual(request.method, HTTPServer.Method.GET)
@@ -33,7 +33,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .BadRequest, text: "bar"))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 400, "response status code")
             if case let HTTPManagerError.FailedResponse(statusCode, response_, body, json) = error {
                 XCTAssert(response === response_, "error response")
@@ -96,7 +96,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
         }
         setupServer()
-        expectationForRequestSuccess(HTTP.request(POST: "/submit", parameters: queryItems)) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(POST: "submit", parameters: queryItems)) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok")
         }
@@ -107,7 +107,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             parameters[item.name] = item.value
         }
         setupServer()
-        expectationForRequestSuccess(HTTP.request(POST: "/submit", parameters: parameters)) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(POST: "submit", parameters: parameters)) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok")
         }
@@ -121,7 +121,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
         }
-        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parseAsJSON()) { task, response, value in
             if let response = response as? NSHTTPURLResponse {
                 XCTAssertEqual(response.statusCode, 200, "response status code")
                 XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "application/json", "response Content-Type header")
@@ -140,7 +140,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
             }
-            let req = HTTP.request(GET: "/foo").parseAsJSONWithHandler({ response, json -> Int in
+            let req = HTTP.request(GET: "foo").parseAsJSONWithHandler({ response, json -> Int in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "response content type")
                 XCTAssertEqual(response.MIMEType, "application/json", "response MIME type")
                 let ok = json["ok"]?.bool
@@ -167,7 +167,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, text: "foobar"))
             }
             struct InvalidUTF8Error: ErrorType {}
-            let req = HTTP.request(GET: "/foo").parseWithHandler({ response, data -> String in
+            let req = HTTP.request(GET: "foo").parseWithHandler({ response, data -> String in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "response Content-Type header")
                 XCTAssertEqual(response.MIMEType, "text/plain", "response MIME type")
                 guard let str = String(data: data, encoding: NSUTF8StringEncoding) else {
@@ -194,7 +194,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .OK, body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
         }
-        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parseAsJSON()) { task, response, value in
             if let response = response as? NSHTTPURLResponse {
                 XCTAssertEqual(response.statusCode, 200, "response status code")
                 let contentType = response.allHeaderFields["Content-Type"]
@@ -213,7 +213,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "*/*", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "text/plain"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
             }
-            let req = HTTP.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "foo").parseAsJSON()
             req.expectedContentTypes = ["*/*"]
             expectationForRequestSuccess(req) { task, response, value in
                 if let response = response as? NSHTTPURLResponse {
@@ -238,7 +238,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": contentType], body: data))
                 }
             }
-            let req = HTTP.request(GET: "/foo").parseWithHandler { response, data -> Int in
+            let req = HTTP.request(GET: "foo").parseWithHandler { response, data -> Int in
                 return data.length
             }
             req.expectedContentTypes = ["text/*"]
@@ -279,7 +279,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json, text/plain;q=0.9, text/html;q=0.8, */*;q=0.7", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, text: "{ \"ok\": true }"))
             }
-            let req = HTTP.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "foo").parseAsJSON()
             XCTAssertEqual(req.expectedContentTypes, ["application/json"], "request expected content types")
             req.expectedContentTypes += ["text/plain", "text/html", "*/*"]
             expectationForRequestSuccess(req) { task, response, json in
@@ -295,7 +295,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain;q=0.5, text/html;level=1;q=0.9, text/html;level=2;q=0.2, application/json;q=0.8", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, text: "{ \"ok\": true }"))
             }
-            let req = HTTP.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "foo").parseAsJSON()
             req.expectedContentTypes = ["text/plain;q=0.5", "text/html;level=1", "text/html;level=2;q=0.2", "application/json"]
             expectationForRequestSuccess(req) { task, response, json in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "response content type header")
@@ -313,21 +313,21 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .NoContent))
             }
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSONWithHandler({ _ in 42 })) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSONWithHandler({ _ in 42 })) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseWithHandler({ _ in 42 })) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parseWithHandler({ _ in 42 })) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual(value, 42, "response body parse value")
         }
@@ -339,21 +339,21 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .NoContent))
             }
         }
-        expectationForRequestFailure(HTTP.request(POST: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(POST: "foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestFailure(HTTP.request(POST: "/foo").parseAsJSONWithHandler({ _ in true })) { task, response, error in
+        expectationForRequestFailure(HTTP.request(POST: "foo").parseAsJSONWithHandler({ _ in true })) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.UnexpectedNoContent: break
             default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestSuccess(HTTP.request(POST: "/foo").parseWithHandler({ _ in 42 })) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(POST: "foo").parseWithHandler({ _ in 42 })) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual(value, 42, "response body parse value")
         }
@@ -367,7 +367,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .OK, body: "{ \"ok\": true }"))
         }
-        expectationForRequestSuccess(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, json in
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parseAsJSON()) { task, response, json in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
             let header = (response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String
             XCTAssertNil(header, "response content type header")
@@ -383,7 +383,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "text/html"], body: "{ \"ok\": true }"))
             }
-            let req = HTTP.request(GET: "/foo").parseAsJSON()
+            let req = HTTP.request(GET: "foo").parseAsJSON()
             XCTAssertEqual(req.expectedContentTypes, ["application/json"], "request expected content types")
             expectationForRequestFailure(req) { task, response, error in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
@@ -411,7 +411,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "text/html"], body: "Hello world"))
             }
-            let req = HTTP.request(GET: "/foo").parseWithHandler({ _ -> Int in
+            let req = HTTP.request(GET: "foo").parseWithHandler({ _ -> Int in
                 XCTFail("parse handler unexpectedly called")
                 return 42
             })
@@ -443,7 +443,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .NoContent, headers: ["Content-Type": "text/html"]))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
             XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
@@ -462,7 +462,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .NoContent, headers: ["Content-Type": "text/html"]))
             }
-            let req = HTTP.request(GET: "/foo").parseWithHandler({ response, data -> Int in
+            let req = HTTP.request(GET: "foo").parseWithHandler({ response, data -> Int in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response.MIMEType, "text/html", "response MIME type")
@@ -485,7 +485,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
             completionHandler(HTTPServer.Response(status: .NoContent, headers: ["Content-Type": "text/html"]))
         }
-        expectationForRequestSuccess(HTTP.request(DELETE: "/foo").parseAsJSON()) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(DELETE: "foo").parseAsJSON()) { task, response, value in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
             XCTAssertEqual(response.MIMEType, "text/html", "response MIME type")
@@ -498,7 +498,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "[1, 2"))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo").parseAsJSON()) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON()) { task, response, error in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
             XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
             // we only care that it's a JSON error, not specifically what the error is
@@ -511,7 +511,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "[1, 2"))
             }
             struct CantBeThrownError: ErrorType {}
-            let req = HTTP.request(GET: "/foo").parseAsJSONWithHandler({ (response, json) -> Int in
+            let req = HTTP.request(GET: "foo").parseAsJSONWithHandler({ (response, json) -> Int in
                 throw CantBeThrownError()
             })
             expectationForRequestFailure(req) { task, response, error in
@@ -529,12 +529,12 @@ final class PMHTTPTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: "{ \"error\": \"You sent a bad request\" }"))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
             if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {
-                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
             }
         }
         waitForExpectationsWithTimeout(5, handler: nil)
@@ -543,12 +543,12 @@ final class PMHTTPTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: "{ error: \"You sent a bad request\" }"))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
             if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
             }
         }
         waitForExpectationsWithTimeout(5, handler: nil)
@@ -557,14 +557,14 @@ final class PMHTTPTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .BadRequest, body: "{ \"error\": \"You sent a bad request\" }"))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             // NSURLResponse.MIMEType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
             // Just assume it won't ever auto-detect JSON.
             XCTAssertNotEqual(response?.MIMEType, "application/json", "response MIME type")
             if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
             }
         }
         waitForExpectationsWithTimeout(5, handler: nil)
@@ -573,12 +573,12 @@ final class PMHTTPTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "text/html"], body: "{ \"error\": \"You sent a bad request\" }"))
         }
-        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             XCTAssertEqual(response?.MIMEType, "text/html", "response MIME type")
             if case let HTTPManagerError.FailedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
             }
         }
         waitForExpectationsWithTimeout(5, handler: nil)
@@ -591,7 +591,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: data))
             }
-            expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+            expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
                 XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
                 if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, response_, body, json) = error {
                     // check the Swift error first
@@ -608,7 +608,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
                 } else {
-                    XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                    XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
                 }
             }
             waitForExpectationsWithTimeout(5, handler: nil)
@@ -620,7 +620,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .BadRequest, headers: ["Content-Type": "application/json"], body: data))
             }
-            expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+            expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
                 XCTAssertEqual(response?.MIMEType, "application/json", "response MIME type")
                 if case let error as HTTPManagerError = error, case let HTTPManagerError.FailedResponse(statusCode, response_, body, json) = error {
                     // check the Swift error first
@@ -637,7 +637,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
                     XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
                 } else {
-                    XCTFail("expected APIManagerError.FailedResponse, found \(error)")
+                    XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
                 }
             }
             waitForExpectationsWithTimeout(5, handler: nil)
@@ -1000,7 +1000,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     
     func testNoEnvironment() {
         HTTP.environment = nil
-        expectationForRequestFailure(HTTP.request(GET: "/foo")) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             XCTAssert(task.networkTask.error === error as NSError, "network task error")
             XCTAssertEqual((error as NSError).domain, NSURLErrorDomain, "error domain")
             XCTAssertEqual((error as NSError).code, NSURLErrorUnsupportedURL, "error code")
@@ -1033,7 +1033,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
             }
-            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            let req = HTTP.request(GET: "foo")
             XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
             expectationForRequestSuccess(req) { _ in }
             waitForExpectationsWithTimeout(5, handler: nil)
@@ -1048,7 +1048,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
             }
-            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            let req = HTTP.request(GET: "foo")
             req.defaultResponseCacheStoragePolicy = .AllowedInMemoryOnly
             expectationForRequestSuccess(req) { _ in }
             waitForExpectationsWithTimeout(5, handler: nil)
@@ -1063,7 +1063,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK, text: "Hello world"))
             }
-            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            let req = HTTP.request(GET: "foo")
             req.defaultResponseCacheStoragePolicy = .NotAllowed
             expectationForRequestSuccess(req) { _ in }
             waitForExpectationsWithTimeout(5, handler: nil)
@@ -1075,7 +1075,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Cache-Control": "max-age=60"], text: "Hello world"))
             }
-            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            let req = HTTP.request(GET: "foo")
             req.defaultResponseCacheStoragePolicy = policy
             expectationForRequestSuccess(req) { _ in }
             waitForExpectationsWithTimeout(5, handler: nil)
@@ -1087,13 +1087,13 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         // parse requests
         do {
-            let req = HTTP.request(GET: "http://\(httpServer.address)/foo")
+            let req = HTTP.request(GET: "foo")
             XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
             XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .NotAllowed, "json parse request cache storage policy")
             XCTAssert(req.parseAsJSONWithHandler({ $1 }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
         }
         do {
-            let req = HTTP.request(DELETE: "http://\(httpServer.address)/foo")
+            let req = HTTP.request(DELETE: "foo")
             XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
             XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .NotAllowed, "json parse request cache storage policy")
             XCTAssert(req.parseAsJSONWithHandler({ $1 }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
