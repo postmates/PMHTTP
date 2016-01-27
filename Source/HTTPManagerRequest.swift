@@ -115,6 +115,23 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     
     // possibly expose some NSURLRequest properties here, if they're useful
     
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public func with(@noescape f: HTTPManagerRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
+    }
+    
     public func copyWithZone(_: NSZone) -> AnyObject {
         return self.dynamicType.init(__copyOfRequest: self)
     }
@@ -418,6 +435,23 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
         })
     }
     
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerNetworkRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
+    }
+    
     private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>) -> HTTPManagerTaskResult<NSData> {
         return result.map(`try`: { response, data in
             if let response = response as? NSHTTPURLResponse, case let statusCode = response.statusCode where !(200...399).contains(statusCode) {
@@ -510,6 +544,23 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
+    
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerDataRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
+    }
 }
 
 // MARK: - Parse Request
@@ -584,6 +635,23 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                 HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
             }
         })
+    }
+    
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerParseRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
     }
     
     private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>, _ expectedContentTypes: [String], _ parseHandler: (NSURLResponse, NSData) throws -> T) -> HTTPManagerTaskResult<T> {
@@ -779,6 +847,23 @@ public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
         })
     }
     
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerDeleteRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
+    }
+    
     internal init(apiManager: HTTPManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
         super.init(apiManager: apiManager, URL: url, method: .DELETE, parameters: parameters)
     }
@@ -880,6 +965,23 @@ public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
         multipartBodies.append(.Pending(.init(block)))
     }
     
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerUploadRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
+    }
+    
     private var multipartBodies: [MultipartBodyPart] = []
     internal override var uploadBody: UploadBody? {
         if !multipartBodies.isEmpty {
@@ -955,6 +1057,23 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
         let request = _preparedURLRequest
         // TODO: set request HTTPBody
         return request
+    }
+    
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(GET: "foo")
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerUploadJSONRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
     }
     
     internal override var uploadBody: UploadBody? {
