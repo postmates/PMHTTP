@@ -29,13 +29,13 @@ internal func trimLWS(str: String) -> String {
 /// using string scalar equality, without even taking NFD form into account. This means that
 /// `"t\u{E9}st"` and `"te\u{301}st"` compare as non-equal even though the `String` versions
 /// will compare as equal.
-/// - Note: The `hashValue` of `CaseInsensitiveString` will not match the `hashValue` of `String`
+/// - Note: The `hashValue` of `CaseInsensitiveASCIIString` will not match the `hashValue` of `String`
 ///   even when the wrapped string is already lowercase.
 internal struct CaseInsensitiveASCIIString: Hashable, StringLiteralConvertible, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     /// The wrapped string.
     let string: String
     
-    /// Creates a new `CaseInsensitiveString` that wraps a given string.
+    /// Creates a new `CaseInsensitiveASCIIString` that wraps a given string.
     init(_ string: String) {
         self.string = string
     }
@@ -106,6 +106,11 @@ func ==(lhs: CaseInsensitiveASCIIString, rhs: CaseInsensitiveASCIIString) -> Boo
             }
         }
     }
+}
+
+/// Returns the result of `pattern == CaseInsensitiveASCIIString(value)`.
+func ~=(pattern: CaseInsensitiveASCIIString, value: String) -> Bool {
+    return pattern == CaseInsensitiveASCIIString(value)
 }
 
 /// Parameters separated by a single character (typically comma or semicolon).

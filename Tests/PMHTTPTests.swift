@@ -1100,6 +1100,42 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
     }
     
+    func testEnvironmentIsPrefixOf() {
+        func check(envStr: String, isPrefixOfURL urlString: String, withBaseURL baseURLString: String? = nil, toBe expected: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+            guard let env = HTTPManager.Environment(string: envStr) else {
+                return XCTFail("Could not create HTTPManager.Environment", file: file, line: line)
+            }
+            let baseURL: NSURL?
+            if let baseURLString = baseURLString {
+                guard let baseURL_ = NSURL(string: baseURLString) else {
+                    return XCTFail("Could not parse base URL string", file: file, line: line)
+                }
+                baseURL = baseURL_
+            } else {
+                baseURL = nil
+            }
+            guard let url = NSURL(string: urlString, relativeToURL: baseURL) else {
+                return XCTFail("Could not parse URL string", file: file, line: line)
+            }
+            let result = env.isPrefixOf(url) == expected
+            XCTAssert(result, "expected (\(env.baseURL)).isPrefixOf(\(url)) to be \(expected), but was \(result)", file: file, line: line)
+        }
+        check("http://ipa.postmates.com", isPrefixOfURL: "http://ipa.postmates.com", toBe: true)
+        check("http://ipa.postmates.com", isPrefixOfURL: "http://ipa.postmates.com/", toBe: true)
+        check("http://ipa.postmates.com", isPrefixOfURL: "http://ipa.postmates.com/foo", toBe: true)
+        check("http://ipa.postmates.com", isPrefixOfURL: "foo", withBaseURL: "http://ipa.postmates.com", toBe: true)
+        check("http://ipa.postmates.com", isPrefixOfURL: "https://ipa.postmates.com/foo", toBe: false)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "https://ipa.postmates.com/api/v1/foo", toBe: true)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "foo", withBaseURL: "https://ipa.postmates.com/api/v1/", toBe: true)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "https://ipa.postmates.com/foo", toBe: false)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "/foo", withBaseURL: "https://ipa.postmates.com/api/v1/", toBe: false)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "../foo", withBaseURL: "https://ipa.postmates.com/api/v1/", toBe: false)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "../v1/foo", withBaseURL: "https://ipa.postmates.com/api/v1/", toBe: true)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "https://ipa.postmates.com:443/api/v1/", toBe: true)
+        check("https://ipa.postmates.com:443/api/v1/", isPrefixOfURL: "https://ipa.postmates.com/api/v1/", toBe: true)
+        check("https://ipa.postmates.com/api/v1/", isPrefixOfURL: "https://ipa.postmates.com:80/api/v1/", toBe: false)
+    }
+    
     func testCredentials() {
         func basicAuthentication(user user: String, password: String) -> String {
             let data = "\(user):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
@@ -1148,6 +1184,10 @@ final class PMHTTPTests: PMHTTPTestCase {
                 }
             }
             waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        do {
+            let req = HTTP.request(GET: "http://apple.com/foo")
+            XCTAssertNil(req.credential, "request object credential")
         }
     }
 }

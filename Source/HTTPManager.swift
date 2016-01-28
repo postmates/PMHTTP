@@ -34,7 +34,7 @@ public final class HTTPManager: NSObject {
     /// Changes to this property affects any newly-created requests but do not
     /// affect any existing requests or any tasks that are in-progress.
     ///
-    /// Changing this property also resets the authentication information if the
+    /// Changing this property also resets the default credential if the
     /// new value differs from the old one. Setting this property to the existing
     /// value has no effect.
     ///
@@ -42,7 +42,7 @@ public final class HTTPManager: NSObject {
     ///   but requests created with absolute URLs will continue to work. See `HTTPManagerConfigurable`
     ///   for how to configure the shared `HTTPManager` prior to first use.
     ///
-    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`.
+    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`, `defaultCredential`.
     public var environment: Environment? {
         get {
             return inner.sync({ $0.environment })
@@ -85,15 +85,22 @@ public final class HTTPManager: NSObject {
         }
     }
     
-    /// The credential to use for HTTP requests.
+    /// The credential to use for HTTP requests. The default value is `nil`.
     ///
     /// Individual requests may override this credential with their own credential.
     ///
-    /// Changes to this property affect any newly-created requests but do not affect
-    /// any existing requests or any tasks that are in-progress.
+    /// Changes to this property affect any newly-created requests but do not affect any existing
+    /// requests or any tasks that are in-progress.
     ///
-    /// - Note: Only password-based credentials are supported. It is an error to assign
-    /// any other type of credential.
+    /// - Note: This credential is only used for HTTP requests that are located within the current
+    ///   environment's base URL. If a request is created with an absolute path or absolute URL, and
+    ///   the resulting URL does not represent a resource found within the environment's base URL,
+    ///   the request will not be assigned the default credential.
+    ///
+    /// - Important: Only password-based credentials are supported. It is an error to assign any
+    ///   other type of credential.
+    ///
+    /// - SeeAlso: `environment`.
     public var defaultCredential: NSURLCredential? {
         get {
             return inner.sync({ $0.defaultCredential })
@@ -236,10 +243,13 @@ public final class HTTPManager: NSObject {
 /// You can also use `HTTPManagerConfigurable` to configure the initial environment on the shared `HTTPManager`.
 public final class HTTPManagerEnvironment: NSObject {
     /// The base URL for the environment.
+    /// - Invariant: The URL is an absolute URL that is valid according to RFC 3986, the URL's path
+    ///   is either empty or has a trailing slash, and the URL has no query or fragment component.
     public let baseURL: NSURL
     
     /// Initializes an environment with a base URL.
-    /// - Parameter baseURL: The base URL to use for the environment. Must be valid according to RFC 3986.
+    /// - Parameter baseURL: The base URL to use for the environment. Must be a valid absolute URL
+    ///   according to RFC 3986.
     /// - Returns: An `HTTPManagerEnvironment` if the base URL is a valid absolute URL, `nil` otherwise.
     ///
     /// - Note: If `baseURL` has a non-empty `path` that does not end in a slash, the path is modified to
@@ -253,7 +263,8 @@ public final class HTTPManagerEnvironment: NSObject {
     }
     
     /// Initializes an environment with a URL string.
-    /// - Parameter string: The URL string to use for the environment. Must be valid according to RFC 3986.
+    /// - Parameter string: The URL string to use for the environment. Must be a valid absolute URL
+    ///   according to RFC 3986.
     /// - Returns: An `HTTPManagerEnvironment` if the URL string is a valid absolute URL, `nil` otherwise.
     ///
     /// - Note: If `string` represents a URL with a non-empty path that does not end in a slash, the path
@@ -264,6 +275,41 @@ public final class HTTPManagerEnvironment: NSObject {
             return nil
         }
         self.init(components: comps)
+    }
+    
+    /// Returns `true` if `url` is prefixed by `self.baseURL`, `false` otherwise.
+    ///
+    /// - Parameter url: The URL to compare against. Must be a valid absolute uRL according to RFC 3986,
+    ///   otherwise this method always returns `false`.
+    ///
+    /// For one URL to prefix another, both URLs must have the same scheme, authority info,
+    /// host, and port, and the first URL's path must be a prefix of the second URL's path.
+    /// Scheme and host are compared case-insensitively, and if the port is nil, an appropriate
+    /// default value is assumed for the HTTP and HTTPS schemes.
+    public func isPrefixOf(url: NSURL) -> Bool {
+        guard let urlComponents = NSURLComponents(URL: url, resolvingAgainstBaseURL: true) else { return false }
+        func getPort(components: NSURLComponents) -> Int? {
+            if let port = components.port { return port as Int }
+            switch components.scheme {
+            case CaseInsensitiveASCIIString("http")?: return 80
+            case CaseInsensitiveASCIIString("https")?: return 443
+            default: return nil
+            }
+        }
+        func caseInsensitiveCompare(a: String?, _ b: String?) -> Bool {
+            return a.map({CaseInsensitiveASCIIString($0)}) == b.map({CaseInsensitiveASCIIString($0)})
+        }
+        guard caseInsensitiveCompare(baseURLComponents.scheme, urlComponents.scheme)
+            && baseURLComponents.percentEncodedUser == urlComponents.percentEncodedUser
+            && baseURLComponents.percentEncodedPassword == urlComponents.percentEncodedPassword
+            && caseInsensitiveCompare(baseURLComponents.percentEncodedHost, urlComponents.percentEncodedHost)
+            && getPort(baseURLComponents) == getPort(urlComponents)
+            else { return false }
+        switch (baseURLComponents.percentEncodedPath, urlComponents.percentEncodedPath) {
+        case (""?, _), (nil, _): return true
+        case (_?, nil): return false
+        case let (a?, b?): return b.hasPrefix(a)
+        }
     }
     
     private convenience init?(components: NSURLComponents) {
@@ -280,13 +326,19 @@ public final class HTTPManagerEnvironment: NSObject {
         guard let url = components.URL else {
             return nil
         }
-        self.init(sanitizedBaseURL: url)
+        self.init(sanitizedBaseURL: url, components: components)
     }
+    
+    /// `NSURLComponents` object equivalent to `baseURL`.
+    /// This property is `private` because the returned object is mutable but should not be mutated.
+    /// It only exists to avoid re-parsing the URL every time its components is accessed.
+    private let baseURLComponents: NSURLComponents
     
     // hack to workaround `return nil` from designated initializers
     // FIXME: Remove in Swift 2.2
-    private init?(sanitizedBaseURL url: NSURL) {
+    private init?(sanitizedBaseURL url: NSURL, components: NSURLComponents) {
         baseURL = url
+        baseURLComponents = components
         super.init()
     }
     
@@ -398,12 +450,17 @@ extension HTTPManager {
     }
     
     private func constructRequest<T: HTTPManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
-        let (baseURL, credential) = inner.sync({ inner -> (NSURL?, NSURLCredential?) in
-            return (inner.environment?.baseURL, inner.defaultCredential)
+        let (environment, credential) = inner.sync({ inner -> (Environment?, NSURLCredential?) in
+            return (inner.environment, inner.defaultCredential)
         })
-        guard let url = NSURL(string: path, relativeToURL: baseURL) else { return nil }
+        guard let url = NSURL(string: path, relativeToURL: environment?.baseURL) else { return nil }
         let request = f(url)
-        request.credential = credential
+        if let credential = credential, environment = environment {
+            // make sure the requested entity is within the space defined by baseURL
+            if environment.isPrefixOf(url) {
+                request.credential = credential
+            }
+        }
         return request
     }
 }
