@@ -607,6 +607,22 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
+                    // And back again
+                    let bridged = HTTPManagerError(nserror)
+                    switch bridged {
+                    case let HTTPManagerError.FailedResponse(statusCode_, response_, body_, json_)?:
+                        XCTAssert(response === response_, "bridged error response")
+                        XCTAssertEqual(statusCode_, statusCode, "bridged error status code")
+                        XCTAssertEqual(body_, body, "bridged error body data")
+                        // bridging will strip nulls, and pass numbers through NSNumber, so lets do that here too
+                        if let jsonNoNull = (json?.plistNoNull).flatMap({try? JSON(plist: $0)}) {
+                            XCTAssertEqual(json_, jsonNoNull, "bridged error body json")
+                        } else {
+                            XCTFail("Couldn't round-trip JSON payload through plistNoNull")
+                        }
+                    default:
+                        XCTFail("bridged error expected HTTPManagerError.FailedResponse, found \(bridged)")
+                    }
                 } else {
                     XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
                 }
@@ -636,6 +652,17 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
                     XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
+                    // And back again
+                    let bridged = HTTPManagerError(nserror)
+                    switch bridged {
+                    case let HTTPManagerError.FailedResponse(statusCode_, response_, body_, json_)?:
+                        XCTAssert(response === response_, "bridged error response")
+                        XCTAssertEqual(statusCode_, statusCode, "bridged error status code")
+                        XCTAssertEqual(body_, body, "bridged error body data")
+                        XCTAssertNil(json_, "bridged error body json")
+                    default:
+                        XCTFail("bridged error expected HTTPManagerError.FailedResponse, found \(bridged)")
+                    }
                 } else {
                     XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
                 }

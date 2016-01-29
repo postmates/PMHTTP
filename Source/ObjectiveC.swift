@@ -6,6 +6,8 @@
 //  Copyright © 2015 Postmates. All rights reserved.
 //
 
+import PMJSON
+
 // obj-c helpers
 extension HTTPManager {
     /// The default `HTTPManager` instance.
@@ -27,9 +29,15 @@ extension HTTPManager {
 }
 
 extension HTTPManagerError {
-    /// Returns an `NSError` using the PMHTTPError constants for use by Objective-C.
-    /// The returned error cannot bridge back into Swift, but it contains a usable `userInfo`.
-    internal func toNSError() -> NSError {
+    /// Returns an `NSError` using the `PMHTTPError` constants for use by Objective-C.
+    /// - Important: This is different than the `NSError` produced by casting the error using
+    /// `error as NSError`, and cannot be casted back to `HTTPManagerError` using
+    /// `nserror as? HTTPManagerError`.
+    /// - Note: Errors that carry JSON payloads may have the payloads change when bridging to `NSError`.
+    ///   In particular, null values will be stripped and JSON payloads where the top-level value is not an
+    ///   object will be omitted.
+    /// - SeeAlso: `init?(_ error:)`.
+    public func toNSError() -> NSError {
         switch self {
         case let .FailedResponse(statusCode, response, body, json):
             let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
@@ -72,6 +80,53 @@ extension HTTPManagerError {
             ]
             userInfo[PMHTTPLocationErrorKey] = location
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedRedirect.rawValue, userInfo: userInfo)
+        }
+    }
+    
+    /// Returns an `HTTPManagerError` corresponding to the given `NSError` if the `NSError` was created
+    /// by the ObjC variants of the `HTTPManager` methods.
+    /// - Important: This is not the same thing as using `as?` to cast the `NSError` to `HTTPManagerError`.
+    ///   The ObjC variants of the `HTTPManager` methods return an `NSError` that was not created by bridging
+    ///   `HTTPManagerError` to `NSError` (because those errors aren't particularly usable from ObjC).
+    /// - Note: Errors that carry JSON payloads may have the payloads change when bridging to `NSError` and back.
+    ///   In particular, null values will be stripped and JSON payloads where the top-level value is not an
+    ///   object will be omitted from the `NSError` version.
+    /// - SeeAlso: `toNSError()`.
+    public init?(_ error: NSError) {
+        guard error.domain == PMHTTPErrorDomain, let code = PMHTTPError(rawValue: error.code) else { return nil }
+        let userInfo = error.userInfo
+        switch code {
+        case .FailedResponse:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
+                statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
+                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+                else { return nil }
+            let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(plist: $0)})
+            self = HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: body, bodyJson: json)
+        case .Unauthorized:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
+                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+                else { return nil }
+            let credential = userInfo[PMHTTPCredentialErrorKey] as? NSURLCredential
+            let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(plist: $0)})
+            self = HTTPManagerError.Unauthorized(credential: credential, response: response, body: body, bodyJson: json)
+        case .UnexpectedContentType:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
+                contentType = userInfo[PMHTTPContentTypeErrorKey] as? String,
+                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+                else { return nil }
+            self = HTTPManagerError.UnexpectedContentType(contentType: contentType, response: response, body: body)
+        case .UnexpectedNoContent:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse
+                else { return nil }
+            self = HTTPManagerError.UnexpectedNoContent(response: response)
+        case .UnexpectedRedirect:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
+                statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
+                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+                else { return nil }
+            let location = userInfo[PMHTTPLocationErrorKey] as? NSURL
+            self = HTTPManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, response: response, body: body)
         }
     }
 }
