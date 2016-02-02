@@ -911,6 +911,8 @@ public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
             request.HTTPBody = data
         case .FormUrlEncoded(let queryItems)?:
             request.HTTPBody = UploadBody.dataRepresentationForQueryItems(queryItems)
+        case .JSON(let json)?:
+            request.HTTPBody = JSON.encodeAsData(json, pretty: false)
         case .MultipartMixed?:
             // TODO: set request HTTPBodyStream
             break
@@ -1069,7 +1071,7 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
     /// The request will include the `HTTPBody` value.
     public override var preparedURLRequest: NSURLRequest {
         let request = _preparedURLRequest
-        // TODO: set request HTTPBody
+        request.HTTPBody = JSON.encodeAsData(uploadJSON, pretty: false)
         return request
     }
     
@@ -1091,8 +1093,7 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
     }
     
     internal override var uploadBody: UploadBody? {
-        // TODO: implement me
-        return nil
+        return .JSON(uploadJSON)
     }
     
     internal init(apiManager: HTTPManager, URL url: NSURL, method: Method, json: JSON) {

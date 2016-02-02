@@ -880,7 +880,25 @@ extension SessionDelegate: NSURLSessionDataDelegate {
     }
     
     @objc func URLSession(session: NSURLSession, task: NSURLSessionTask, needNewBodyStream completionHandler: (NSInputStream?) -> Void) {
-        // TODO: implement me
-        completionHandler(nil)
+        guard let taskInfo = tasks[task.taskIdentifier] else {
+            completionHandler(nil)
+            return
+        }
+        assert(taskInfo.task.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
+        switch taskInfo.uploadBody {
+        case .Data(let data)?:
+            completionHandler(NSInputStream(data: data))
+        case .FormUrlEncoded(let queryItems)?:
+            completionHandler(NSInputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
+        case .JSON(let json)?:
+            dispatch_async(dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)) {
+                completionHandler(NSInputStream(data: JSON.encodeAsData(json, pretty: false)))
+            }
+        case .MultipartMixed?:
+            // TODO: implement me
+            completionHandler(nil)
+        case nil:
+            completionHandler(nil)
+        }
     }
 }

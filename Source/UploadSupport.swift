@@ -7,10 +7,12 @@
 //
 
 import Foundation
+import PMJSON
 
 internal enum UploadBody {
     case Data(NSData)
     case FormUrlEncoded([NSURLQueryItem])
+    case JSON(PMJSON.JSON)
     case MultipartMixed([NSURLQueryItem], [MultipartBodyPart])
     
     static func dataRepresentationForQueryItems(queryItems: [NSURLQueryItem]) -> NSData {

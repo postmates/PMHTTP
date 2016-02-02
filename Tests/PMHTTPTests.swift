@@ -1217,4 +1217,26 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertNil(req.credential, "request object credential")
         }
     }
+    
+    func testJSONUpload() {
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            XCTAssertEqual(request.headers["Content-Type"], "application/json", "request content-type header")
+            do {
+                let json = try request.body.map({try JSON.decode($0)})
+                XCTAssertEqual(json, ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil], "request json body")
+            } catch {
+                if let body = request.body, str = String(data: body, encoding: NSUTF8StringEncoding) {
+                    XCTFail("couldn't decode JSON body: \(String(reflecting: str))")
+                } else {
+                    XCTFail("couldn't decode JSON body: \(request.body.map({"\($0.length) bytes"}) ?? "nil")")
+                }
+            }
+            completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{\"ok\": true, \"msg\": \"upload complete\"}"))
+        }
+        expectationForRequestSuccess(HTTP.request(POST: "foo", json: ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil]).parseAsJSON()) { task, response, json in
+            XCTAssertEqual(response.MIMEType, "application/json", "response MIME type")
+            XCTAssertEqual(json, ["ok": true, "msg": "upload complete"], "response body json")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+    }
 }
