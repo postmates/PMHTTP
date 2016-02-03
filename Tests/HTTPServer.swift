@@ -798,7 +798,7 @@ final class HTTPServer {
                 default:
                     return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid chunk syntax"))
                 }
-                guard let size = UInt(String(buffer.prefixUpTo(idx).lazy.map({UnicodeScalar($0)})), radix: 16) else {
+                guard let size = UInt(String(buffer.prefixUpTo(idx).lazy.map({Character(UnicodeScalar($0))})), radix: 16) else {
                     return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid chunk size"))
                 }
                 if size == 0 {
@@ -807,7 +807,7 @@ final class HTTPServer {
                     chunkedTrailer = nil // just in case
                     socket.readDataToLength(2, withTimeout: -1, tag: Tag.ChunkedBodyTrailer.rawValue)
                 } else {
-                    guard UInt(chunkedBody.length) + size > 5 * 1024 * 1024 else {
+                    guard UInt(chunkedBody.length) + size <= 5 * 1024 * 1024 else {
                         log("Chunk too large (\(size) bytes, \(UInt(chunkedBody.length) + size) total)")
                         return writeResponseAndClose(Response(status: .RequestEntityTooLarge, text: "Requests limited to 5MB"))
                     }
