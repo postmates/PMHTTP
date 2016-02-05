@@ -29,6 +29,16 @@ public final class HTTPManagerTask: NSObject {
     
     @objc private static let automaticallyNotifiesObserversOfState: Bool = false
     
+    /// Invokes `resume()` on the underlying `NSURLSessionTask`.
+    public func resume() {
+        networkTask.resume()
+    }
+    
+    /// Invokes `suspend()` on the underlying `NSURLSessionTask`.
+    public func suspend() {
+        networkTask.suspend()
+    }
+    
     /// Cancels the operation, if it hasn't already completed.
     ///
     /// If the operation is still talking to the network, the underlying network

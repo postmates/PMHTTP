@@ -687,6 +687,7 @@ extension HTTPManager {
     /// - Parameter processor: The processing block. This block must transition the task to the `.Completed` state
     ///   and must handle cancellation correctly.
     /// - Returns: An `HTTPManagerTask`.
+    /// - Important: After creating the task, you must start it by calling the `resume()` method.
     internal func createNetworkTaskWithRequest(request: HTTPManagerRequest, uploadBody: UploadBody?, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
         let urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
@@ -720,7 +721,6 @@ extension HTTPManager {
         if apiTask.userInitiated {
             apiTask.networkTask.priority = NSURLSessionTaskPriorityHigh
         }
-        apiTask.networkTask.resume()
         return apiTask
     }
 }
