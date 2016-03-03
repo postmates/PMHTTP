@@ -23,7 +23,7 @@ extension HTTPManager {
     ///   be parsed by `NSURL` or `json` is not a JSON-compatible object.
     @objc(requestForPOST:json:)
     public func __objc_requestForPOST(path: String, json object: AnyObject) -> HTTPManagerUploadJSONRequest! {
-        guard let json = try? JSON(plist: object) else { return nil }
+        guard let json = try? JSON(ns: object) else { return nil }
         return request(POST: path, json: json)
     }
 }
@@ -47,7 +47,7 @@ extension HTTPManagerError {
                 PMHTTPStatusCodeErrorKey: statusCode,
                 PMHTTPBodyDataErrorKey: body
             ]
-            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.plistNoNull
+            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: userInfo)
         case let .Unauthorized(credential, response, body, json):
             var userInfo: [NSObject: AnyObject] = [
@@ -56,7 +56,7 @@ extension HTTPManagerError {
                 PMHTTPBodyDataErrorKey: body
             ]
             userInfo[PMHTTPCredentialErrorKey] = credential
-            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.plistNoNull
+            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.Unauthorized.rawValue, userInfo: userInfo)
         case let .UnexpectedContentType(contentType, response, body):
             return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedContentType.rawValue, userInfo: [
@@ -101,14 +101,14 @@ extension HTTPManagerError {
                 statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
                 body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
                 else { return nil }
-            let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(plist: $0)})
+            let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(ns: $0)})
             self = HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: body, bodyJson: json)
         case .Unauthorized:
             guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
                 body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
                 else { return nil }
             let credential = userInfo[PMHTTPCredentialErrorKey] as? NSURLCredential
-            let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(plist: $0)})
+            let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(ns: $0)})
             self = HTTPManagerError.Unauthorized(credential: credential, response: response, body: body, bodyJson: json)
         case .UnexpectedContentType:
             guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
@@ -400,7 +400,7 @@ extension HTTPManagerDataRequest {
     @objc(parseAsJSONOmitNulls:)
     public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
-            return omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
+            return omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
         }))
     }
     
@@ -446,7 +446,7 @@ extension HTTPManagerDataRequest {
     public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
             var error: NSError?
-            let jsonObject = omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
+            let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
             if let object = handler(response: response, json: jsonObject, error: &error) {
                 return object
             } else if let error = error {
@@ -654,7 +654,7 @@ extension HTTPManagerDeleteRequest {
     @objc(parseAsJSONOmitNulls:)
     public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
-            return omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
+            return omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
         }))
     }
     
@@ -703,7 +703,7 @@ extension HTTPManagerDeleteRequest {
     public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
             var error: NSError?
-            let jsonObject = omitNulls ? (json.plistNoNull ?? NSNull()) : json.plist
+            let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
             if let object = handler(response: response, json: jsonObject, error: &error) {
                 return object
             } else if let error = error {
@@ -753,7 +753,7 @@ extension HTTPManagerUploadJSONRequest {
     /// - Requires: Values assigned to this property must be json-compatible.
     @objc(uploadJSON)
     public var __objc_uploadJSON: AnyObject {
-        get { return uploadJSON.plist }
-        set { uploadJSON = try! JSON(plist: newValue) }
+        get { return uploadJSON.ns }
+        set { uploadJSON = try! JSON(ns: newValue) }
     }
 }

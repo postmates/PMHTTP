@@ -615,10 +615,10 @@ final class PMHTTPTests: PMHTTPTestCase {
                         XCTAssertEqual(statusCode_, statusCode, "bridged error status code")
                         XCTAssertEqual(body_, body, "bridged error body data")
                         // bridging will strip nulls, and pass numbers through NSNumber, so lets do that here too
-                        if let jsonNoNull = (json?.plistNoNull).flatMap({try? JSON(plist: $0)}) {
+                        if let jsonNoNull = (json?.nsNoNull).flatMap({try? JSON(ns: $0)}) {
                             XCTAssertEqual(json_, jsonNoNull, "bridged error body json")
                         } else {
-                            XCTFail("Couldn't round-trip JSON payload through plistNoNull")
+                            XCTFail("Couldn't round-trip JSON payload through nsNoNull")
                         }
                     default:
                         XCTFail("bridged error expected HTTPManagerError.FailedResponse, found \(bridged)")
