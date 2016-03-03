@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E139FA31C4EC82F00A764BD /* PMHTTPError.m */; };
 		9E139FA61C4EC9EE00A764BD /* PMHTTPError.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E139FA51C4EC83800A764BD /* PMHTTPError.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E22DD291C88CEF200C49993 /* DateParsing.swift */; };
+		9E22DD2C1C88D09100C49993 /* DateParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */; };
 		9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E29514A1C4D95CB001D38AC /* Utilities.swift */; };
 		9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */; };
 		9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77821C2B792A000FF8AC /* QueueConfined.swift */; };
@@ -43,6 +45,8 @@
 /* Begin PBXFileReference section */
 		9E139FA31C4EC82F00A764BD /* PMHTTPError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPError.m; sourceTree = "<group>"; };
 		9E139FA51C4EC83800A764BD /* PMHTTPError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMHTTPError.h; sourceTree = "<group>"; };
+		9E22DD291C88CEF200C49993 /* DateParsing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateParsing.swift; sourceTree = "<group>"; };
+		9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateParsingTests.swift; sourceTree = "<group>"; };
 		9E29514A1C4D95CB001D38AC /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityManager.swift; sourceTree = "<group>"; };
 		9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Carthage.xcconfig; sourceTree = "<group>"; };
@@ -137,6 +141,7 @@
 				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
 				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
 				9E4C77A81C360714000FF8AC /* ObjectiveC.swift */,
+				9E22DD291C88CEF200C49993 /* DateParsing.swift */,
 				9E139FA51C4EC83800A764BD /* PMHTTPError.h */,
 				9E139FA31C4EC82F00A764BD /* PMHTTPError.m */,
 				9E4C77821C2B792A000FF8AC /* QueueConfined.swift */,
@@ -155,6 +160,7 @@
 				9EC8F0D11C408F1400297FC5 /* HTTP Server */,
 				9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */,
 				9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */,
+				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
 				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
 			);
@@ -312,6 +318,7 @@
 				9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */,
 				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,
+				9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */,
 				9E4C77A91C360714000FF8AC /* ObjectiveC.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -320,6 +327,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9E22DD2C1C88D09100C49993 /* DateParsingTests.swift in Sources */,
 				9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */,
 				9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */,
 				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
