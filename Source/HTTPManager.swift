@@ -71,10 +71,10 @@ public final class HTTPManager: NSObject {
     public var sessionConfiguration: NSURLSessionConfiguration {
         get {
             let config = inner.sync({ $0.sessionConfiguration })
-            return config.copy() as! NSURLSessionConfiguration
+            return unsafeDowncast(config.copy())
         }
         set {
-            let config = sessionConfiguration.copy() as! NSURLSessionConfiguration
+            let config: NSURLSessionConfiguration = unsafeDowncast(newValue.copy())
             inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] in
                 $0.sessionConfiguration = config
                 $0.setHeader("User-Agent", value: value, overwrite: false)
