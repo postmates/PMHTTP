@@ -697,7 +697,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     
     func testRequestPaths() {
         var skipRemainingTests = false
-        func runTest(requestPath: String, urlPath: String, serverPath: String? = nil, file: String = __FILE__, line: UInt = __LINE__) {
+        func runTest(requestPath: String, urlPath: String, serverPath: String? = nil, file: StaticString = #file, line: UInt = #line) {
             if skipRemainingTests { return }
             expectationForHTTPRequest(httpServer, path: serverPath ?? urlPath) { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .OK))
@@ -883,7 +883,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     func testRedirections() {
         let address = httpServer.address
         
-        func addEchoRequestHandlers(requestMethod: HTTPServer.Method, status: HTTPServer.Status, redirectMethod: HTTPServer.Method? = nil, file: String = __FILE__, line: UInt = __LINE__) {
+        func addEchoRequestHandlers(requestMethod: HTTPServer.Method, status: HTTPServer.Status, redirectMethod: HTTPServer.Method? = nil, file: StaticString = #file, line: UInt = #line) {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 XCTAssertEqual(request.method, requestMethod, "request method", file: file, line: line)
                 completionHandler(HTTPServer.Response(status: status, headers: ["Location": "http://\(address)/bar"]))
@@ -893,7 +893,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .OK, body: request.body))
             }
         }
-        func addSuccessHandler(request: HTTPManagerNetworkRequest, redirectMethod: HTTPManagerRequest.Method? = nil, body: String = "", file: String = __FILE__, line: UInt = __LINE__) {
+        func addSuccessHandler(request: HTTPManagerNetworkRequest, redirectMethod: HTTPManagerRequest.Method? = nil, body: String = "", file: StaticString = #file, line: UInt = #line) {
             expectationForRequestSuccess(request) { task, response, data in
                 XCTAssertEqual(task.networkTask.originalRequest?.URL?.absoluteString, "http://\(address)/foo", "original request url", file: file, line: line)
                 XCTAssertEqual(task.networkTask.originalRequest?.HTTPMethod, String(request.requestMethod), "original request HTTP method", file: file, line: line)
@@ -910,7 +910,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
 
         
-        func runTest(status: HTTPServer.Status, preserveMethodOnRedirect: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        func runTest(status: HTTPServer.Status, preserveMethodOnRedirect: Bool, file: StaticString = #file, line: UInt = #line) {
             // GET
             addEchoRequestHandlers(.GET, status: status, file: file, line: line)
             addSuccessHandler(HTTP.request(GET: "foo"), file: file, line: line)
@@ -970,7 +970,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
         }
         
-        func addFailureExpectation(request: HTTPManagerParseRequest<JSON>, file: String = __FILE__, line: UInt = __LINE__) {
+        func addFailureExpectation(request: HTTPManagerParseRequest<JSON>, file: StaticString = #file, line: UInt = #line) {
             expectationForRequestFailure(request) { task, response, error in
                 XCTAssertEqual(task.networkTask.originalRequest?.URL?.absoluteString, "http://\(address)/foo", "original request url", file: file, line: line)
                 XCTAssertEqual(task.networkTask.currentRequest?.URL?.absoluteString, "http://\(address)/foo", "current request url", file: file, line: line)
@@ -1128,7 +1128,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testEnvironmentIsPrefixOf() {
-        func check(envStr: String, isPrefixOfURL urlString: String, withBaseURL baseURLString: String? = nil, toBe expected: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        func check(envStr: String, isPrefixOfURL urlString: String, withBaseURL baseURLString: String? = nil, toBe expected: Bool, file: StaticString = #file, line: UInt = #line) {
             guard let env = HTTPManager.Environment(string: envStr) else {
                 return XCTFail("Could not create HTTPManager.Environment", file: file, line: line)
             }

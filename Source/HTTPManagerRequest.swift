@@ -7,7 +7,7 @@
 //
 
 import Foundation
-@exported import PMJSON
+@_exported import PMJSON
 
 /// An HTTP request.
 ///
@@ -461,7 +461,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     }
     
     private static func taskProcessor(task: HTTPManagerTask, _ result: HTTPManagerTaskResult<NSData>) -> HTTPManagerTaskResult<NSData> {
-        return result.map(`try`: { response, data in
+        return result.map(try: { response, data in
             if let response = response as? NSHTTPURLResponse, case let statusCode = response.statusCode where !(200...399).contains(statusCode) {
                 let json: JSON?
                 switch response.MIMEType.map(MediaType.init) {
@@ -498,7 +498,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
 
 /// A protocol for `HTTPManagerRequest`s that can be performed.
 public protocol HTTPManagerRequestPerformable {
-    typealias ResultValue
+    associatedtype ResultValue
     
     /// Performs an asynchronous request and calls the specified handler when done.
     /// - Parameter handler: The handler to call when the request is done. This
@@ -727,7 +727,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
             return .Canceled
         }
         
-        return result.map(`try`: { response, data in
+        return result.map(try: { response, data in
             if let response = response as? NSHTTPURLResponse {
                 let statusCode = response.statusCode
                 if (300...399).contains(statusCode) {

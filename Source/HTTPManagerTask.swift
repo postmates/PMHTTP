@@ -84,8 +84,8 @@ public final class HTTPManagerTask: NSObject {
     private let _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState)
 }
 
-extension HTTPManagerTask : CustomDebugStringConvertible {
-    // NSObject already conforms to CustomStringConvertible
+extension HTTPManagerTask {
+    // NSObject already conforms to CustomStringConvertible and CustomDebugStringConvertible
     
     public override var description: String {
         return getDescription(false)

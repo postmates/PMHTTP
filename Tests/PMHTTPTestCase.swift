@@ -45,10 +45,10 @@ class PMHTTPTestCase: XCTestCase {
     
     @available(*, unavailable)
     override func waitForExpectationsWithTimeout(timeout: NSTimeInterval, handler: XCWaitCompletionHandler?) {
-        waitForExpectationsWithTimeout(timeout, file: __FILE__, line: __LINE__, handler: handler)
+        waitForExpectationsWithTimeout(timeout, file: #file, line: #line, handler: handler)
     }
     
-    @objc func waitForExpectationsWithTimeout(timeout: NSTimeInterval, file: String = __FILE__, line: UInt = __LINE__, handler: XCWaitCompletionHandler?) {
+    func waitForExpectationsWithTimeout(timeout: NSTimeInterval, file: StaticString = #file, line: UInt = #line, handler: XCWaitCompletionHandler?) {
         var setUnhandledRequestCallback = false
         if httpServer.unhandledRequestCallback == nil {
             setUnhandledRequestCallback = true
@@ -78,7 +78,7 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, file: String = __FILE__, line: UInt = __LINE__,
+        request: Request, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void
         ) -> HTTPManagerTask
     {
@@ -106,7 +106,7 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, file: String = __FILE__, line: UInt = __LINE__,
+        request: Request, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void
         ) -> HTTPManagerTask
     {

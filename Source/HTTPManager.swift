@@ -14,7 +14,7 @@ import Foundation
 #elseif os(watchOS)
     import WatchKit.WKExtension
 #endif
-@exported import PMJSON
+@_exported import PMJSON
 
 /// The default `HTTPManager` instance.
 /// - SeeAlso: `HTTPManagerConfigurable`.
