@@ -312,7 +312,7 @@ public final class HTTPManagerEnvironment: NSObject {
         }
     }
     
-    private convenience init?(components: NSURLComponents) {
+    private init?(components: NSURLComponents) {
         guard components.scheme != nil else {
             // no scheme? Not an absolute URL
             return nil
@@ -326,21 +326,15 @@ public final class HTTPManagerEnvironment: NSObject {
         guard let url = components.URL else {
             return nil
         }
-        self.init(sanitizedBaseURL: url, components: components)
+        baseURL = url
+        baseURLComponents = components
+        super.init()
     }
     
     /// `NSURLComponents` object equivalent to `baseURL`.
     /// This property is `private` because the returned object is mutable but should not be mutated.
     /// It only exists to avoid re-parsing the URL every time its components is accessed.
     private let baseURLComponents: NSURLComponents
-    
-    // hack to workaround `return nil` from designated initializers
-    // FIXME: Remove in Swift 2.2
-    private init?(sanitizedBaseURL url: NSURL, components: NSURLComponents) {
-        baseURL = url
-        baseURLComponents = components
-        super.init()
-    }
     
     public override var description: String {
         return "<HTTPManagerEnvironment: 0x\(String(unsafeBitCast(unsafeAddressOf(self), UInt.self), radix: 16)) \(baseURL.absoluteString))>"

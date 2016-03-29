@@ -492,8 +492,6 @@ extension HTTPManagerDataRequest {
 ///
 /// - Note: This class is only meant to be used from Obj-C.
 public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
-    // FIXME: Swift 2.2: Add - recommended: doc comment field
-    
     // NB: All mutable properties need to be overridden here
     
     public override var url: NSURL {
