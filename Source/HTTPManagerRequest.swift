@@ -101,6 +101,10 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// Set this to `true` to increase the priority. Default is `false`.
     public var userInitiated: Bool = false
     
+    /// The retry behavior to use for the request. Default is the value of
+    /// `HTTPManager.defaultRetryBehavior`.
+    public var retryBehavior: HTTPManagerRetryBehavior?
+    
     #if os(iOS)
     /// Whether tasks created from this request should affect the visiblity of the
     /// network activity indicator. Default is `true`.
@@ -164,6 +168,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
+        retryBehavior = request.retryBehavior
         #if os(iOS)
             affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         #endif
@@ -797,6 +802,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         self.defaultResponseCacheStoragePolicy = defaultResponseCacheStoragePolicy ?? request.defaultResponseCacheStoragePolicy
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
+        retryBehavior = request.retryBehavior
         #if os(iOS)
             affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         #endif

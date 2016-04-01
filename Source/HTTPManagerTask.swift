@@ -78,6 +78,7 @@ public final class HTTPManagerTask: NSObject {
     internal let userInitiated: Bool
     internal let followRedirects: Bool
     internal let defaultResponseCacheStoragePolicy: NSURLCacheStoragePolicy
+    internal let retryBehavior: HTTPManagerRetryBehavior?
     #if os(iOS)
     internal let trackingNetworkActivity: Bool
     #endif
@@ -88,6 +89,7 @@ public final class HTTPManagerTask: NSObject {
         self.userInitiated = request.userInitiated
         self.followRedirects = request.shouldFollowRedirects
         self.defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
+        self.retryBehavior = request.retryBehavior
         #if os(iOS)
             self.trackingNetworkActivity = request.affectsNetworkActivityIndicator
         #endif

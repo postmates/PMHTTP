@@ -117,6 +117,23 @@ public final class HTTPManager: NSObject {
         }
     }
     
+    /// The default retry behavior to use for requests. The default value is `nil`.
+    ///
+    /// Individual requests may override this behavior with their own behavior.
+    ///
+    /// Changes to this property affect any newly-created requests but do not affect
+    /// any existing requests or any tasks that are in-progress.
+    public var defaultRetryBehavior: HTTPManagerRetryBehavior? {
+        get {
+            return inner.sync({ $0.defaultRetryBehavior })
+        }
+        set {
+            inner.asyncBarrier {
+                $0.defaultRetryBehavior = newValue
+            }
+        }
+    }
+    
     /// The user agent that's passed to every request.
     public var userAgent: String {
         return inner.sync({
@@ -163,6 +180,7 @@ public final class HTTPManager: NSObject {
         var environment: Environment?
         var sessionConfiguration: NSURLSessionConfiguration = .defaultSessionConfiguration()
         var defaultCredential: NSURLCredential?
+        var defaultRetryBehavior: HTTPManagerRetryBehavior?
 
         var session: NSURLSession!
         var sessionDelegate: SessionDelegate!
@@ -444,8 +462,8 @@ extension HTTPManager {
     }
     
     private func constructRequest<T: HTTPManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
-        let (environment, credential) = inner.sync({ inner -> (Environment?, NSURLCredential?) in
-            return (inner.environment, inner.defaultCredential)
+        let (environment, credential, defaultRetryBehavior) = inner.sync({ inner -> (Environment?, NSURLCredential?, HTTPManagerRetryBehavior?) in
+            return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior)
         })
         guard let url = NSURL(string: path, relativeToURL: environment?.baseURL) else { return nil }
         let request = f(url)
@@ -455,6 +473,7 @@ extension HTTPManager {
                 request.credential = credential
             }
         }
+        request.retryBehavior = defaultRetryBehavior
         return request
     }
 }
