@@ -1264,7 +1264,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Suspended, "network task state")
         task.resume()
         XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Running, "network task state")
-        task.suspend()
+        task.networkTask.suspend()
         XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Suspended, "network task state")
         task.resume()
         XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Running, "network task state")
