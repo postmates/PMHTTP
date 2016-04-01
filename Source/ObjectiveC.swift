@@ -131,6 +131,131 @@ extension HTTPManagerError {
     }
 }
 
+extension HTTPManagerRetryBehavior {
+    /// Returns a retry behavior that evaluates a block.
+    ///
+    /// The returned retry behavior will be evaluated only for idempotent requests. If the request involves
+    /// redirections, the original request will be evaluated for idempotence (and in the event of a retry,
+    /// the original request is the one that is retried).
+    ///
+    /// - Note: The block will be executed on an arbitrary dispatch queue.
+    ///
+    /// The block takes the following parameters:
+    ///
+    /// - Parameter task: The `HTTPManagerTask` under consideration. You can use this task
+    ///   to retrieve the last `networkTask` and its `originalRequest` and `response`.
+    /// - Parameter error: The error that occurred. This may be an error from the networking portion
+    ///   or it may be an error from the processing stage.
+    /// - Parameter attempt: The number of retries so far. The first retry block is attempt `0`, the second is
+    ///   attempt `1`, etc.
+    /// - Parameter callback: A block that must be invoked to determine whether a retry should be done.
+    ///   Passing `true` means the request should be automatically retried, `false` means no retry.
+    ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
+    ///
+    ///   **Important:** This block must be executed at some point or the task will be stuck in the
+    ///   `.Processing` state forever.
+    ///
+    ///   **Requires:** This block must not be executed more than once.
+    @objc(retryBehaviorWithHandler:)
+    public convenience init(__handler handler: (task: HTTPManagerTask, error: NSError, attempt: Int, callback: Bool -> Void) -> Void) {
+        self.init({ task, error, attempt, callback in
+            switch error {
+            case let error as HTTPManagerError:
+                handler(task: task, error: error.toNSError(), attempt: attempt, callback: callback)
+            default:
+                handler(task: task, error: error as NSError, attempt: attempt, callback: callback)
+            }
+        })
+    }
+    
+    /// Returns a retry behavior that evaluates a block.
+    ///
+    /// The returned retry behavior will be evaluated for all requests regardless of whether the request
+    /// is idempotent. If the request involves redirections, the original request is the one that is retried.
+    ///
+    /// - Important: Your handler needs to be aware of whether it's being invoked on a non-idempotent request
+    ///   and only retry those requests where performing the request twice is safe. Your handler shold consult
+    ///   the `originalRequest` property of the task for making this determination.
+    ///
+    /// The block takes the following parameters:
+    ///
+    /// - Parameter task: The `HTTPManagerTask` under consideration. You can use this task
+    ///   to retrieve the last `networkTask` and its `originalRequest` and `response`.
+    /// - Parameter error: The error that occurred. This may be an error from the networking portion
+    ///   or it may be an error from the processing stage.
+    /// - Parameter attempt: The number of retries so far. The first retry block is attempt `0`, the second is
+    ///   attempt `1`, etc.
+    /// - Parameter callback: A block that must be invoked to determine whether a retry should be done.
+    ///   Passing `true` means the request should be automatically retried, `false` means no retry.
+    ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
+    ///
+    ///   **Important:** This block must be executed at some point or the task will be stuck in the
+    ///   `.Processing` state forever.
+    ///
+    ///   **Requires:** This block must not be executed more than once.
+    @objc(retryBehaviorIgnoringIdempotenceWithHandler:)
+    public convenience init(__ignoringIdempotence handler: (task: HTTPManagerTask, error: NSError, attempt: Int, callback: Bool -> Void) -> Void) {
+        self.init(ignoringIdempotence: { task, error, attempt, callback in
+            switch error {
+            case let error as HTTPManagerError:
+                handler(task: task, error: error.toNSError(), attempt: attempt, callback: callback)
+            default:
+                handler(task: task, error: error as NSError, attempt: attempt, callback: callback)
+            }
+        })
+    }
+    
+    /// Returns a retry behavior that retries once automatically for networking errors.
+    ///
+    /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
+    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// truncated response). The request will not be retried for networking errors that
+    /// are unlikely to change when retrying.
+    ///
+    /// If the request is non-idempotent, it only retries if the error indicates that a
+    /// connection was never made to the server (such as cannot find host).
+    ///
+    /// - Parameter including503ServiceUnavailable: If `YES`, retries on a 503 Service Unavailable
+    ///   response as well. Non-idempotent requests will also be retried on a 503 Service Unavailable
+    ///   as the server did not handle the original request. If `NO`, only networking failures
+    ///   are retried.
+    @objc(retryNetworkFailureOnceIncluding503ServiceUnavailable:)
+    public class func __retryNetworkFailureOnce(including503ServiceUnavailable: Bool) -> HTTPManagerRetryBehavior {
+        if including503ServiceUnavailable {
+            return HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
+        } else {
+            return HTTPManagerRetryBehavior.retryNetworkFailure(withStrategy: .retryOnce)
+        }
+    }
+    
+    /// Returns a retry behavior that retries twice automatically for networking errors.
+    ///
+    /// The first retry happens immediately, and the second retry happens after a given
+    /// delay.
+    ///
+    /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
+    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// truncated response). The request will not be retried for networking errors that
+    /// are unlikely to change when retrying.
+    ///
+    /// If the request is non-idempotent, it only retries if the error indicates that a
+    /// connection was never made to the server (such as cannot find host).
+    ///
+    /// - Parameter delay: The amount of time in seconds to wait before the second retry.
+    /// - Parameter including503ServiceUnavailable: If `YES`, retries on a 503 Service Unavailable
+    ///   response as well. Non-idempotent requests will also be retried on a 503 Service Unavailable
+    ///   as the server did not handle the original request. If `NO`, only networking failures
+    ///   are retried.
+    @objc(retryNetworkFailureTwiceWithDelay:including503ServiceUnavailable:)
+    public class func __retryNetworkFailureTwice(withDelay delay: NSTimeInterval, including503ServiceUnavailable: Bool) -> HTTPManagerRetryBehavior {
+        if including503ServiceUnavailable {
+            return HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryTwiceWithDelay(delay))
+        } else {
+            return HTTPManagerRetryBehavior.retryNetworkFailure(withStrategy: .retryTwiceWithDelay(delay))
+        }
+    }
+}
+
 // MARK: - Result
 
 /// The results of an HTTP request.
