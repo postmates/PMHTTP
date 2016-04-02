@@ -959,10 +959,11 @@ private class SessionDelegate: NSObject {
     struct TaskInfo {
         let task: HTTPManagerTask
         let uploadBody: UploadBody?
-        let processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void
+        let processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>, attempt: Int, retry: HTTPManager -> Bool) -> Void
         var data: NSMutableData? = nil
+        var attempt: Int = 0
         
-        init(task: HTTPManagerTask, uploadBody: UploadBody? = nil, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) {
+        init(task: HTTPManagerTask, uploadBody: UploadBody? = nil, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>, attempt: Int, retry: HTTPManager -> Bool) -> Void) {
             self.task = task
             self.uploadBody = uploadBody
             self.processor = processor
@@ -974,11 +975,13 @@ extension HTTPManager {
     /// Creates and returns an `HTTPManagerTask`.
     /// - Parameter request: The request to create the task from.
     /// - Parameter uploadBody: The data to upload, if any.
-    /// - Parameter processor: The processing block. This block must transition the task to the `.Completed` state
-    ///   and must handle cancellation correctly.
+    /// - Parameter processor: The processing block. The `retry` parameter to the block is a closure that may be
+    ///   executed to attempt to retry the task. If executed, the retry block will return `true` if the task could be
+    ///   retried or `false` otherwise. If the task is not retried (or if retrying fails), the processor must arrange
+    ///   for the task to transition to `.Completed` (unless it's already been canceled).
     /// - Returns: An `HTTPManagerTask`.
     /// - Important: After creating the task, you must start it by calling the `resume()` method.
-    internal func createNetworkTaskWithRequest(request: HTTPManagerRequest, uploadBody: UploadBody?, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
+    internal func createNetworkTaskWithRequest(request: HTTPManagerRequest, uploadBody: UploadBody?, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>, attempt: Int, retry: HTTPManager -> Bool) -> Void) -> HTTPManagerTask {
         let urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
         if case .FormUrlEncoded(let queryItems)? = uploadBody {
@@ -987,12 +990,12 @@ extension HTTPManager {
         uploadBody?.evaluatePending()
         let apiTask = inner.sync { inner -> HTTPManagerTask in
             let networkTask: NSURLSessionTask
-            if case .Data(let data)? = uploadBody {
-                uploadBody = nil
+            switch uploadBody {
+            case .Data(let data)?:
                 networkTask = inner.session.uploadTaskWithRequest(urlRequest, fromData: data)
-            } else if uploadBody != nil {
+            case _?:
                 networkTask = inner.session.uploadTaskWithStreamedRequest(urlRequest)
-            } else {
+            case nil:
                 networkTask = inner.session.dataTaskWithRequest(urlRequest)
             }
             let apiTask = HTTPManagerTask(networkTask: networkTask, request: request)
@@ -1001,17 +1004,70 @@ extension HTTPManager {
                 assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
                 sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
             }
-            #if os(iOS)
-                if apiTask.trackingNetworkActivity {
-                    NetworkActivityManager.shared.incrementCounter()
-                }
-            #endif
             return apiTask
         }
+        #if os(iOS)
+            if apiTask.trackingNetworkActivity {
+                NetworkActivityManager.shared.incrementCounter()
+            }
+        #endif
         if apiTask.userInitiated {
             apiTask.networkTask.priority = NSURLSessionTaskPriorityHigh
         }
         return apiTask
+    }
+    
+    /// Transitions the given task back into `.Running` with a new network task.
+    ///
+    /// This method updates the `SessionDelegate`'s `tasks` dictionary for the new
+    /// network task, but it does not attempt to remove any existing entry for the
+    /// old task. The caller is responsible for removing the old entry.
+    ///
+    /// The newly-created `NSURLSessionTask` is automatically resumed.
+    ///
+    /// - Parameter taskInfo: The `TaskInfo` object representing the task to retry.
+    /// - Returns: An `NSURLSessionTask` for the retry, or `nil` if the task could not be retried
+    ///   (e.g. because it's already been canceled).
+    /// - Important: After creating the new network task, you must start it by calling the `resume()` method.
+    private func retryNetworkTask(taskInfo: SessionDelegate.TaskInfo) -> NSURLSessionTask? {
+        guard let request = taskInfo.task.networkTask.originalRequest else {
+            preconditionFailure("internal HTTPManager error: networkTask.originalRequest is nil")
+        }
+        let networkTask = inner.sync { inner -> NSURLSessionTask? in
+            let networkTask: NSURLSessionTask
+            switch taskInfo.uploadBody {
+            case .Data(let data)?:
+                networkTask = inner.session.uploadTaskWithRequest(request, fromData: data)
+            case _?:
+                networkTask = inner.session.uploadTaskWithStreamedRequest(request)
+            case nil:
+                networkTask = inner.session.dataTaskWithRequest(request)
+            }
+            let result = taskInfo.task.resetStateToRunningWithNetworkTask(networkTask)
+            if !result.ok {
+                assert(result.oldState == .Canceled, "internal HTTPManager error: could not reset non-canceled task back to Running state")
+                networkTask.cancel()
+                return nil
+            }
+            var taskInfo = taskInfo
+            taskInfo.attempt += 1
+            inner.session.delegateQueue.addOperationWithBlock { [sessionDelegate=inner.sessionDelegate] in
+                assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
+                sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
+            }
+            return networkTask
+        }
+        if let networkTask = networkTask {
+            #if os(iOS)
+                if taskInfo.task.trackingNetworkActivity {
+                    NetworkActivityManager.shared.incrementCounter()
+                }
+            #endif
+            if taskInfo.task.userInitiated {
+                networkTask.priority = NSURLSessionTaskPriorityHigh
+            }
+        }
+        return networkTask
     }
 }
 
@@ -1081,36 +1137,43 @@ extension SessionDelegate: NSURLSessionDataDelegate {
             }
         #endif
         
-        let queue = dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)
+        let queue = dispatch_get_global_queue(apiTask.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)
         if let error = error where error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
             // Either we canceled during the networking portion, or someone called
             // cancel() on the NSURLSessionTask directly. In the latter case, treat it
             // as a cancellation anyway.
-            let result = taskInfo.task.transitionStateTo(.Canceled)
+            let result = apiTask.transitionStateTo(.Canceled)
             assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")
             dispatch_async(queue) {
-                processor(apiTask, .Canceled)
+                processor(apiTask, .Canceled, attempt: taskInfo.attempt, retry: { _ in return false })
             }
         } else {
             let result = apiTask.transitionStateTo(.Processing)
             if result.ok {
                 assert(result.oldState == .Running, "internal HTTPManager error: tried to process task that's already processing")
-                dispatch_async(queue) { [data=taskInfo.data] in
+                dispatch_async(queue) {
+                    func retry(apiManager: HTTPManager) -> Bool {
+                        guard let networkTask = apiManager.retryNetworkTask(taskInfo) else {
+                            return false
+                        }
+                        networkTask.resume()
+                        return true
+                    }
                     if let error = error {
-                        processor(apiTask, .Error(task.response, error))
+                        processor(apiTask, .Error(task.response, error), attempt: taskInfo.attempt, retry: retry)
                     } else if let response = task.response {
-                        processor(apiTask, .Success(response, data ?? NSData()))
+                        processor(apiTask, .Success(response, taskInfo.data ?? NSData()), attempt: taskInfo.attempt, retry: retry)
                     } else {
                         // this should be unreachable
                         let userInfo = [NSLocalizedDescriptionKey: "internal error: task response was nil with no error"]
-                        processor(apiTask, .Error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)))
+                        processor(apiTask, .Error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)), attempt: taskInfo.attempt, retry: retry)
                     }
                 }
             } else {
                 assert(result.oldState == .Canceled, "internal HTTPManager error: tried to process task that's already completed")
                 // We must have canceled concurrently with the networking portion finishing
                 dispatch_async(queue) {
-                    processor(apiTask, .Canceled)
+                    processor(apiTask, .Canceled, attempt: taskInfo.attempt, retry: { _ in return false })
                 }
             }
         }

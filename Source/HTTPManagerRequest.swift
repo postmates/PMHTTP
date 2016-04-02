@@ -423,10 +423,21 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTaskWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { task, result in
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
-            HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
-        })
+            if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
+                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
+                    if shouldRetry, let apiManager = apiManager where retry(apiManager) {
+                        // The task is now retrying
+                        return
+                    } else {
+                        HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                    }
+                })
+            } else {
+                HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+            }
+            })
     }
     
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
@@ -440,12 +451,25 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTaskWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { task, result in
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
-            queue.addOperationWithBlock {
-                HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+            if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
+                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
+                    if shouldRetry, let apiManager = apiManager where retry(apiManager) {
+                        // The task is now retrying
+                        return
+                    } else {
+                        queue.addOperationWithBlock {
+                            HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                        }
+                    }
+                })
+            } else {
+                queue.addOperationWithBlock {
+                    HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                }
             }
-        })
+            })
     }
     
     /// Executes a block with `self` as the argument, and then returns `self` again.
@@ -684,9 +708,20 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTaskWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler] task, result in
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler, weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
-            HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+            if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
+                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
+                    if shouldRetry, let apiManager = apiManager where retry(apiManager) {
+                        // The task is now retrying
+                        return
+                    } else {
+                        HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                    }
+                })
+            } else {
+                HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+            }
             })
     }
     
@@ -701,10 +736,23 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTaskWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler] task, result in
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler, weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
-            queue.addOperationWithBlock {
-                HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+            if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
+                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
+                    if shouldRetry, let apiManager = apiManager where retry(apiManager) {
+                        // The task is now retrying
+                        return
+                    } else {
+                        queue.addOperationWithBlock {
+                            HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                        }
+                    }
+                })
+            } else {
+                queue.addOperationWithBlock {
+                    HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                }
             }
             })
     }
