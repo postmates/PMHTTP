@@ -694,7 +694,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
         /// Retries once immediately, and then a second time after a default short delay.
         /// - Note: The default delay is currently 2 seconds, but this may be subject
         ///   to changing in the future.
-        static let retryTwiceWithDefaultDelay = Strategy.retryTwiceWithDelay(2)
+        public static let retryTwiceWithDefaultDelay = Strategy.retryTwiceWithDelay(2)
         /// Retries once immediately, then, assuming a networking error that indicates no
         /// connection could be established to the server, retries again once Reachability
         /// indicates the host associated with the request can be reached. The Reachability
