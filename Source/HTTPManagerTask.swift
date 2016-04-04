@@ -10,11 +10,20 @@ import Foundation
 import PMHTTPPrivate
 
 /// An initiated HTTP operation.
+///
+/// **Thread safety:** All methods in this class are safe to call from any thread.
 public final class HTTPManagerTask: NSObject {
     public typealias State = HTTPManagerTaskState
     
     /// The underlying `NSURLSessionTask`.
-    public let networkTask: NSURLSessionTask
+    ///
+    /// If a failed request is automatically retried, this property value
+    /// will change.
+    ///
+    /// - Note: This property supports key-value observing.
+    public var networkTask: NSURLSessionTask {
+        get { return _stateBox.networkTask }
+    }
     
     /// The `NSURLCredential` used to authenticate the request, if any.
     public let credential: NSURLCredential?
@@ -27,17 +36,28 @@ public final class HTTPManagerTask: NSObject {
         return State(_stateBox.state)
     }
     
-    @objc private static let automaticallyNotifiesObserversOfState: Bool = false
+    @objc public override class func automaticallyNotifiesObserversForKey(_: String) -> Bool {
+        return false
+    }
     
     /// Invokes `resume()` on the underlying `NSURLSessionTask`.
+    /// - Note: To suspend the underlying task you can access it with the
+    ///   `networkTask` property.
     public func resume() {
         networkTask.resume()
     }
     
-    /// Invokes `suspend()` on the underlying `NSURLSessionTask`.
-    public func suspend() {
-        networkTask.suspend()
-    }
+    /// Use `networkTask.suspend()` instead.
+    @available(*, unavailable, message="use networkTask.suspend() instead")
+    public func suspend() {}
+    
+    // NB: We don't expose a suspend() method here because that would produce surprising
+    // behavior in the face of automatic retries. If the user calls suspend() while the
+    // HTTP manager is in the process of handling the failure, the retry will be resumed
+    // automatically, which would be surprising to the user. Requiring the user to call
+    // suspend() on the underlying networkTask solves this issue as the underlying
+    // networkTask changes on retries (and therefore it's not surprising that suspending
+    // the old networkTask has no effect on the new one).
     
     /// Cancels the operation, if it hasn't already completed.
     ///
@@ -58,16 +78,18 @@ public final class HTTPManagerTask: NSObject {
     internal let userInitiated: Bool
     internal let followRedirects: Bool
     internal let defaultResponseCacheStoragePolicy: NSURLCacheStoragePolicy
+    internal let retryBehavior: HTTPManagerRetryBehavior?
     #if os(iOS)
     internal let trackingNetworkActivity: Bool
     #endif
     
     internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
-        self.networkTask = networkTask
+        _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState, networkTask: networkTask)
         self.credential = request.credential
         self.userInitiated = request.userInitiated
         self.followRedirects = request.shouldFollowRedirects
         self.defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
+        self.retryBehavior = request.retryBehavior
         #if os(iOS)
             self.trackingNetworkActivity = request.affectsNetworkActivityIndicator
         #endif
@@ -81,7 +103,27 @@ public final class HTTPManagerTask: NSObject {
         return (result.completed, State(result.oldState))
     }
     
-    private let _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState)
+    /// Resets the state back to `.Running` and replaces the `networkTask` property with
+    /// a new value. If the state cannot be transitioned back to `.Running` the `networkTask`
+    /// property is not modified.
+    /// - Parameter networkTask: The new `NSURLSessionTask` to use for the `networkTask` property.
+    /// - Returns: A tuple where `ok` is `true` if the task was reset, otherwise `false`, and `oldState`
+    ///   describes the state the task was in when the transition was attempted.
+    internal func resetStateToRunningWithNetworkTask(networkTask: NSURLSessionTask) -> (ok: Bool, oldState: State) {
+        willChangeValueForKey("state")
+        willChangeValueForKey("networkTask")
+        defer {
+            didChangeValueForKey("networkTask")
+            didChangeValueForKey("state")
+        }
+        let result = _stateBox.transitionStateTo(State.Running.boxState)
+        if result.completed {
+            _stateBox.networkTask = networkTask
+        }
+        return (result.completed, State(result.oldState))
+    }
+    
+    private let _stateBox: PMHTTPManagerTaskStateBox
 }
 
 extension HTTPManagerTask {

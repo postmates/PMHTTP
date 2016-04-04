@@ -117,6 +117,23 @@ public final class HTTPManager: NSObject {
         }
     }
     
+    /// The default retry behavior to use for requests. The default value is `nil`.
+    ///
+    /// Individual requests may override this behavior with their own behavior.
+    ///
+    /// Changes to this property affect any newly-created requests but do not affect
+    /// any existing requests or any tasks that are in-progress.
+    public var defaultRetryBehavior: HTTPManagerRetryBehavior? {
+        get {
+            return inner.sync({ $0.defaultRetryBehavior })
+        }
+        set {
+            inner.asyncBarrier {
+                $0.defaultRetryBehavior = newValue
+            }
+        }
+    }
+    
     /// The user agent that's passed to every request.
     public var userAgent: String {
         return inner.sync({
@@ -163,6 +180,7 @@ public final class HTTPManager: NSObject {
         var environment: Environment?
         var sessionConfiguration: NSURLSessionConfiguration = .defaultSessionConfiguration()
         var defaultCredential: NSURLCredential?
+        var defaultRetryBehavior: HTTPManagerRetryBehavior?
 
         var session: NSURLSession!
         var sessionDelegate: SessionDelegate!
@@ -444,8 +462,8 @@ extension HTTPManager {
     }
     
     private func constructRequest<T: HTTPManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
-        let (environment, credential) = inner.sync({ inner -> (Environment?, NSURLCredential?) in
-            return (inner.environment, inner.defaultCredential)
+        let (environment, credential, defaultRetryBehavior) = inner.sync({ inner -> (Environment?, NSURLCredential?, HTTPManagerRetryBehavior?) in
+            return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior)
         })
         guard let url = NSURL(string: path, relativeToURL: environment?.baseURL) else { return nil }
         let request = f(url)
@@ -455,6 +473,7 @@ extension HTTPManager {
                 request.credential = credential
             }
         }
+        request.retryBehavior = defaultRetryBehavior
         return request
     }
 }
@@ -587,6 +606,283 @@ private func describeData(data: NSData) -> String {
     }
 }
 
+/// Represents the retry behavior for an HTTP request.
+///
+/// Retry behaviors provide a mechanism for requests to automatically retry upon failure before
+/// notifying the caller about the failure. Any arbitrary retry behavior can be implemented, but
+/// convenience methods are provided for some of the more common behaviors.
+///
+/// Unless otherwise specified, retry behaviors are only evaluated for idempotent requests.
+/// This includes GET, HEAD, PUT, DELETE, OPTIONS, and TRACE.
+///
+/// - Note: Retry behaviors are evaluated on an arbitrary dispatch queue.
+public final class HTTPManagerRetryBehavior: NSObject {
+    /// Returns a retry behavior that evaluates a block.
+    ///
+    /// The returned retry behavior will be evaluated only for idempotent requests. If the request involves
+    /// redirections, the original request will be evaluated for idempotence (and in the event of a retry,
+    /// the original request is the one that is retried).
+    ///
+    /// - Note: The block will be executed on an arbitrary dispatch queue.
+    ///
+    /// The block takes the following parameters:
+    ///
+    /// - Parameter task: The `HTTPManagerTask` under consideration. You can use this task
+    ///   to retrieve the last `networkTask` and its `originalRequest` and `response`.
+    /// - Parameter error: The error that occurred. This may be an error from the networking portion
+    ///   or it may be an error from the processing stage.
+    /// - Parameter attempt: The number of retries so far. The first retry block is attempt `0`, the second is
+    ///   attempt `1`, etc.
+    /// - Parameter callback: A block that must be invoked to determine whether a retry should be done.
+    ///   Passing `true` means the request should be automatically retried, `false` means no retry.
+    ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
+    ///
+    ///   **Important:** This block must be executed at some point or the task will be stuck in the
+    ///   `.Processing` state forever.
+    ///
+    ///   **Requires:** This block must not be executed more than once.
+    public init(_ handler: (task: HTTPManagerTask, error: ErrorType, attempt: Int, callback: Bool -> Void) -> Void) {
+        self.handler = { task, error, attempt, callback in
+            // NSURLSessionTask.originalRequest may be nil if this is a stream task. We don't use stream tasks,
+            // so this should never apply to us.
+            if task.networkTask.originalRequest?.isIdempotent() ?? false {
+                handler(task: task, error: error, attempt: attempt, callback: callback)
+            } else {
+                callback(false)
+            }
+        }
+        super.init()
+    }
+    
+    /// Returns a retry behavior that evaluates a block.
+    ///
+    /// The returned retry behavior will be evaluated for all requests regardless of whether the request
+    /// is idempotent. If the request involves redirections, the original request is the one that is retried.
+    ///
+    /// - Important: Your handler needs to be aware of whether it's being invoked on a non-idempotent request
+    ///   and only retry those requests where performing the request twice is safe. Your handler shold consult
+    ///   the `originalRequest` property of the task for making this determination.
+    ///
+    /// The block takes the following parameters:
+    ///
+    /// - Parameter task: The `HTTPManagerTask` under consideration. You can use this task
+    ///   to retrieve the last `networkTask` and its `originalRequest` and `response`.
+    /// - Parameter error: The error that occurred. This may be an error from the networking portion
+    ///   or it may be an error from the processing stage.
+    /// - Parameter attempt: The number of retries so far. The first retry block is attempt `0`, the second is
+    ///   attempt `1`, etc.
+    /// - Parameter callback: A block that must be invoked to determine whether a retry should be done.
+    ///   Passing `true` means the request should be automatically retried, `false` means no retry.
+    ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
+    ///
+    ///   **Important:** This block must be executed at some point or the task will be stuck in the
+    ///   `.Processing` state forever.
+    ///
+    ///   **Requires:** This block must not be executed more than once.
+    public init(ignoringIdempotence handler: (task: HTTPManagerTask, error: ErrorType, attempt: Int, callback: Bool -> Void) -> Void) {
+        self.handler = handler
+        super.init()
+    }
+    
+    public enum Strategy: Equatable {
+        // NB: Lowercase enum cases matches expected Swift 3 naming conventions.
+        
+        /// Retries a single time with no delay.
+        case retryOnce
+        /// Retries once immediately, and then a second time after the given delay.
+        case retryTwiceWithDelay(NSTimeInterval)
+        /// Retries once immediately, and then a second time after a default short delay.
+        /// - Note: The default delay is currently 2 seconds, but this may be subject
+        ///   to changing in the future.
+        static let retryTwiceWithDefaultDelay = Strategy.retryTwiceWithDelay(2)
+        /// Retries once immediately, then, assuming a networking error that indicates no
+        /// connection could be established to the server, retries again once Reachability
+        /// indicates the host associated with the request can be reached. The Reachability
+        /// check is subject to the given timeout.
+        // TODO: Implement Reachability
+        // case retryWithReachability(timeout: NSTimeInterval)
+        
+        /// Evaluates the retry strategy for the given parameters.
+        private func evaluate(task: HTTPManagerTask, error: ErrorType, attempt: Int, callback: Bool -> Void) {
+            switch self {
+            case .retryOnce:
+                callback(attempt == 0)
+            case .retryTwiceWithDelay(let delay):
+                switch attempt {
+                case 0:
+                    callback(true)
+                case 1:
+                    let time = dispatch_time(DISPATCH_TIME_NOW, Int64(delay * NSTimeInterval(NSEC_PER_SEC)))
+                    dispatch_after(time, dispatch_get_global_queue(task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0), { callback(true) })
+                default:
+                    callback(false)
+                }
+            }
+        }
+    }
+    
+    /// Returns a retry behavior that retries automatically for networking errors.
+    ///
+    /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
+    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// truncated response). The request will not be retried for networking errors that
+    /// are unlikely to change when retrying.
+    ///
+    /// If the request is non-idempotent, it only retries if the error indicates that a
+    /// connection was never made to the server (such as cannot find host).
+    ///
+    /// - Parameter strategy: The strategy to use when retrying.
+    public static func retryNetworkFailure(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
+        return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
+            if task.networkTask.originalRequest?.isIdempotent() ?? false {
+                if error.isTransientNetworkingError() {
+                    strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+                } else {
+                    callback(false)
+                }
+            } else if error.isTransientNoConnectionError() {
+                // We did not connect to the host, so idempotence doesn't matter.
+                strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+            } else {
+                callback(false)
+            }
+        })
+    }
+    
+    /// Returns a retry behavior that retries automatically for networking errors or a
+    /// 503 Service Unavailable response.
+    ///
+    /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
+    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// truncated response).The request will not be retried for networking errors that
+    /// are unlikely to change when retrying.
+    ///
+    /// If the request is non-idempotent, it only retries if the error indicates that a
+    /// connection was never made to the server (such as cannot find host) or in the case
+    /// of a 503 Service Unavailable response (which indicates the server did not process
+    /// the request).
+    ///
+    /// - Parameter strategy: The strategy to use when retrying.
+    public static func retryNetworkFailureOrServiceUnavailable(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
+        return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
+            if task.networkTask.originalRequest?.isIdempotent() ?? false {
+                if error.isTransientNetworkingError() || error.is503ServiceUnavailable() {
+                    strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+                } else {
+                    callback(false)
+                }
+            } else if error.isTransientNoConnectionError()
+                // We did not connect to the host, so idempotence doesn't matter.
+                || error.is503ServiceUnavailable()
+                // We did connect but got a 503 Service Unavailable, so the server didn't handle the request.
+            {
+                strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+            } else {
+                callback(false)
+            }
+        })
+    }
+    
+    internal let handler: (task: HTTPManagerTask, error: ErrorType, attempt: Int, callback: Bool -> Void) -> Void
+}
+
+public func ==(lhs: HTTPManagerRetryBehavior.Strategy, rhs: HTTPManagerRetryBehavior.Strategy) -> Bool {
+    switch (lhs, rhs) {
+    case (.retryOnce, .retryOnce): return true
+    case (.retryTwiceWithDelay(let a), .retryTwiceWithDelay(let b)): return a == b
+    default: return false
+    }
+}
+
+private extension ErrorType {
+    /// Returns `true` if `self` is a transient networking error, or is a `PMJSON.JSONParserError`
+    /// with a code of `.UnexpectedEOF`.
+    func isTransientNetworkingError() -> Bool {
+        switch self {
+        case let error as JSONParserError where error.code == .UnexpectedEOF:
+            return true
+        case let error as NSError where error.domain == NSURLErrorDomain:
+            // FIXME(Swift 3): Swift 3 will likely have a proper ErrorType enum for URL errors.
+            
+            switch error.code {
+            case NSURLErrorUnknown:
+                // We don't know what this is, so we'll err on the side of accepting it.
+                return true
+            case NSURLErrorTimedOut, NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost,
+                 NSURLErrorNetworkConnectionLost, NSURLErrorDNSLookupFailed,
+                 NSURLErrorNotConnectedToInternet, NSURLErrorBadServerResponse,
+                 NSURLErrorZeroByteResource, NSURLErrorCannotDecodeRawData, NSURLErrorCannotDecodeContentData,
+                 NSURLErrorCannotParseResponse,
+                 NSURLErrorClientCertificateRequired...NSURLErrorSecureConnectionFailed, // all SSL errors
+                 NSURLErrorDataNotAllowed:
+                return true
+            case NSURLErrorCallIsActive:
+                // If we retry immediately this is unlikely to change, but if we retry after a delay
+                // then retrying makes sense, so we'll accept it.
+                return true
+            default:
+                return false
+            }
+        default:
+            return false
+        }
+    }
+    
+    /// Returns `true` if `self` is a transient networking error that guarantees that no data
+    /// was sent to the server. This either means no connection was established, or a connection
+    /// was established but the SSL handshake failed.
+    func isTransientNoConnectionError() -> Bool {
+        switch self {
+        case let error as NSError where error.domain == NSURLErrorDomain:
+            // FIXME(Swift 3): Swift 3 will likely have a proper ErrorType enum for URL errors.
+            switch error.code {
+            case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed,
+                 NSURLErrorNotConnectedToInternet, NSURLErrorDataNotAllowed,
+            NSURLErrorClientCertificateRequired...NSURLErrorSecureConnectionFailed: // all SSL errors
+                return true
+            case NSURLErrorCallIsActive:
+                // If we retry immediately this is unlikely to change, but if we retry after a delay
+                // then retrying makes sense, so we'll accept it.
+                return true
+            default:
+                return false
+            }
+        default:
+            return false
+        }
+    }
+    
+    /// Returns `true` if `self` is an `HTTPManagerError.FailedResponse(503, ...)`.
+    func is503ServiceUnavailable() -> Bool {
+        switch self {
+        case let error as HTTPManagerError:
+            switch error {
+            case .FailedResponse(statusCode: 503, response: _, body: _, bodyJson: _):
+                return true
+            default:
+                return false
+            }
+        default:
+            return false
+        }
+    }
+}
+
+private extension NSURLRequest {
+    /// Returns `true` if the request is idempotent (if the HTTP method is GET, HEAD, PUT,
+    /// DELETE, OPTIONS, or TRACE).
+    func isIdempotent() -> Bool {
+        // HTTPMethod is optional, but it's unclear what happens if you assign nil.
+        // I'm assuming it performs the default behavior, which is GET.
+        switch HTTPMethod ?? "GET" {
+        case "GET", "HEAD", "PUT", "DELETE", "OPTIONS", "TRACE":
+            return true
+        default:
+            return false
+        }
+    }
+}
+
 // MARK: - Private
 
 extension HTTPManager {
@@ -663,10 +959,11 @@ private class SessionDelegate: NSObject {
     struct TaskInfo {
         let task: HTTPManagerTask
         let uploadBody: UploadBody?
-        let processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void
+        let processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>, attempt: Int, retry: HTTPManager -> Bool) -> Void
         var data: NSMutableData? = nil
+        var attempt: Int = 0
         
-        init(task: HTTPManagerTask, uploadBody: UploadBody? = nil, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) {
+        init(task: HTTPManagerTask, uploadBody: UploadBody? = nil, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>, attempt: Int, retry: HTTPManager -> Bool) -> Void) {
             self.task = task
             self.uploadBody = uploadBody
             self.processor = processor
@@ -678,11 +975,13 @@ extension HTTPManager {
     /// Creates and returns an `HTTPManagerTask`.
     /// - Parameter request: The request to create the task from.
     /// - Parameter uploadBody: The data to upload, if any.
-    /// - Parameter processor: The processing block. This block must transition the task to the `.Completed` state
-    ///   and must handle cancellation correctly.
+    /// - Parameter processor: The processing block. The `retry` parameter to the block is a closure that may be
+    ///   executed to attempt to retry the task. If executed, the retry block will return `true` if the task could be
+    ///   retried or `false` otherwise. If the task is not retried (or if retrying fails), the processor must arrange
+    ///   for the task to transition to `.Completed` (unless it's already been canceled).
     /// - Returns: An `HTTPManagerTask`.
     /// - Important: After creating the task, you must start it by calling the `resume()` method.
-    internal func createNetworkTaskWithRequest(request: HTTPManagerRequest, uploadBody: UploadBody?, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
+    internal func createNetworkTaskWithRequest(request: HTTPManagerRequest, uploadBody: UploadBody?, processor: (HTTPManagerTask, HTTPManagerTaskResult<NSData>, attempt: Int, retry: HTTPManager -> Bool) -> Void) -> HTTPManagerTask {
         let urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
         if case .FormUrlEncoded(let queryItems)? = uploadBody {
@@ -691,12 +990,12 @@ extension HTTPManager {
         uploadBody?.evaluatePending()
         let apiTask = inner.sync { inner -> HTTPManagerTask in
             let networkTask: NSURLSessionTask
-            if case .Data(let data)? = uploadBody {
-                uploadBody = nil
+            switch uploadBody {
+            case .Data(let data)?:
                 networkTask = inner.session.uploadTaskWithRequest(urlRequest, fromData: data)
-            } else if uploadBody != nil {
+            case _?:
                 networkTask = inner.session.uploadTaskWithStreamedRequest(urlRequest)
-            } else {
+            case nil:
                 networkTask = inner.session.dataTaskWithRequest(urlRequest)
             }
             let apiTask = HTTPManagerTask(networkTask: networkTask, request: request)
@@ -705,17 +1004,70 @@ extension HTTPManager {
                 assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
                 sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
             }
-            #if os(iOS)
-                if apiTask.trackingNetworkActivity {
-                    NetworkActivityManager.shared.incrementCounter()
-                }
-            #endif
             return apiTask
         }
+        #if os(iOS)
+            if apiTask.trackingNetworkActivity {
+                NetworkActivityManager.shared.incrementCounter()
+            }
+        #endif
         if apiTask.userInitiated {
             apiTask.networkTask.priority = NSURLSessionTaskPriorityHigh
         }
         return apiTask
+    }
+    
+    /// Transitions the given task back into `.Running` with a new network task.
+    ///
+    /// This method updates the `SessionDelegate`'s `tasks` dictionary for the new
+    /// network task, but it does not attempt to remove any existing entry for the
+    /// old task. The caller is responsible for removing the old entry.
+    ///
+    /// The newly-created `NSURLSessionTask` is automatically resumed.
+    ///
+    /// - Parameter taskInfo: The `TaskInfo` object representing the task to retry.
+    /// - Returns: An `NSURLSessionTask` for the retry, or `nil` if the task could not be retried
+    ///   (e.g. because it's already been canceled).
+    /// - Important: After creating the new network task, you must start it by calling the `resume()` method.
+    private func retryNetworkTask(taskInfo: SessionDelegate.TaskInfo) -> NSURLSessionTask? {
+        guard let request = taskInfo.task.networkTask.originalRequest else {
+            preconditionFailure("internal HTTPManager error: networkTask.originalRequest is nil")
+        }
+        let networkTask = inner.sync { inner -> NSURLSessionTask? in
+            let networkTask: NSURLSessionTask
+            switch taskInfo.uploadBody {
+            case .Data(let data)?:
+                networkTask = inner.session.uploadTaskWithRequest(request, fromData: data)
+            case _?:
+                networkTask = inner.session.uploadTaskWithStreamedRequest(request)
+            case nil:
+                networkTask = inner.session.dataTaskWithRequest(request)
+            }
+            let result = taskInfo.task.resetStateToRunningWithNetworkTask(networkTask)
+            if !result.ok {
+                assert(result.oldState == .Canceled, "internal HTTPManager error: could not reset non-canceled task back to Running state")
+                networkTask.cancel()
+                return nil
+            }
+            var taskInfo = taskInfo
+            taskInfo.attempt += 1
+            inner.session.delegateQueue.addOperationWithBlock { [sessionDelegate=inner.sessionDelegate] in
+                assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
+                sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
+            }
+            return networkTask
+        }
+        if let networkTask = networkTask {
+            #if os(iOS)
+                if taskInfo.task.trackingNetworkActivity {
+                    NetworkActivityManager.shared.incrementCounter()
+                }
+            #endif
+            if taskInfo.task.userInitiated {
+                networkTask.priority = NSURLSessionTaskPriorityHigh
+            }
+        }
+        return networkTask
     }
 }
 
@@ -785,36 +1137,43 @@ extension SessionDelegate: NSURLSessionDataDelegate {
             }
         #endif
         
-        let queue = dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)
+        let queue = dispatch_get_global_queue(apiTask.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)
         if let error = error where error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
             // Either we canceled during the networking portion, or someone called
             // cancel() on the NSURLSessionTask directly. In the latter case, treat it
             // as a cancellation anyway.
-            let result = taskInfo.task.transitionStateTo(.Canceled)
+            let result = apiTask.transitionStateTo(.Canceled)
             assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")
             dispatch_async(queue) {
-                processor(apiTask, .Canceled)
+                processor(apiTask, .Canceled, attempt: taskInfo.attempt, retry: { _ in return false })
             }
         } else {
             let result = apiTask.transitionStateTo(.Processing)
             if result.ok {
                 assert(result.oldState == .Running, "internal HTTPManager error: tried to process task that's already processing")
-                dispatch_async(queue) { [data=taskInfo.data] in
+                dispatch_async(queue) {
+                    func retry(apiManager: HTTPManager) -> Bool {
+                        guard let networkTask = apiManager.retryNetworkTask(taskInfo) else {
+                            return false
+                        }
+                        networkTask.resume()
+                        return true
+                    }
                     if let error = error {
-                        processor(apiTask, .Error(task.response, error))
+                        processor(apiTask, .Error(task.response, error), attempt: taskInfo.attempt, retry: retry)
                     } else if let response = task.response {
-                        processor(apiTask, .Success(response, data ?? NSData()))
+                        processor(apiTask, .Success(response, taskInfo.data ?? NSData()), attempt: taskInfo.attempt, retry: retry)
                     } else {
                         // this should be unreachable
                         let userInfo = [NSLocalizedDescriptionKey: "internal error: task response was nil with no error"]
-                        processor(apiTask, .Error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)))
+                        processor(apiTask, .Error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)), attempt: taskInfo.attempt, retry: retry)
                     }
                 }
             } else {
                 assert(result.oldState == .Canceled, "internal HTTPManager error: tried to process task that's already completed")
                 // We must have canceled concurrently with the networking portion finishing
                 dispatch_async(queue) {
-                    processor(apiTask, .Canceled)
+                    processor(apiTask, .Canceled, attempt: taskInfo.attempt, retry: { _ in return false })
                 }
             }
         }

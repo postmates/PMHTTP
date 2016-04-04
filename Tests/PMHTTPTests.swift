@@ -1239,36 +1239,4 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
     }
-    
-    func testSuspendResume() {
-        let semaphore = dispatch_semaphore_create(0)
-        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-            if dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, 2 * Int64(NSEC_PER_SEC))) == 0 {
-                completionHandler(HTTPServer.Response(status: .OK))
-            } else {
-                completionHandler(HTTPServer.Response(status: .InternalServerError, text: "semaphore timeout"))
-            }
-        }
-        let request = HTTP.request(GET: "foo")
-        let expectation = expectationWithDescription("GET request for \(request.url)")
-        let task = request.createTaskWithCompletion { task, result in
-            switch result {
-            case .Success: break
-            case .Error(_, let error):
-                XCTFail("request failed: \(error)")
-            case .Canceled:
-                XCTFail("request canceled")
-            }
-            expectation.fulfill()
-        }
-        XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Suspended, "network task state")
-        task.resume()
-        XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Running, "network task state")
-        task.suspend()
-        XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Suspended, "network task state")
-        task.resume()
-        XCTAssertEqual(task.networkTask.state, NSURLSessionTaskState.Running, "network task state")
-        dispatch_semaphore_signal(semaphore)
-        waitForExpectationsWithTimeout(5, handler: nil)
-    }
 }

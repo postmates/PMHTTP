@@ -29,6 +29,8 @@ class PMHTTPTestCase: XCTestCase {
         httpServer.reset()
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)")!
         HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
+        HTTP.defaultCredential = nil
+        HTTP.defaultRetryBehavior = nil
     }
     
     override func tearDown() {
@@ -78,12 +80,12 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, file: StaticString = #file, line: UInt = #line,
+        request: Request, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void
         ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        let task = request.performRequestWithCompletion { [expectationTasks] task, result in
+        let task = request.createTaskWithCompletion { [expectationTasks] task, result in
             switch result {
             case let .Success(response, value):
                 completion(task: task, response: response, value: value)
@@ -102,16 +104,19 @@ class PMHTTPTestCase: XCTestCase {
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
         }
+        if startAutomatically {
+            task.resume()
+        }
         return task
     }
     
     func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, file: StaticString = #file, line: UInt = #line,
+        request: Request, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void
         ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        return request.performRequestWithCompletion { [expectationTasks] task, result in
+        let task = request.createTaskWithCompletion { [expectationTasks] task, result in
             switch result {
             case .Success(let response, _):
                 XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
@@ -127,6 +132,13 @@ class PMHTTPTestCase: XCTestCase {
             }
             expectation.fulfill()
         }
+        expectationTasks.with { tasks in
+            let _ = tasks.append(task)
+        }
+        if startAutomatically {
+            task.resume()
+        }
+        return task
     }
 }
 
