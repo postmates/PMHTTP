@@ -29,6 +29,7 @@
 		9E7DDF4B1C1A388400EA43AD /* HTTPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */; };
 		9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */; };
 		9E8C1E441CAF50A6000D7FA2 /* PMHTTPRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */; };
+		9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4EE341CB71E4F00E4E531 /* Mocking.swift */; };
 		9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */; };
 		9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */; };
 /* End PBXBuildFile section */
@@ -71,6 +72,7 @@
 		9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManager.swift; sourceTree = "<group>"; };
 		9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPTestCase.swift; sourceTree = "<group>"; };
 		9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPRetryTests.swift; sourceTree = "<group>"; };
+		9EA4EE341CB71E4F00E4E531 /* Mocking.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Mocking.swift; sourceTree = "<group>"; };
 		9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
 		9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTest+HTTPServerExpectation.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -140,6 +142,7 @@
 				9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */,
 				9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */,
 				9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */,
+				9EA4EE341CB71E4F00E4E531 /* Mocking.swift */,
 				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
 				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
 				9E4C77A81C360714000FF8AC /* ObjectiveC.swift */,
@@ -323,6 +326,7 @@
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,
 				9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */,
 				9E4C77A91C360714000FF8AC /* ObjectiveC.swift in Sources */,
+				9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
