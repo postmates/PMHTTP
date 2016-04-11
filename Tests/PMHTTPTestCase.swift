@@ -11,10 +11,19 @@ import XCTest
 
 class PMHTTPTestCase: XCTestCase {
     static var httpServer: HTTPServer!
+    static var cacheConfigured = false
     
     class override func setUp() {
         super.setUp()
         httpServer = try! HTTPServer()
+        if !cacheConfigured {
+            // Bypass the shared URL cache and use an in-memory cache only.
+            // This avoids issues seen with the on-disk cache being locked when we try to remove cached responses.
+            let config = HTTP.sessionConfiguration
+            config.URLCache = NSURLCache(memoryCapacity: 20*1024*1024, diskCapacity: 0, diskPath: nil)
+            HTTP.sessionConfiguration = config
+            cacheConfigured = true
+        }
     }
     
     class override func tearDown() {
