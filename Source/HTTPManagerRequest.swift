@@ -169,6 +169,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
+        mock = request.mock
         #if os(iOS)
             affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         #endif
@@ -211,6 +212,9 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     internal func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
         return nil
     }
+    
+    // See Mocking.swift for details.
+    internal var mock: HTTPMockInstance?
 }
 
 extension HTTPManagerRequest {
@@ -851,6 +855,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
+        mock = request.mock
         #if os(iOS)
             affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         #endif

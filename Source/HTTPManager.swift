@@ -141,6 +141,9 @@ public final class HTTPManager: NSObject {
         }) ?? HTTPManager.defaultUserAgent
     }
     
+    /// An `HTTPMockManager` that can be used to define mocks for this `HTTPManager`.
+    public let mockManager = HTTPMockManager()
+    
     /// Invalidates all in-flight network operations and resets the URL session.
     ///
     /// - Note: Any tasks that have finished their network portion and are processing
@@ -240,7 +243,12 @@ public final class HTTPManager: NSObject {
         }
         let sessionDelegate = SessionDelegate(apiManager: self)
         inner.sessionDelegate = sessionDelegate
-        inner.session = NSURLSession(configuration: inner.sessionConfiguration, delegate: sessionDelegate, delegateQueue: nil)
+        // Insert HTTPMockURLProtocol into the protocol classes list.
+        let config: NSURLSessionConfiguration = unsafeDowncast(inner.sessionConfiguration.copy())
+        var classes = config.protocolClasses ?? []
+        classes.insert(HTTPMockURLProtocol.self, atIndex: 0)
+        config.protocolClasses = classes
+        inner.session = NSURLSession(configuration: config, delegate: sessionDelegate, delegateQueue: nil)
     }
 }
 
@@ -297,7 +305,7 @@ public final class HTTPManagerEnvironment: NSObject {
     
     /// Returns `true` if `url` is prefixed by `self.baseURL`, `false` otherwise.
     ///
-    /// - Parameter url: The URL to compare against. Must be a valid absolute uRL according to RFC 3986,
+    /// - Parameter url: The URL to compare against. Must be a valid absolute URL according to RFC 3986,
     ///   otherwise this method always returns `false`.
     ///
     /// For one URL to prefix another, both URLs must have the same scheme, authority info,
@@ -988,6 +996,9 @@ extension HTTPManager {
             uploadBody = .Data(UploadBody.dataRepresentationForQueryItems(queryItems))
         }
         uploadBody?.evaluatePending()
+        if let mock = request.mock ?? mockManager.mockForRequest(urlRequest, environment: environment) {
+            NSURLProtocol.setProperty(mock, forKey: HTTPMockURLProtocol.requestProperty, inRequest: urlRequest)
+        }
         let apiTask = inner.sync { inner -> HTTPManagerTask in
             let networkTask: NSURLSessionTask
             switch uploadBody {

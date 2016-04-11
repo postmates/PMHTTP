@@ -11,16 +11,26 @@ import XCTest
 
 class PMHTTPTestCase: XCTestCase {
     static var httpServer: HTTPServer!
+    static var cacheConfigured = false
     
     class override func setUp() {
         super.setUp()
         httpServer = try! HTTPServer()
+        if !cacheConfigured {
+            // Bypass the shared URL cache and use an in-memory cache only.
+            // This avoids issues seen with the on-disk cache being locked when we try to remove cached responses.
+            let config = HTTP.sessionConfiguration
+            config.URLCache = NSURLCache(memoryCapacity: 20*1024*1024, diskCapacity: 0, diskPath: nil)
+            HTTP.sessionConfiguration = config
+            cacheConfigured = true
+        }
     }
     
     class override func tearDown() {
         httpServer.invalidate()
         httpServer = nil
         HTTP.resetSession()
+        HTTP.mockManager.reset()
         super.tearDown()
     }
     
@@ -36,11 +46,12 @@ class PMHTTPTestCase: XCTestCase {
     override func tearDown() {
         httpServer.reset()
         HTTP.resetSession()
+        HTTP.mockManager.reset()
         super.tearDown()
     }
     
     var httpServer: HTTPServer! {
-        return PMHTTPTests.httpServer
+        return PMHTTPTestCase.httpServer
     }
     
     private let expectationTasks: Locked<[HTTPManagerTask]> = Locked([])
@@ -56,6 +67,7 @@ class PMHTTPTestCase: XCTestCase {
             setUnhandledRequestCallback = true
             httpServer.unhandledRequestCallback = { request, response, completionHandler in
                 XCTFail("Unhandled request \(request)", file: file, line: line)
+                completionHandler(HTTPServer.Response(status: .NotFound, text: "Unhandled request"))
             }
         }
         super.waitForExpectationsWithTimeout(timeout) { error in
