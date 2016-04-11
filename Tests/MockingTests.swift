@@ -489,6 +489,17 @@ class MockingTests: PMHTTPTestCase {
                 XCTAssertEqual(json, ["ok": true, "elts": [1,2,3]], "body JSON")
             }
             waitForExpectationsWithTimeout(5, handler: nil)
+            
+            req.clearMock()
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{\"ok\": true}"))
+            }
+            expectationForRequestSuccess(req) { (task, response, json) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "Content-Type header")
+                XCTAssertEqual(json, ["ok": true], "body JSON")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
         }
         
         do {
