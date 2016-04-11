@@ -21,6 +21,7 @@ class PMHTTPTestCase: XCTestCase {
         httpServer.invalidate()
         httpServer = nil
         HTTP.resetSession()
+        HTTP.mockManager.reset()
         super.tearDown()
     }
     
@@ -36,11 +37,12 @@ class PMHTTPTestCase: XCTestCase {
     override func tearDown() {
         httpServer.reset()
         HTTP.resetSession()
+        HTTP.mockManager.reset()
         super.tearDown()
     }
     
     var httpServer: HTTPServer! {
-        return PMHTTPTests.httpServer
+        return PMHTTPTestCase.httpServer
     }
     
     private let expectationTasks: Locked<[HTTPManagerTask]> = Locked([])
@@ -56,6 +58,7 @@ class PMHTTPTestCase: XCTestCase {
             setUnhandledRequestCallback = true
             httpServer.unhandledRequestCallback = { request, response, completionHandler in
                 XCTFail("Unhandled request \(request)", file: file, line: line)
+                completionHandler(HTTPServer.Response(status: .NotFound, text: "Unhandled request"))
             }
         }
         super.waitForExpectationsWithTimeout(timeout) { error in

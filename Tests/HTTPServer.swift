@@ -27,6 +27,7 @@ final class HTTPServer {
         shared = QueueConfined(label: "HTTPServer internal queue", value: Shared())
         listener = Listener(shared: shared)
         try listener.socket.acceptOnInterface("lo0", port: 0)
+        listener.log("Listening")
     }
     
     deinit {
@@ -401,6 +402,7 @@ final class HTTPServer {
         /// Returns a `dispatch_block_t` created with `dispatch_block_create()` that can
         // be waited on with `dispatch_block_wait(_:_:)` or `dispatch_block_notify(_:_:_:)`.
         func invalidate() -> dispatch_block_t {
+            log("Invalidated")
             socket.delegate = nil
             socket.disconnect()
             return reset()
@@ -422,7 +424,7 @@ final class HTTPServer {
         
         private func log(@autoclosure msg: () -> String) {
             if HTTPServer.enableDebugLogging {
-                NSLog("<HTTP Server %@:%hu> %@", socket.localHost, socket.localPort, msg())
+                NSLog("<HTTP Server %@:%hu> %@", socket.localHost ?? "nil", socket.localPort ?? 0, msg())
             }
         }
         
