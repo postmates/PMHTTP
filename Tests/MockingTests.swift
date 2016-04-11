@@ -101,7 +101,7 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockRequest() {
         let req = HTTP.request(GET: "foo")
-        req.mock(200, text: "Mock response")
+        req.mock(statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(req) { (task, response, value) in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "mock response status code")
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Mock response", "mock response body text")
@@ -131,7 +131,7 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockRequestJSON() {
         let req = HTTP.request(GET: "foo")
-        req.mock(200, headers: ["Content-Type": "application/json"], text: "{ \"ok\": true, \"elts\": [1,2,3,4,5] }")
+        req.mock(statusCode: 200, headers: ["Content-Type": "application/json"], text: "{ \"ok\": true, \"elts\": [1,2,3,4,5] }")
         expectationForRequestSuccess(req.parseAsJSON()) { (task, response, json) in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(response.MIMEType, "application/json", "MIME type")

@@ -364,7 +364,7 @@ public extension HTTPManagerNetworkRequest {
     ///   `"Content-Length"` header, one is synthesized from the data.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(statusCode: Int, headers: [String: String] = [:], data: NSData = NSData(), delay: NSTimeInterval = 0.03) {
+    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], data: NSData = NSData(), delay: NSTimeInterval = 0.03) {
         var headers = headers
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.length)
@@ -390,13 +390,13 @@ public extension HTTPManagerNetworkRequest {
     ///   `"Content-Length"` header, one is synthesized from the text.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(statusCode: Int, headers: [String: String] = [:], text: String, delay: NSTimeInterval = 0.03) {
+    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], text: String, delay: NSTimeInterval = 0.03) {
         let data = text.dataUsingEncoding(NSUTF8StringEncoding) ?? NSData()
         var headers = headers
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = "text/plain; charset=utf-8"
         }
-        mock(statusCode, headers: headers, data: data, delay: delay)
+        mock(statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
     /// Modifies the request to return a mock JSON response.
@@ -408,13 +408,13 @@ public extension HTTPManagerNetworkRequest {
     ///   `"Content-Length"` header, one is synthesized from the encoded JSON.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: NSTimeInterval = 0.03) {
+    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], json: JSON, delay: NSTimeInterval = 0.03) {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = "application/json"
         }
-        mock(statusCode, headers: headers, data: data, delay: delay)
+        mock(statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
     /// Removes any mock previously added with `mock(...)`.
