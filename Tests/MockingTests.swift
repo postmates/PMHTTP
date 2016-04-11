@@ -149,7 +149,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
     }
     
-    func testMockResponseDelay() {
+    func testMockDelay() {
         // Ensure the response is always delayed by at least the given delay.
         // Give it up to 100ms longer than the delay for the actual response since we cannot rely on the precise timing
         // of asynchronous operations.
@@ -174,6 +174,36 @@ class MockingTests: PMHTTPTestCase {
         HTTP.mockManager.addMock("foo", statusCode: 200, delay: 0.15)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
+            let delay = CACurrentMediaTime() - start
+            XCTAssert((0.15...0.25).contains(delay), "response delay: expected 150ms...250ms, found \(delay*1000)ms")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+    }
+    
+    func testMockRequestDelay() {
+        // Ensure the response is always delayed by at least the given delay.
+        // Give it up to 100ms longer than the delay for the actual response since we cannot rely on the precise timing
+        // of asynchronous operations.
+        let req = HTTP.request(GET: "foo")
+        req.mock(statusCode: 200, delay: 0.05)
+        var start = CACurrentMediaTime()
+        expectationForRequestSuccess(req) { (task, response, value) in
+            let delay = CACurrentMediaTime() - start
+            XCTAssert((0.05...0.15).contains(delay), "response delay: expected 50ms...150ms, found \(delay*1000)ms")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        req.mock(statusCode: 200, delay: 0)
+        start = CACurrentMediaTime()
+        expectationForRequestSuccess(req) { (task, response, value) in
+            let delay = CACurrentMediaTime() - start
+            XCTAssert((0...0.1).contains(delay), "response delay: expected 0ms...100ms, found \(delay*1000)ms")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        req.mock(statusCode: 200, delay: 0.15)
+        start = CACurrentMediaTime()
+        expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
             XCTAssert((0.15...0.25).contains(delay), "response delay: expected 150ms...250ms, found \(delay*1000)ms")
         }
@@ -445,6 +475,84 @@ class MockingTests: PMHTTPTestCase {
         }
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.host):9/foo")) { (task, response, value) in
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Mock response", "body text")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+    }
+    
+    func testMockParse() {
+        do {
+            let req = HTTP.request(GET: "foo").parseAsJSON()
+            req.mock(value: ["ok": true, "elts": [1,2,3]])
+            expectationForRequestSuccess(req) { (task, response, json) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "Content-Type header")
+                XCTAssertEqual(json, ["ok": true, "elts": [1,2,3]], "body JSON")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            let req = HTTP.request(GET: "foo").parseAsJSON()
+            req.mock(headers: ["Content-Type": "text/plain"], value: ["foo": "bar"])
+            expectationForRequestSuccess(req) { (task, response, json) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "Content-Type header")
+                XCTAssertEqual(json, ["foo": "bar"], "body JSON")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            let req = HTTP.request(GET: "foo").parseWithHandler({ _ -> Int in
+                XCTFail("Parse handler unexpectedly called")
+                return 42
+            })
+            req.mock(value: 123)
+            expectationForRequestSuccess(req, completion: { (task, response, value) in
+                XCTAssertEqual(value, 123, "parsed body")
+            })
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            let req = HTTP.request(GET: "foo")
+            req.mock(statusCode: 500)
+            let req_ = req.parseAsJSON()
+            req_.mock(value: ["ok": true]) // this should override the network mock
+            expectationForRequestSuccess(req_, completion: { (task, response, json) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+                XCTAssertEqual(json, ["ok": true], "body JSON")
+            })
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+    }
+    
+    func testMockParseRequestDelay() {
+        // Ensure the response is always delayed by at least the given delay.
+        // Give it up to 100ms longer than the delay for the actual response since we cannot rely on the precise timing
+        // of asynchronous operations.
+        let req = HTTP.request(GET: "foo").parseAsJSON()
+        req.mock(value: ["ok": true], delay: 0.05)
+        var start = CACurrentMediaTime()
+        expectationForRequestSuccess(req) { (task, response, value) in
+            let delay = CACurrentMediaTime() - start
+            XCTAssert((0.05...0.15).contains(delay), "response delay: expected 50ms...150ms, found \(delay*1000)ms")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        req.mock(value: ["ok": true], delay: 0)
+        start = CACurrentMediaTime()
+        expectationForRequestSuccess(req) { (task, response, value) in
+            let delay = CACurrentMediaTime() - start
+            XCTAssert((0...0.1).contains(delay), "response delay: expected 0ms...100ms, found \(delay*1000)ms")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        req.mock(value: ["ok": true], delay: 0.15)
+        start = CACurrentMediaTime()
+        expectationForRequestSuccess(req) { (task, response, value) in
+            let delay = CACurrentMediaTime() - start
+            XCTAssert((0.15...0.25).contains(delay), "response delay: expected 150ms...250ms, found \(delay*1000)ms")
         }
         waitForExpectationsWithTimeout(5, handler: nil)
     }

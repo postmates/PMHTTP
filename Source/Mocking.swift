@@ -423,6 +423,53 @@ public extension HTTPManagerNetworkRequest {
     }
 }
 
+public extension HTTPManagerParseRequest {
+    /// Modifies the request to return a mock response.
+    ///
+    /// Requests with a mock response will not hit the network and will not invoke the
+    /// parse handler.
+    ///
+    /// Any network mock inherited from an `HTTPManagerNetworkRequest` will be overwritten
+    /// by this method.
+    ///
+    /// - Parameter headers: (Optional) A collection of HTTP headers to return.
+    /// - Parameter value: The parsed value to return.
+    /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
+    ///   response. The default value is 30ms.
+    ///
+    /// - Note: If the parse result type `T` is `JSON` and `headers` does not define the
+    ///   `"Content-Type"` header, a default value of `"application/json"` will be used.
+    public func mock(headers headers: [String: String] = [:], value: T, delay: NSTimeInterval = 0.03) {
+        var headers = headers
+        if T.self is JSON.Type && headers["Content-Type"] == nil {
+            headers["Content-Type"] = "application/json"
+        }
+        // Add a network mock that returns a 200 response with no data.
+        mock = HTTPMockInstance(queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), parameters: [:], handler: { (request, parameters, completion) in
+            let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 200, HTTPVersion: "HTTP/1.1", headerFields: headers)!
+            if delay > 0 {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(delay * NSTimeInterval(NSEC_PER_SEC))), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0)) {
+                    completion(response: response, body: NSData())
+                }
+            } else {
+                completion(response: response, body: NSData())
+            }
+        })
+        // NB: Don't use @autoclosure(escaping) on `value` because that has surprising behavior when
+        // closing over a mutable variable (e.g. it doesn't make a copy of the value).
+        dataMock = { value }
+    }
+    
+    /// Removes any mock previously added with `mock(...)`.
+    ///
+    /// This removes both the parse result mock added with `HTTPManagerParseRequest.mock(...)`
+    /// as well as any inherited network mock added with `HTTPManagerNetworkRequest.mock(...)`.
+    public func clearMock() {
+        mock = nil
+        dataMock = nil
+    }
+}
+
 /// A token that can be used to unregister a mock from an `HTTPMockManager`.
 @objc public protocol HTTPMockToken {}
 

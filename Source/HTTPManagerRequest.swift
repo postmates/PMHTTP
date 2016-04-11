@@ -119,6 +119,9 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     
     // possibly expose some NSURLRequest properties here, if they're useful
     
+    // See Mocking.swift for details.
+    internal var mock: HTTPMockInstance?
+    
     /// Executes a block with `self` as the argument, and then returns `self` again.
     /// - Parameter f: A block to execute, with `self` as the argument.
     /// - Returns: `self`.
@@ -212,9 +215,6 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     internal func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
         return nil
     }
-    
-    // See Mocking.swift for details.
-    internal var mock: HTTPMockInstance?
 }
 
 extension HTTPManagerRequest {
@@ -712,7 +712,16 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTaskWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler, weak apiManager] task, result, attempt, retry in
+        let parseHandler: (NSURLResponse, NSData) throws -> T
+        let expectedContentTypes: [String]
+        if let dataMock = dataMock {
+            parseHandler = { _ in dataMock() }
+            expectedContentTypes = [] // skip Content-Type handling in the task processor
+        } else {
+            parseHandler = self.parseHandler
+            expectedContentTypes = self.expectedContentTypes
+        }
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
             if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
                 retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
@@ -740,7 +749,16 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTaskWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [expectedContentTypes, parseHandler, weak apiManager] task, result, attempt, retry in
+        let parseHandler: (NSURLResponse, NSData) throws -> T
+        let expectedContentTypes: [String]
+        if let dataMock = dataMock {
+            parseHandler = { _ in dataMock() }
+            expectedContentTypes = [] // skip Content-Type handling in the task processor
+        } else {
+            parseHandler = self.parseHandler
+            expectedContentTypes = self.expectedContentTypes
+        }
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
             if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
                 retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
@@ -840,6 +858,10 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     private let _contentType: String
     private let uploadBody: UploadBody?
     
+    // See Mocking.swift for details.
+    // This is a closure instead of just `T?` to avoid bloating the request object if `T` is large.
+    internal var dataMock: (() -> T)?
+    
     internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, defaultResponseCacheStoragePolicy: NSURLCacheStoragePolicy? = nil, parseHandler: (NSURLResponse, NSData) throws -> T) {
         self.parseHandler = parseHandler
         prepareRequestHandler = request.prepareURLRequest()
@@ -869,6 +891,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         _contentType = request._contentType
         uploadBody = request.uploadBody
         expectedContentTypes = request.expectedContentTypes
+        dataMock = request.dataMock
         super.init(__copyOfRequest: request)
     }
     
