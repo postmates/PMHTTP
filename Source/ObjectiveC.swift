@@ -673,6 +673,11 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
         set { _request.headerFields = newValue }
     }
     
+    internal override var mock: HTTPMockInstance? {
+        get { return _request.mock }
+        set { _request.mock = newValue }
+    }
+    
     /// The expected MIME type of the response. Defaults to `["application/json"]` for
     /// JSON parse requests, or `[]` for requests created with `-parseWithHandler:`.
     ///
@@ -734,7 +739,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
         }
     }
     
-    private let _request: HTTPManagerParseRequest<AnyObject?>
+    internal let _request: HTTPManagerParseRequest<AnyObject?>
     
     private init(request: HTTPManagerParseRequest<AnyObject?>) {
         _request = request

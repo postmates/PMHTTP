@@ -470,6 +470,47 @@ public extension HTTPManagerParseRequest {
     }
 }
 
+public extension HTTPManagerObjectParseRequest {
+    /// Modifies the request to return a mock response.
+    ///
+    /// Requests with a mock response will not hit the network and will not invoke the
+    /// parse handler.
+    ///
+    /// Any network mock inherited from an `HTTPManagerNetworkRequest` will be overwritten
+    /// by this method.
+    ///
+    /// - Parameter value: The parsed value to return.
+    ///
+    /// - SeeAlso: `mock(headers:value:delay:)`.
+    public func mock(value: AnyObject?) {
+        _request.mock(value: value)
+    }
+    
+    /// Modifies the request to return a mock response.
+    ///
+    /// Requests with a mock response will not hit the network and will not invoke the
+    /// parse handler.
+    ///
+    /// Any network mock inherited from an `HTTPManagerNetworkRequest` will be overwritten
+    /// by this method.
+    ///
+    /// - Parameter headers: A collection of HTTP headers to return.
+    /// - Parameter value: The parsed object to return.
+    /// - Parameter delay: The amount of time in seconds to wait before returning the
+    ///   response. The default value is 30ms.
+    public func mock(headers headers: [String: String], value: AnyObject?, delay: NSTimeInterval) {
+        _request.mock(headers: headers, value: value, delay: delay)
+    }
+    
+    /// Removes any mock previously added with `mock(...)`.
+    ///
+    /// This removes both the parse result mock added with `HTTPManagerParseRequest.mock(...)`
+    /// as well as any inherited network mock added with `HTTPManagerNetworkRequest.mock(...)`.
+    public func clearMock() {
+        _request.clearMock()
+    }
+}
+
 /// A token that can be used to unregister a mock from an `HTTPMockManager`.
 @objc public protocol HTTPMockToken {}
 
