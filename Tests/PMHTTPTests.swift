@@ -782,8 +782,8 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
                     completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
                 }
-                let req = request.parseAsJSONWithHandler({ (response, json) -> Int in
-                    return Int(try json.getArray("ary") { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) })
+                let req = request.parseAsJSONWithHandler({ result -> Int in
+                    return Int(try result.getJSON().getArray("ary", { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) }))
                 })
                 expectationForRequestSuccess(req) { task, response, value in
                     XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
@@ -832,14 +832,15 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
                     completionHandler(HTTPServer.Response(status: .NoContent))
                 }
-                struct UnexpectedCallError: ErrorType {}
-                let req = request.parseAsJSONWithHandler({ response, json -> Int in
-                    throw UnexpectedCallError()
+                let req = request.parseAsJSONWithHandler({ result -> Int in
+                    XCTAssertEqual((result.response as? NSHTTPURLResponse)?.statusCode, 204, "parse handler response status code (\(method))")
+                    XCTAssertNil(result.json, "parse handler json value (\(method))")
+                    return 42
                 })
-                expectationForRequestSuccess(req) { task, response, json in
+                expectationForRequestSuccess(req) { task, response, value in
                     XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
                     XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
-                    XCTAssertNil(json, "response body json (\(method))")
+                    XCTAssertEqual(value, 42, "response body parsed value (\(method))")
                 }
                 waitForExpectationsWithTimeout(5, handler: nil)
             }
@@ -849,14 +850,15 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
                     completionHandler(HTTPServer.Response(status: .NoContent))
                 }
-                struct UnexpectedCallError: ErrorType {}
-                let req = request.parseWithHandler({ response, data -> String in
-                    throw UnexpectedCallError()
+                let req = request.parseWithHandler({ response, data -> String? in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
+                    XCTAssertEqual(0, data.length, "response data length (\(method))")
+                    return "foo"
                 })
-                expectationForRequestSuccess(req) { task, response, json in
+                expectationForRequestSuccess(req) { task, response, value in
                     XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
                     XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
-                    XCTAssertNil(json, "response body json (\(method))")
+                    XCTAssertEqual(value, "foo", "response body parsed value (\(method))")
                 }
                 waitForExpectationsWithTimeout(5, handler: nil)
             }
@@ -1114,7 +1116,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             let req = HTTP.request(DELETE: "foo")
             XCTAssert(req.defaultResponseCacheStoragePolicy == .Allowed, "request cache storage policy")
             XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .NotAllowed, "json parse request cache storage policy")
-            XCTAssert(req.parseAsJSONWithHandler({ $1 }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
+            XCTAssert(req.parseAsJSONWithHandler({ $0.json }).defaultResponseCacheStoragePolicy == .NotAllowed, "json with handler parse request cache storage policy")
         }
     }
     

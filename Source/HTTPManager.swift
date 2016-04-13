@@ -581,8 +581,8 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
     /// - Parameter body: The body of the response, if any.
     case UnexpectedContentType(contentType: String, response: NSHTTPURLResponse, body: NSData)
     /// An HTTP response returned a 204 No Content where an entity was expected.
-    /// This is only thrown from parse requests with a GET or HEAD method.
-    /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
+    /// This is only thrown automatically from parse requests with a GET or HEAD method.
+    /// - Note: Custom parse requests (using `parseWithHandler(_:)`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
     /// - Parameter response: The `NSHTTPURLResponse` object.
     case UnexpectedNoContent(response: NSHTTPURLResponse)

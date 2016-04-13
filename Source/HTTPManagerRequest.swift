@@ -418,6 +418,24 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
         return super._preparedURLRequest
     }
     
+    /// Returns a new request that parses the data with the specified handler.
+    /// - Note: If the server responds with 204 No Content, the parse handler is
+    ///   invoked with an empty data. The handler may choose to throw
+    ///   `HTTPManagerError.UnexpectedNoContent` if it does not handle this case.
+    /// - Parameter handler: The handler to call as part of the request
+    ///   processing. This handler is not guaranteed to be called on any
+    ///   particular thread. The handler returns the new value for the request.
+    /// - Returns: An `HTTPManagerParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main
+    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   instead.
+    /// - Note: If the request is canceled, the results of the handler may be
+    ///   discarded. Any side-effects performed by your handler must be safe in
+    ///   the event of a cancelation.
+    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> HTTPManagerParseRequest<T> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
+    }
+    
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
     ///
     /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
@@ -595,6 +613,8 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     }
     
     /// Returns a new request that parses the data as JSON.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped
+    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
@@ -607,6 +627,8 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped
+    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -624,21 +646,6 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
             }
             return try handler(response: response, json: JSON.decode(data))
         })
-    }
-    
-    /// Returns a new request that parses the data with the specified handler.
-    /// - Parameter handler: The handler to call as part of the request
-    ///   processing. This handler is not guaranteed to be called on any
-    ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `HTTPManagerParseRequest`.
-    /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
-    ///   instead.
-    /// - Note: If the request is canceled, the results of the handler may be
-    ///   discarded. Any side-effects performed by your handler must be safe in
-    ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> HTTPManagerParseRequest<T> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
     
     /// Executes a block with `self` as the argument, and then returns `self` again.
@@ -938,11 +945,45 @@ private func acceptHeaderValueForContentTypes(contentTypes: [String]) -> String 
 
 /// An HTTP POST/PUT/PATCH/DELETE request that does not yet have a parse handler.
 ///
-/// Similar to an `HTTPManagerDataRequest` except that it handles a 204 (No Content)
-/// response by skipping the parse and the resulting response value may be `nil`.
+/// Similar to an `HTTPManagerDataRequest` except that it handles 204 No Content
+/// instead of throwing `HTTPManagerError.UnexpectedNoContent`.
 public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
+    /// The results of JSON parsing for use in `parseAsJSONWithHandler(_:)`.
+    public enum JSONResult {
+        /// The server returned 204 No Content.
+        case NoContent(NSHTTPURLResponse)
+        /// The server returned a valid JSON response.
+        case Success(NSURLResponse, JSON)
+        
+        /// The server response.
+        public var response: NSURLResponse {
+            switch self {
+            case .NoContent(let response): return response
+            case .Success(let response, _): return response
+            }
+        }
+        
+        /// The parsed JSON response, or `nil` if the server returned 204 No Content.
+        public var json: JSON? {
+            switch self {
+            case .NoContent: return nil
+            case .Success(_, let json): return json
+            }
+        }
+        
+        /// Returns the parsed JSON response, or throws `HTTPManagerError.UnexpectedNoContent`
+        /// if the server returned 204 No Content.
+        public func getJSON() throws -> JSON {
+            switch self {
+            case .NoContent(let response): throw HTTPManagerError.UnexpectedNoContent(response: response)
+            case .Success(_, let json): return json
+            }
+        }
+    }
+    
     /// Returns a new request that parses the data as JSON.
-    /// If the response is a 204 (No Content), there is no data to parse.
+    /// - Note: The parse result is `nil` if and only if the server responded with
+    ///   204 No Content.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON?> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
@@ -957,8 +998,6 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler.
-    /// If the response is a 204 (No Content), there is no data to parse and
-    /// the handler is not invoked.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -969,37 +1008,13 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T?) -> HTTPManagerParseRequest<T?> {
+    public func parseAsJSONWithHandler<T>(handler: (result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
-            if (response as? NSHTTPURLResponse)?.statusCode == 204 {
+            if let response = response as? NSHTTPURLResponse where response.statusCode == 204 {
                 // No Content
-                return nil
+                return try handler(result: .NoContent(response))
             } else {
-                return try handler(response: response, json: JSON.decode(data))
-            }
-        })
-    }
-    
-    /// Returns a new request that parses the data with the specified handler.
-    /// If the response is a 204 (No Content), there is no data to parse and
-    /// the handler is not invoked.
-    /// - Parameter handler: The handler to call as part of the request
-    ///   processing. This handler is not guaranteed to be called on any
-    ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `HTTPManagerParseRequest`.
-    /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
-    ///   instead.
-    /// - Note: If the request is canceled, the results of the handler may be
-    ///   discarded. Any side-effects performed by your handler must be safe in
-    ///   the event of a cancelation.
-    public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T?) -> HTTPManagerParseRequest<T?> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: { response, data in
-            if (response as? NSHTTPURLResponse)?.statusCode == 204 {
-                // No Content
-                return nil
-            } else {
-                return try handler(response: response, data: data)
+                return try handler(result: .Success(response, JSON.decode(data)))
             }
         })
     }

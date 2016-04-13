@@ -477,6 +477,37 @@ extension HTTPManagerRequest {
 // MARK: - Network Request
 
 extension HTTPManagerNetworkRequest {
+    /// Returns a new request that parses the data with the specified handler.
+    /// - Note: If the server responds with 204 No Content, the parse handler is
+    ///   invoked with an empty data. The handler may choose to return the error
+    ///   `HTTPManagerError.UnexpectedNoContent` if it does not handle this case.
+    /// - Parameter handler: The handler to call as part of the request
+    ///   processing. This handler is not guaranteed to be called on any
+    ///   particular thread. The handler returns the new value for the request.
+    ///   If the handler returns `nil`, then if `error` is filled in with an
+    ///   error the parse is considered to have errored, otherwise the parse is
+    ///   treated as successful but with a `nil` value.
+    /// - Returns: An `HTTPManagerObjectParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main
+    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   instead.
+    /// - Note: If the request is canceled, the results of the handler may be
+    ///   discarded. Any side-effects performed by your handler must be safe in
+    ///   the event of a cancelation.
+    @objc(parseWithHandler:)
+    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
+            var error: NSError?
+            if let object = handler(response: response, data: data, error: &error) {
+                return object
+            } else if let error = error {
+                throw error
+            } else {
+                return nil
+            }
+        }))
+    }
+    
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
     /// - Parameter handler: The handler to call when the request is done. This
@@ -521,6 +552,8 @@ extension HTTPManagerDataRequest {
     
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped
+    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     @objc(parseAsJSON)
     public func __objc_parseAsJSON() -> HTTPManagerObjectParseRequest {
@@ -528,6 +561,8 @@ extension HTTPManagerDataRequest {
     }
     
     /// Returns a new request that parses the data as JSON.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped
+    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
@@ -541,6 +576,8 @@ extension HTTPManagerDataRequest {
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler. Any nulls in the JSON are represented as `NSNull`.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped
+    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -561,6 +598,8 @@ extension HTTPManagerDataRequest {
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped
+    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
@@ -583,34 +622,6 @@ extension HTTPManagerDataRequest {
             var error: NSError?
             let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
             if let object = handler(response: response, json: jsonObject, error: &error) {
-                return object
-            } else if let error = error {
-                throw error
-            } else {
-                return nil
-            }
-        }))
-    }
-    
-    /// Returns a new request that parses the data with the specified handler.
-    /// - Parameter handler: The handler to call as part of the request
-    ///   processing. This handler is not guaranteed to be called on any
-    ///   particular thread. The handler returns the new value for the request.
-    ///   If the handler returns `nil`, then if `error` is filled in with an
-    ///   error the parse is considered to have errored, otherwise the parse is
-    ///   treated as successful but with a `nil` value.
-    /// - Returns: An `HTTPManagerObjectParseRequest`.
-    /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
-    ///   instead.
-    /// - Note: If the request is canceled, the results of the handler may be
-    ///   discarded. Any side-effects performed by your handler must be safe in
-    ///   the event of a cancelation.
-    @objc(parseWithHandler:)
-    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
-            var error: NSError?
-            if let object = handler(response: response, data: data, error: &error) {
                 return object
             } else if let error = error {
                 throw error
@@ -771,7 +782,8 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
 extension HTTPManagerActionRequest {
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
-    /// If the response is a 204 No Content, there is no data to parse.
+    /// - Note: The parse result is `nil` if and only if the server responded with
+    ///   204 No Content.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If the response is a 204 No Content, the result object
     ///   will return `nil` for `value`.
@@ -781,7 +793,8 @@ extension HTTPManagerActionRequest {
     }
     
     /// Returns a new request that parses the data as JSON.
-    /// If the response is a 204 No Content, there is no data to parse.
+    /// - Note: The parse result is `nil` if and only if the server responded with
+    ///   204 No Content.
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
@@ -790,15 +803,16 @@ extension HTTPManagerActionRequest {
     ///   will return `nil` for `value`.
     @objc(parseAsJSONOmitNulls:)
     public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
-            return omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
+        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ result -> AnyObject? in
+            return result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
         }))
     }
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler. Any nulls in the JSON are represented as `NSNull`.
-    /// If the response is a 204 (No Content), there is no data to parse and
-    /// the handler is not invoked.
+    /// - Note: If the `json` argument to the handler is `nil`, this means the server
+    ///   responded with 204 No Content and the `response` argument is guaranteed
+    ///   to be an instance of `NSHTTPURLResponse`.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -812,14 +826,15 @@ extension HTTPManagerActionRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject?, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler.
-    /// If the response is a 204 (No Content), there is no data to parse and
-    /// the handler is not invoked.
+    /// - Note: If the `json` argument to the handler is `nil`, this means the server
+    ///   responded with 204 No Content and the `response` argument is guaranteed
+    ///   to be an instance of `NSHTTPURLResponse`.
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
@@ -837,38 +852,11 @@ extension HTTPManagerActionRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject?, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ result -> AnyObject? in
             var error: NSError?
-            let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
-            if let object = handler(response: response, json: jsonObject, error: &error) {
-                return object
-            } else if let error = error {
-                throw error
-            } else {
-                return nil
-            }
-        }))
-    }
-    
-    /// Returns a new request that parses the data with the specified handler.
-    /// If the response is a 204 (No Content), there is no data to parse and
-    /// the handler is not invoked.
-    /// - Parameter handler: The handler to call as part of the request
-    ///   processing. This handler is not guaranteed to be called on any
-    ///   particular thread. The handler returns the new value for the request.
-    /// - Returns: An `HTTPManagerObjectParseRequest`.
-    /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
-    ///   instead.
-    /// - Note: If the request is canceled, the results of the handler may be
-    ///   discarded. Any side-effects performed by your handler must be safe in
-    ///   the event of a cancelation.
-    @objc(parseWithHandler:)
-    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
-            var error: NSError?
-            if let object = handler(response: response, data: data, error: &error) {
+            let jsonObject = result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
+            if let object = handler(response: result.response, json: jsonObject, error: &error) {
                 return object
             } else if let error = error {
                 throw error
