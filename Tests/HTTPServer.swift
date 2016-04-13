@@ -182,6 +182,7 @@ final class HTTPServer {
         case GET
         case POST
         case PUT
+        case PATCH
         case DELETE
         case CONNECT
         case Other(String)
@@ -192,6 +193,7 @@ final class HTTPServer {
             case comparable("GET", options: .CaseInsensitiveSearch): self = .GET
             case comparable("POST", options: .CaseInsensitiveSearch): self = .POST
             case comparable("PUT", options: .CaseInsensitiveSearch): self = .PUT
+            case comparable("PATCH", options: .CaseInsensitiveSearch): self = .PATCH
             case comparable("DELETE", options: .CaseInsensitiveSearch): self = .DELETE
             default: self = .Other(rawValue.uppercaseString)
             }
@@ -203,6 +205,7 @@ final class HTTPServer {
             case .GET: return "GET"
             case .POST: return "POST"
             case .PUT: return "PUT"
+            case .PATCH: return "PATCH"
             case .DELETE: return "DELETE"
             case .CONNECT: return "CONNECT"
             case .Other(let s): return s

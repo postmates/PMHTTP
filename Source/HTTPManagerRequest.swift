@@ -16,7 +16,7 @@ import Foundation
 public class HTTPManagerRequest: NSObject, NSCopying {
     /// An HTTP method verb.
     public enum Method: String {
-        case GET, POST, DELETE
+        case GET, POST, PUT, PATCH, DELETE
     }
     
     /// The URL for the request, including any query items as appropriate.

@@ -469,6 +469,70 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
     }
     
+    /// Creates a PUT request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPUT:parameters:)
+    public func request(PUT path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadRequest! {
+        return request(PUT: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
+    }
+    /// Creates a PUT request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`.
+    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPUT:queryItems:)
+    public func request(PUT path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, method: .PUT, parameters: parameters) })
+    }
+    /// Creates a PUT request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter json: The JSON data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL`.
+    @nonobjc public func request(PUT path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PUT, json: json) })
+    }
+    
+    /// Creates a PATCH request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPATCH:parameters:)
+    public func request(PATCH path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadRequest! {
+        return request(PATCH: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
+    }
+    /// Creates a PATCH request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`.
+    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPATCH:queryItems:)
+    public func request(PATCH path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, method: .PATCH, parameters: parameters) })
+    }
+    /// Creates a PATCH request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter json: The JSON data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL`.
+    @nonobjc public func request(PATCH path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PATCH, json: json) })
+    }
+    
     private func constructRequest<T: HTTPManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
         let (environment, credential, defaultRetryBehavior) = inner.sync({ inner -> (Environment?, NSURLCredential?, HTTPManagerRetryBehavior?) in
             return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior)

@@ -752,81 +752,84 @@ final class PMHTTPTests: PMHTTPTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
     }
     
-    func testDelete() {
-        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-            XCTAssertEqual(request.method, HTTPServer.Method.DELETE, "request method")
-            XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
-            completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ok\": true }"))
-        }
-        expectationForRequestSuccess(HTTP.request(DELETE: "foo").parseAsJSON()) { task, response, json in
-            XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, "DELETE", "current request method")
-            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
-            XCTAssertEqual(json, ["ok": true], "response body json")
-        }
-        waitForExpectationsWithTimeout(5, handler: nil)
-        
-        do {
-            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-                XCTAssertEqual(request.method, HTTPServer.Method.DELETE, "request method")
-                XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
-                completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
-            }
-            let req = HTTP.request(DELETE: "foo").parseAsJSONWithHandler({ (response, json) -> Int in
-                return Int(try json.getArray("ary") { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) })
-            })
-            expectationForRequestSuccess(req) { task, response, value in
-                XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, "DELETE", "current request method")
-                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
-                XCTAssertEqual(value, 6, "response body value")
-            }
-            waitForExpectationsWithTimeout(5, handler: nil)
-        }
-        
-        do {
-            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-                XCTAssertEqual(request.method, HTTPServer.Method.DELETE, "request method")
-                completionHandler(HTTPServer.Response(status: .OK, text: "foobar"))
-            }
-            struct DecodeError: ErrorType {}
-            let req = HTTP.request(DELETE: "foo").parseWithHandler({ response, data -> String in
-                guard let str = String(data: data, encoding: NSUTF8StringEncoding) else {
-                    throw DecodeError()
-                }
-                return str
-            })
-            expectationForRequestSuccess(req) { task, response, str in
-                XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, "DELETE", "current request method")
-                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code")
-                XCTAssertEqual(str, "foobar", "response body string")
-            }
-            waitForExpectationsWithTimeout(5, handler: nil)
-        }
-    }
-    
-    func testNoContent() {
-        for method in [HTTPManagerRequest.Method.POST, .DELETE] {
+    func testActions() {
+        for method in [HTTPManagerRequest.Method.POST, .PUT, .PATCH, .DELETE] {
             let request: HTTPManagerActionRequest
             switch method {
             case .POST: request = HTTP.request(POST: "foo")
+            case .PUT: request = HTTP.request(PUT: "foo")
+            case .PATCH: request = HTTP.request(PATCH: "foo")
             case .DELETE: request = HTTP.request(DELETE: "foo")
             default: fatalError("unreachable")
             }
+            
+            // 200 OK
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-                XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method")
-                XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
-                completionHandler(HTTPServer.Response(status: .NoContent))
+                XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
+                XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
+                completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ok\": true }"))
             }
             expectationForRequestSuccess(request.parseAsJSON()) { task, response, json in
-                XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method")
-                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
-                XCTAssertNil(json, "response body json")
+                XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code (\(method))")
+                XCTAssertEqual(json, ["ok": true], "response body json (\(method))")
             }
             waitForExpectationsWithTimeout(5, handler: nil)
             
             do {
                 expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-                    XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method")
-                    XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
+                    XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
+                    XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
+                    completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
+                }
+                let req = request.parseAsJSONWithHandler({ (response, json) -> Int in
+                    return Int(try json.getArray("ary") { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) })
+                })
+                expectationForRequestSuccess(req) { task, response, value in
+                    XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code (\(method))")
+                    XCTAssertEqual(value, 6, "response body value (\(method))")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
+            
+            do {
+                expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                    XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
+                    completionHandler(HTTPServer.Response(status: .OK, text: "foobar"))
+                }
+                struct DecodeError: ErrorType {}
+                let req = request.parseWithHandler({ response, data -> String in
+                    guard let str = String(data: data, encoding: NSUTF8StringEncoding) else {
+                        throw DecodeError()
+                    }
+                    return str
+                })
+                expectationForRequestSuccess(req) { task, response, str in
+                    XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "response status code (\(method))")
+                    XCTAssertEqual(str, "foobar", "response body string (\(method))")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
+            
+            // 204 No Content
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
+                XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
+                completionHandler(HTTPServer.Response(status: .NoContent))
+            }
+            expectationForRequestSuccess(request.parseAsJSON()) { task, response, json in
+                XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
+                XCTAssertNil(json, "response body json (\(method))")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+            
+            do {
+                expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                    XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
+                    XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
                     completionHandler(HTTPServer.Response(status: .NoContent))
                 }
                 struct UnexpectedCallError: ErrorType {}
@@ -834,16 +837,16 @@ final class PMHTTPTests: PMHTTPTestCase {
                     throw UnexpectedCallError()
                 })
                 expectationForRequestSuccess(req) { task, response, json in
-                    XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method")
-                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
-                    XCTAssertNil(json, "response body json")
+                    XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
+                    XCTAssertNil(json, "response body json (\(method))")
                 }
                 waitForExpectationsWithTimeout(5, handler: nil)
             }
             
             do {
                 expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-                    XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method")
+                    XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
                     completionHandler(HTTPServer.Response(status: .NoContent))
                 }
                 struct UnexpectedCallError: ErrorType {}
@@ -851,9 +854,9 @@ final class PMHTTPTests: PMHTTPTestCase {
                     throw UnexpectedCallError()
                 })
                 expectationForRequestSuccess(req) { task, response, json in
-                    XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method")
-                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code")
-                    XCTAssertNil(json, "response body json")
+                    XCTAssertEqual(task.networkTask.currentRequest?.HTTPMethod, String(method), "current request method (\(method))")
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
+                    XCTAssertNil(json, "response body json (\(method))")
                 }
                 waitForExpectationsWithTimeout(5, handler: nil)
             }
