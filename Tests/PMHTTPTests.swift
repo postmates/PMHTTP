@@ -1032,6 +1032,14 @@ final class PMHTTPTests: PMHTTPTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
     }
     
+    func testCachePolicy() {
+        XCTAssertNil(HTTP.request(GET: "foo").cachePolicy, "GET request cache policy")
+        XCTAssertEqual(HTTP.request(POST: "foo").cachePolicy, .ReloadIgnoringLocalCacheData, "POST request cache policy")
+        XCTAssertEqual(HTTP.request(PUT: "foo").cachePolicy, .ReloadIgnoringLocalCacheData, "PUT request cache policy")
+        XCTAssertEqual(HTTP.request(PATCH: "foo").cachePolicy, .ReloadIgnoringLocalCacheData, "PATCH request cache policy")
+        XCTAssertEqual(HTTP.request(DELETE: "foo").cachePolicy, .ReloadIgnoringLocalCacheData, "DELETE request cache policy")
+    }
+    
     func testCacheStoragePolicy() {
         guard let cache = HTTP.sessionConfiguration.URLCache else {
             XCTFail("No cache configured on the session")

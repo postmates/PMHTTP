@@ -428,16 +428,11 @@ extension HTTPManagerRequest {
     }
     
     /// The cache policy to use for the request. If `NSURLRequestUseProtocolCachePolicy`,
-    /// the default cache policy is used. Default is `NSURLRequestUseProtocolCachePolicy`.
+    /// the default cache policy is used. Default is `NSURLRequestUseProtocolCachePolicy`
+    /// for GET/HEAD requests and `NSURLRequestReloadIgnoringLocalCacheData` for
+    /// POST/PUT/PATCH/DELETE requests.
     @objc(cachePolicy) public var __objc_cachePolicy: NSURLRequestCachePolicy {
-        get { return cachePolicy ?? NSURLRequestCachePolicy.UseProtocolCachePolicy }
-        set {
-            if newValue == NSURLRequestCachePolicy.UseProtocolCachePolicy {
-                cachePolicy = nil
-            } else {
-                cachePolicy = newValue
-            }
-        }
+        return cachePolicy ?? NSURLRequestCachePolicy.UseProtocolCachePolicy
     }
     
     /// Additional HTTP header fields to pass in the request. Default is `[:]`.
@@ -511,6 +506,19 @@ extension HTTPManagerNetworkRequest {
 // MARK: - Data Request
 
 extension HTTPManagerDataRequest {
+    /// The cache policy to use for the request. If `NSURLRequestUseProtocolCachePolicy`,
+    /// the default cache policy is used. Default is `NSURLRequestUseProtocolCachePolicy`.
+    @objc(cachePolicy) public override var __objc_cachePolicy: NSURLRequestCachePolicy {
+        get { return super.__objc_cachePolicy }
+        set {
+            if newValue == NSURLRequestCachePolicy.UseProtocolCachePolicy {
+                cachePolicy = nil
+            } else {
+                cachePolicy = newValue
+            }
+        }
+    }
+    
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
@@ -640,8 +648,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
     }
     
     public override var cachePolicy: NSURLRequestCachePolicy? {
-        get { return _request.cachePolicy }
-        set { _request.cachePolicy = newValue }
+        return _request.cachePolicy
     }
     
     public override var shouldFollowRedirects: Bool {

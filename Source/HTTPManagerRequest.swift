@@ -70,8 +70,9 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     public var timeoutInterval: NSTimeInterval?
     
     /// The cache policy to use for the request. If `nil`, the default cache policy
-    /// is used. Default is `nil`.
-    public var cachePolicy: NSURLRequestCachePolicy?
+    /// is used. Default is `nil` for GET/HEAD requests and `.ReloadIgnoringLocalCacheData`
+    /// for POST/PUT/PATCH/DELETE requests.
+    public private(set) var cachePolicy: NSURLRequestCachePolicy?
     
     /// The default cache storage policy to use for the response if the response does not
     /// include appropriate caching headers. If the response does include appropriate headers
@@ -586,6 +587,13 @@ extension HTTPManagerRequestPerformable {
 
 /// An HTTP GET/HEAD request that does not yet have a parse handler.
 public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
+    /// The cache policy to use for the request. If `nil`, the default cache policy
+    /// is used. Default is `nil`.
+    public override var cachePolicy: NSURLRequestCachePolicy? {
+        get { return super.cachePolicy }
+        set { super.cachePolicy = newValue }
+    }
+    
     /// Returns a new request that parses the data as JSON.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
@@ -1011,6 +1019,15 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     @nonobjc public override func with(@noescape f: HTTPManagerActionRequest throws -> Void) rethrows -> Self {
         try f(self)
         return self
+    }
+    
+    public override init(apiManager: HTTPManager, URL url: NSURL, method: Method, parameters: [NSURLQueryItem]) {
+        super.init(apiManager: apiManager, URL: url, method: method, parameters: parameters)
+        cachePolicy = .ReloadIgnoringLocalCacheData
+    }
+    
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
+        super.init(__copyOfRequest: request)
     }
 }
 
