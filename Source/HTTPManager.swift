@@ -442,10 +442,10 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
-    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPOST:parameters:)
-    public func request(POST path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadRequest! {
+    public func request(POST path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadFormRequest! {
         return request(POST: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a POST request.
@@ -453,11 +453,11 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
-    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPOST:queryItems:)
-    public func request(POST path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
-        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, method: .POST, parameters: parameters) })
+    public func request(POST path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadFormRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .POST, parameters: parameters) })
     }
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -474,10 +474,10 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
-    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPUT:parameters:)
-    public func request(PUT path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadRequest! {
+    public func request(PUT path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadFormRequest! {
         return request(PUT: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a PUT request.
@@ -485,11 +485,11 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
-    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPUT:queryItems:)
-    public func request(PUT path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
-        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, method: .PUT, parameters: parameters) })
+    public func request(PUT path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadFormRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PUT, parameters: parameters) })
     }
     /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -506,10 +506,10 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
-    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPATCH:parameters:)
-    public func request(PATCH path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadRequest! {
+    public func request(PATCH path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerUploadFormRequest! {
         return request(PATCH: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a PATCH request.
@@ -517,11 +517,11 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
-    /// - Returns: An `HTTPManagerUploadRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForPATCH:queryItems:)
-    public func request(PATCH path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
-        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, method: .PATCH, parameters: parameters) })
+    public func request(PATCH path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadFormRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PATCH, parameters: parameters) })
     }
     /// Creates a PATCH request.
     /// - Parameter path: The path for the request, interpreted relative to the

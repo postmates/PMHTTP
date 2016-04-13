@@ -867,9 +867,9 @@ extension HTTPManagerActionRequest {
     }
 }
 
-// MARK: - Upload Request
+// MARK: - Upload Form Request
 
-// It looks like HTTPManagerUploadRequest is already fully ObjC-compatible
+// It looks like HTTPManagerUploadFormRequest is already fully ObjC-compatible
 
 // MARK: - Upload JSON Request
 

@@ -1046,15 +1046,15 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     }
 }
 
-// MARK: - Upload Request
+// MARK: - Upload Form Request
 
-/// An HTTP POST/PUT/PATCH request that does not yet have a parse handler.
+/// An HTTP POST/PUT/PATCH request with form data that does not yet have a parse handler.
 ///
 /// By default, any request parameters (see `HTTPManagerRequest.parameters`) are
 /// passed as `application/x-www-form-urlencoded`. Adding any multipart bodies
 /// passes everything as `multipart/form-data` instead. When mixing *parameters*
 /// and multipart bodies, the *parameters* are sent prior to any multipart bodies.
-public final class HTTPManagerUploadRequest: HTTPManagerActionRequest {
+public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     /// The URL for the request, including any query items as appropriate.
     public override var url: NSURL {
         return baseURL
@@ -1158,7 +1158,7 @@ public final class HTTPManagerUploadRequest: HTTPManagerActionRequest {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(@noescape f: HTTPManagerUploadRequest throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(@noescape f: HTTPManagerUploadFormRequest throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
@@ -1175,7 +1175,7 @@ public final class HTTPManagerUploadRequest: HTTPManagerActionRequest {
     }
 }
 
-/// Helper class for `HTTPManagerUploadRequest.addMultipartBodyWithBlock(_:)`.
+/// Helper class for `HTTPManagerUploadFormRequest.addMultipartBodyWithBlock(_:)`.
 public final class HTTPManagerUploadMultipart: NSObject {
     /// Specifies a named multipart body for this request.
     ///
