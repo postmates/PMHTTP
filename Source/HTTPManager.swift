@@ -462,6 +462,17 @@ extension HTTPManager {
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
+    /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL`.
+    @objc(requestForPOST:contentType:data:)
+    public func request(POST path: String, contentType: String = "application/octet-stream", data: NSData) -> HTTPManagerUploadDataRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .POST, contentType: contentType, data: data) })
+    }
+    /// Creates a POST request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
     ///   be parsed by `NSURL`.
@@ -494,6 +505,17 @@ extension HTTPManager {
     /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
+    /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL`.
+    @objc(requestForPUT:contentType:data:)
+    public func request(PUT path: String, contentType: String = "application/octet-stream", data: NSData) -> HTTPManagerUploadDataRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .PUT, contentType: contentType, data: data) })
+    }
+    /// Creates a PUT request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
     ///   be parsed by `NSURL`.
@@ -522,6 +544,17 @@ extension HTTPManager {
     @objc(requestForPATCH:queryItems:)
     public func request(PATCH path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadFormRequest! {
         return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PATCH, parameters: parameters) })
+    }
+    /// Creates a PATCH request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL`.
+    @objc(requestForPATCH:contentType:data:)
+    public func request(PATCH path: String, contentType: String = "application/octet-stream", data: NSData) -> HTTPManagerUploadDataRequest! {
+        return constructRequest(path, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .PATCH, contentType: contentType, data: data) })
     }
     /// Creates a PATCH request.
     /// - Parameter path: The path for the request, interpreted relative to the

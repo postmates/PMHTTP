@@ -1211,6 +1211,36 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
     }
     
+    func testDataUpload() {
+        do {
+            let bodyData = "<?xml version=\"1.0\"?><root><node>wat</node></root>".dataUsingEncoding(NSUTF8StringEncoding)!
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Content-Type"], "text/xml", "request content-type header")
+                XCTAssertEqual(request.body, bodyData, "request body")
+                completionHandler(HTTPServer.Response(status: .OK))
+            }
+            let request = HTTP.request(POST: "foo", contentType: "text/xml", data: bodyData)
+            XCTAssertEqual(request.preparedURLRequest.HTTPBody, bodyData, "request body data")
+            expectationForRequestSuccess(request) { (task, response, value) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            let bodyData = "foobar".dataUsingEncoding(NSUTF8StringEncoding)!
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Content-Type"], "application/octet-stream", "request content-type header")
+                XCTAssertEqual(request.body, bodyData, "request body")
+                completionHandler(HTTPServer.Response(status: .OK))
+            }
+            expectationForRequestSuccess(HTTP.request(PUT: "foo", data: bodyData)) { (task, response, value) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+    }
+    
     func testJSONUpload() {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             XCTAssertEqual(request.headers["Content-Type"], "application/json", "request content-type header")
@@ -1226,7 +1256,10 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{\"ok\": true, \"msg\": \"upload complete\"}"))
         }
-        expectationForRequestSuccess(HTTP.request(POST: "foo", json: ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil]).parseAsJSON()) { task, response, json in
+        let json: JSON = ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil]
+        let request = HTTP.request(POST: "foo", json: json)
+        XCTAssertEqual(request.preparedURLRequest.HTTPBody, JSON.encodeAsData(json, pretty: false), "request json data")
+        expectationForRequestSuccess(request.parseAsJSON()) { task, response, json in
             XCTAssertEqual(response.MIMEType, "application/json", "response MIME type")
             XCTAssertEqual(json, ["ok": true, "msg": "upload complete"], "response body json")
         }

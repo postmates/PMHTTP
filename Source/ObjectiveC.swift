@@ -882,3 +882,7 @@ extension HTTPManagerUploadJSONRequest {
         set { uploadJSON = try! JSON(ns: newValue) }
     }
 }
+
+// MARK: - Upload Data Request
+
+// It looks like HTTPManagerUploadDataRequest is already fully ObjC-compatible

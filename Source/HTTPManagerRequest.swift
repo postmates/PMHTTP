@@ -415,7 +415,21 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// For upload requests, the request will include the `HTTPBody` or `HTTPBodyStream`
     /// as appropriate.
     public var preparedURLRequest: NSURLRequest {
-        return super._preparedURLRequest
+        let request = _preparedURLRequest
+        switch uploadBody {
+        case .Data(let data)?:
+            request.HTTPBody = data
+        case .FormUrlEncoded(let queryItems)?:
+            request.HTTPBody = UploadBody.dataRepresentationForQueryItems(queryItems)
+        case .JSON(let json)?:
+            request.HTTPBody = JSON.encodeAsData(json, pretty: false)
+        case .MultipartMixed?:
+            // TODO: set request HTTPBodyStream
+            break
+        case nil:
+            break
+        }
+        return request
     }
     
     /// Returns a new request that parses the data with the specified handler.
@@ -1071,26 +1085,6 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
         }
     }
     
-    /// Creates and returns an `NSURLRequest` object from the properties of `self`.
-    /// The request will include the `HTTPBody` or `HTTPBodyStream` as appropriate.
-    public override var preparedURLRequest: NSURLRequest {
-        let request = _preparedURLRequest
-        switch uploadBody {
-        case .Data(let data)?:
-            request.HTTPBody = data
-        case .FormUrlEncoded(let queryItems)?:
-            request.HTTPBody = UploadBody.dataRepresentationForQueryItems(queryItems)
-        case .JSON(let json)?:
-            request.HTTPBody = JSON.encodeAsData(json, pretty: false)
-        case .MultipartMixed?:
-            // TODO: set request HTTPBodyStream
-            break
-        case nil:
-            break
-        }
-        return request
-    }
-    
     /// Specifies a named multipart body for this request.
     ///
     /// Calling this method sets the request's overall Content-Type to
@@ -1212,6 +1206,58 @@ public final class HTTPManagerUploadMultipart: NSObject {
     internal var multipartData: [MultipartBodyPart.Data] = []
 }
 
+// MARK: - Upload Data Request
+
+/// An HTTP POST/PUT/PATCH request with binary data that does not yet have a parse handler.
+///
+/// The body of this request is a given `NSData` object. Any `parameters` are passed in the
+/// query string.
+public final class HTTPManagerUploadDataRequest: HTTPManagerActionRequest {
+    /// The data to upload.
+    public var uploadData: NSData
+    
+    public override var contentType: String {
+        get { return _contentType }
+        set { _contentType = newValue }
+    }
+    
+    /// Executes a block with `self` as the argument, and then returns `self` again.
+    /// - Parameter f: A block to execute, with `self` as the argument.
+    /// - Returns: `self`.
+    /// This method exists to help with functional-style chaining, e.g.:
+    /// ```
+    /// HTTP.request(POST: "foo", data: someData)
+    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .with({ $0.userInitiated = true })
+    ///     .performRequestWithCompletion { task, result in
+    ///         // ...
+    /// }
+    /// ```
+    @nonobjc public override func with(@noescape f: HTTPManagerUploadDataRequest throws -> Void) rethrows -> Self {
+        try f(self)
+        return self
+    }
+    
+    private var _contentType: String = ""
+    
+    internal override var uploadBody: UploadBody? {
+        return .Data(uploadData)
+    }
+    
+    internal init(apiManager: HTTPManager, URL url: NSURL, method: Method, contentType: String, data: NSData) {
+        _contentType = contentType
+        uploadData = data
+        super.init(apiManager: apiManager, URL: url, method: method, parameters: [])
+    }
+    
+    public required init(__copyOfRequest request: HTTPManagerRequest) {
+        let request: HTTPManagerUploadDataRequest = unsafeDowncast(request)
+        _contentType = request._contentType
+        uploadData = request.uploadData
+        super.init(__copyOfRequest: request)
+    }
+}
+
 // MARK: - Upload JSON Request
 
 /// An HTTP POST/PUT/PATCH for JSON data that does not yet have a parse handler.
@@ -1226,14 +1272,6 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerActionRequest {
     /// - Returns: `"application/json"`.
     public override var contentType: String {
         return "application/json"
-    }
-    
-    /// Creates and returns an `NSURLRequest` object from the properties of `self`.
-    /// The request will include the `HTTPBody` value.
-    public override var preparedURLRequest: NSURLRequest {
-        let request = _preparedURLRequest
-        request.HTTPBody = JSON.encodeAsData(uploadJSON, pretty: false)
-        return request
     }
     
     /// Executes a block with `self` as the argument, and then returns `self` again.
