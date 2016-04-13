@@ -584,7 +584,7 @@ extension HTTPManagerRequestPerformable {
 
 // MARK: - Data Request
 
-/// An HTTP GET or POST request that does not yet have a parse handler.
+/// An HTTP GET/HEAD request that does not yet have a parse handler.
 public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
     /// - Returns: An `HTTPManagerParseRequest`.
@@ -926,13 +926,13 @@ private func acceptHeaderValueForContentTypes(contentTypes: [String]) -> String 
     return value
 }
 
-// MARK: - Delete Request
+// MARK: - Action Request
 
-/// An HTTP DELETE request that does not yet have a parse handler.
+/// An HTTP POST/PUT/PATCH/DELETE request that does not yet have a parse handler.
 ///
 /// Similar to an `HTTPManagerDataRequest` except that it handles a 204 (No Content)
 /// response by skipping the parse and the resulting response value may be `nil`.
-public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
+public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
     /// If the response is a 204 (No Content), there is no data to parse.
     /// - Returns: An `HTTPManagerParseRequest`.
@@ -1001,36 +1001,28 @@ public final class HTTPManagerDeleteRequest: HTTPManagerNetworkRequest {
     /// - Returns: `self`.
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
-    /// HTTP.request(GET: "foo")
+    /// HTTP.request(POST: "foo")
     ///     .parseAsJSONWithHandler({ doParse($1) })
     ///     .with({ $0.userInitiated = true })
     ///     .performRequestWithCompletion { task, result in
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(@noescape f: HTTPManagerDeleteRequest throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(@noescape f: HTTPManagerActionRequest throws -> Void) rethrows -> Self {
         try f(self)
         return self
-    }
-    
-    internal init(apiManager: HTTPManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
-        super.init(apiManager: apiManager, URL: url, method: .DELETE, parameters: parameters)
-    }
-    
-    public required init(__copyOfRequest request: HTTPManagerRequest) {
-        super.init(__copyOfRequest: request)
     }
 }
 
 // MARK: - Upload Request
 
-/// An HTTP POST request that does not yet have a parse handler.
+/// An HTTP POST/PUT/PATCH request that does not yet have a parse handler.
 ///
 /// By default, any request parameters (see `HTTPManagerRequest.parameters`) are
 /// passed as `application/x-www-form-urlencoded`. Adding any multipart bodies
 /// passes everything as `multipart/form-data` instead. When mixing *parameters*
 /// and multipart bodies, the *parameters* are sent prior to any multipart bodies.
-public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
+public final class HTTPManagerUploadRequest: HTTPManagerActionRequest {
     /// The URL for the request, including any query items as appropriate.
     public override var url: NSURL {
         return baseURL
@@ -1127,7 +1119,7 @@ public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
     /// - Returns: `self`.
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
-    /// HTTP.request(GET: "foo")
+    /// HTTP.request(POST: "foo")
     ///     .parseAsJSONWithHandler({ doParse($1) })
     ///     .with({ $0.userInitiated = true })
     ///     .performRequestWithCompletion { task, result in
@@ -1148,14 +1140,6 @@ public final class HTTPManagerUploadRequest: HTTPManagerDataRequest {
         } else {
             return nil
         }
-    }
-    
-    internal init(apiManager: HTTPManager, URL url: NSURL, parameters: [NSURLQueryItem]) {
-        super.init(apiManager: apiManager, URL: url, method: .POST, parameters: parameters)
-    }
-    
-    public required init(__copyOfRequest request: HTTPManagerRequest) {
-        super.init(__copyOfRequest: request)
     }
 }
 
@@ -1198,11 +1182,11 @@ public final class HTTPManagerUploadMultipart: NSObject {
 
 // MARK: - Upload JSON Request
 
-/// An HTTP POST for JSON data that does not yet have a parse handler.
+/// An HTTP POST/PUT/PATCH for JSON data that does not yet have a parse handler.
 ///
 /// The body of this request is a JSON blob. Any `parameters` are passed in the
 /// query string.
-public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
+public final class HTTPManagerUploadJSONRequest: HTTPManagerActionRequest {
     /// The JSON data to upload.
     public var uploadJSON: JSON
     
@@ -1225,7 +1209,7 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerDataRequest {
     /// - Returns: `self`.
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
-    /// HTTP.request(GET: "foo")
+    /// HTTP.request(POST: "foo", json: jsonObject)
     ///     .parseAsJSONWithHandler({ doParse($1) })
     ///     .with({ $0.userInitiated = true })
     ///     .performRequestWithCompletion { task, result in

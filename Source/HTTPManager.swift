@@ -419,10 +419,10 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
-    /// - Returns: An `HTTPManagerDeleteRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerActionRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForDELETE:parameters:)
-    public func request(DELETE path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerDeleteRequest! {
+    public func request(DELETE path: String, parameters: [String: AnyObject] = [:]) -> HTTPManagerActionRequest! {
         return request(DELETE: path, parameters: parameters.map({ NSURLQueryItem(name: $0, value: String($1)) }))
     }
     /// Creates a DELETE request.
@@ -430,11 +430,11 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string.
-    /// - Returns: An `HTTPManagerDeleteRequest`, or `nil` if the `path` cannot be
+    /// - Returns: An `HTTPManagerActionRequest`, or `nil` if the `path` cannot be
     ///   parsed by `NSURL`.
     @objc(requestForDELETE:queryItems:)
-    public func request(DELETE path: String, parameters: [NSURLQueryItem]) -> HTTPManagerDeleteRequest! {
-        return constructRequest(path, f: { HTTPManagerDeleteRequest(apiManager: self, URL: $0, parameters: parameters) })
+    public func request(DELETE path: String, parameters: [NSURLQueryItem]) -> HTTPManagerActionRequest! {
+        return constructRequest(path, f: { HTTPManagerActionRequest(apiManager: self, URL: $0, method: .DELETE, parameters: parameters) })
     }
     
     /// Creates a POST request.
@@ -457,7 +457,7 @@ extension HTTPManager {
     ///   parsed by `NSURL`.
     @objc(requestForPOST:queryItems:)
     public func request(POST path: String, parameters: [NSURLQueryItem]) -> HTTPManagerUploadRequest! {
-        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, parameters: parameters) })
+        return constructRequest(path, f: { HTTPManagerUploadRequest(apiManager: self, URL: $0, method: .POST, parameters: parameters) })
     }
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -517,7 +517,7 @@ public enum HTTPManagerError: ErrorType, CustomStringConvertible, CustomDebugStr
     /// - Parameter body: The body of the response, if any.
     case UnexpectedContentType(contentType: String, response: NSHTTPURLResponse, body: NSData)
     /// An HTTP response returned a 204 No Content where an entity was expected.
-    /// This is only thrown from parse requests with methods other than DELETE.
+    /// This is only thrown from parse requests with a GET or HEAD method.
     /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
     /// - Parameter response: The `NSHTTPURLResponse` object.

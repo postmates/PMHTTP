@@ -276,7 +276,8 @@ public class PMHTTPResult: NSObject, NSCopying {
     /// If the task finished successfully, returns the resulting value, if any.
     /// Otherwise, returns `nil`.
     /// - Note: A successful result may still have a `nil` value if the parse handler
-    ///   returns `nil` or if it's a DELETE request and the response is 204 No Content.
+    ///   returns `nil` or if it's a POST/PUT/PATCH/DELETE request and the response
+    ///   is 204 No Content.
     public let value: AnyObject?
     
     /// If the task finished successfully, or if it failed with an error
@@ -357,8 +358,9 @@ public class PMHTTPResult: NSObject, NSCopying {
 public final class PMHTTPDataResult: PMHTTPResult {
     /// If the task finished successfully, returns the resulting `NSData`, if any.
     /// Otherwise, returns `nil`.
-    /// - Note: A successful result may still have a `nil` value if it's a DELETE
-    /// request and the response is 204 No Content.
+    /// - Note: A successful result may still have a `nil` value if it's a
+    ///   POST/PUT/PATCH/DELETE request and the response is 204 No Content.
+    ///   Successful GET/HEAD requests will never have a `nil` value.
     /// - Note: This property returns the same value that `value` does.
     public var data: NSData? {
         return value as! NSData?
@@ -757,9 +759,9 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
     }
 }
 
-// MARK: - Delete Request
+// MARK: - Action Request
 
-extension HTTPManagerDeleteRequest {
+extension HTTPManagerActionRequest {
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
     /// If the response is a 204 No Content, there is no data to parse.
