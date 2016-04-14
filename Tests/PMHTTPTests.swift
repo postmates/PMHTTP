@@ -72,46 +72,155 @@ final class PMHTTPTests: PMHTTPTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
     }
     
-    func testSimplePOST() {
+    func testParameters() {
         let queryItems = [NSURLQueryItem(name: "foo", value: "bar"), NSURLQueryItem(name: "baz", value: "wat")]
-        func setupServer() {
+        var parameters: [String: String] = [:]
+        for item in queryItems {
+            parameters[item.name] = item.value
+        }
+        func sortedQueryItems(queryItems: [NSURLQueryItem]) -> [NSURLQueryItem] {
+            return queryItems.sort({ $0.name < $1.name })
+        }
+        
+        for method in [HTTPManagerRequest.Method.GET, .DELETE] {
+            do {
+                let request: HTTPManagerNetworkRequest
+                switch method {
+                case .GET: request = HTTP.request(GET: "foo", parameters: queryItems)
+                case .DELETE: request = HTTP.request(DELETE: "foo", parameters: queryItems)
+                default: fatalError()
+                }
+                expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                    XCTAssertEqual(request.method, HTTPServer.Method(method), "request method")
+                    XCTAssertEqual(request.urlComponents.queryItems ?? [], queryItems, "url query (\(method))")
+                    completionHandler(HTTPServer.Response(status: .OK, text: "ok"))
+                }
+                expectationForRequestSuccess(request) { (task, response, value) in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code (\(method))")
+                    XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok", "response body (\(method))")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
+            
+            // try again using the dictionary form for the request
+            do {
+                let request: HTTPManagerNetworkRequest
+                switch method {
+                case .GET: request = HTTP.request(GET: "foo", parameters: parameters)
+                case .DELETE: request = HTTP.request(DELETE: "foo", parameters: parameters)
+                default: fatalError()
+                }
+                expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                    XCTAssertEqual(request.method, HTTPServer.Method(method), "request method")
+                    // sort the query items because the dictionary form is not order-preserving
+                    XCTAssertEqual(sortedQueryItems(request.urlComponents.queryItems ?? []), sortedQueryItems(queryItems), "url query (\(method))")
+                    completionHandler(HTTPServer.Response(status: .OK, text: "ok"))
+                }
+                expectationForRequestSuccess(request) { (task, response, value) in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code (\(method))")
+                    XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok", "response body (\(method))")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
+        }
+        
+        func setupServer(method: HTTPManagerRequest.Method) {
             expectationForHTTPRequest(httpServer, path: "/submit") { request, completionHandler in
-                XCTAssertEqual(request.method, HTTPServer.Method.POST)
+                XCTAssertEqual(request.method, HTTPServer.Method(method), "request method")
                 guard request.headers["Content-Type"] == "application/x-www-form-urlencoded" else {
-                    XCTFail("Unexpected content type: \(request.headers["Content-Type"])")
+                    XCTFail("Unexpected content type: \(String(reflecting: request.headers["Content-Type"])) (\(method))")
                     return completionHandler(HTTPServer.Response(status: .UnsupportedMediaType))
                 }
                 guard let bodyText = request.body.flatMap({String(data: $0, encoding: NSUTF8StringEncoding)}) else {
-                    XCTFail("Missing request body, or body not utf-8")
+                    XCTFail("Missing request body, or body not utf-8 (\(method))")
                     return completionHandler(HTTPServer.Response(status: .BadRequest))
                 }
                 let comps = NSURLComponents()
                 comps.percentEncodedQuery = bodyText
                 // sort the query items because the dictionary form is not order-preserving
-                func sortedQueryItems(queryItems: [NSURLQueryItem]) -> [NSURLQueryItem] {
-                    return queryItems.sort({ $0.name < $1.name })
-                }
-                XCTAssertEqual(sortedQueryItems(comps.queryItems ?? []), sortedQueryItems(queryItems))
+                XCTAssertEqual(sortedQueryItems(comps.queryItems ?? []), sortedQueryItems(queryItems), "form data (\(method))")
                 completionHandler(HTTPServer.Response(status: .OK, text: "ok"))
             }
         }
-        setupServer()
-        expectationForRequestSuccess(HTTP.request(POST: "submit", parameters: queryItems)) { task, response, value in
-            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
-            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok")
+        for method in [HTTPManagerRequest.Method.POST, .PUT, .PATCH] {
+            do {
+                let request: HTTPManagerActionRequest
+                switch method {
+                case .POST: request = HTTP.request(POST: "submit", parameters: queryItems)
+                case .PUT: request = HTTP.request(PUT: "submit", parameters: queryItems)
+                case .PATCH: request = HTTP.request(PATCH: "submit", parameters: queryItems)
+                default: fatalError()
+                }
+                setupServer(method)
+                expectationForRequestSuccess(request) { task, response, value in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+                    XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok", "response body")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
+            // try again using the dictionary form for the request
+            do {
+                let request: HTTPManagerActionRequest
+                switch method {
+                case .POST: request = HTTP.request(POST: "submit", parameters: parameters)
+                case .PUT: request = HTTP.request(PUT: "submit", parameters: parameters)
+                case .PATCH: request = HTTP.request(PATCH: "submit", parameters: parameters)
+                default: fatalError()
+                }
+                setupServer(method)
+                expectationForRequestSuccess(request) { task, response, value in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code (\(method))")
+                    XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok", "response body (\(method))")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
+            // check the data/JSON versions
+            do {
+                let data = "Hello".dataUsingEncoding(NSUTF8StringEncoding)!
+                let json: JSON = ["ok": true]
+                let (dataRequest, jsonRequest): (HTTPManagerActionRequest, HTTPManagerActionRequest)
+                switch method {
+                case .POST:
+                    dataRequest = HTTP.request(POST: "data", data: data)
+                    jsonRequest = HTTP.request(POST: "json", json: json)
+                case .PUT:
+                    dataRequest = HTTP.request(PUT: "data", data: data)
+                    jsonRequest = HTTP.request(PUT: "json", json: json)
+                case .PATCH:
+                    dataRequest = HTTP.request(PATCH: "data", data: data)
+                    jsonRequest = HTTP.request(PATCH: "json", json: json)
+                default: fatalError()
+                }
+                dataRequest.parameters = queryItems
+                jsonRequest.parameters = queryItems
+                expectationForHTTPRequest(httpServer, path: "/data") { (request, completionHandler) in
+                    XCTAssertEqual(request.method, HTTPServer.Method(method), "request method")
+                    XCTAssertEqual(request.urlComponents.queryItems ?? [], queryItems, "request url query (\(method))")
+                    XCTAssertEqual(request.body, data, "request body (\(method))")
+                    completionHandler(HTTPServer.Response(status: .OK, text: "ok"))
+                }
+                expectationForHTTPRequest(httpServer, path: "/json") { (request, completionHandler) in
+                    XCTAssertEqual(request.method, HTTPServer.Method(method), "request method")
+                    XCTAssertEqual(request.urlComponents.queryItems ?? [], queryItems, "request url query (\(method))")
+                    do {
+                        let requestJson = try JSON.decode(request.body ?? NSData())
+                        XCTAssertEqual(requestJson, json, "request json body (\(method))")
+                    } catch {
+                        XCTFail("error decoding JSON: \(error)")
+                    }
+                    completionHandler(HTTPServer.Response(status: .OK, text: "ok"))
+                }
+                expectationForRequestSuccess(dataRequest) { (task, response, value) in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code (\(method))")
+                    XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok", "response body (\(method))")
+                }
+                expectationForRequestSuccess(jsonRequest) { (task, response, value) in
+                    XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code (\(method))")
+                    XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok", "response body (\(method))")
+                }
+                waitForExpectationsWithTimeout(5, handler: nil)
+            }
         }
-        waitForExpectationsWithTimeout(5, handler: nil)
-        // try again using the dictionary form for the request
-        var parameters: [String: String] = [:]
-        for item in queryItems {
-            parameters[item.name] = item.value
-        }
-        setupServer()
-        expectationForRequestSuccess(HTTP.request(POST: "submit", parameters: parameters)) { task, response, value in
-            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200)
-            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "ok")
-        }
-        waitForExpectationsWithTimeout(5, handler: nil)
     }
     
     func testParse() {
@@ -765,7 +874,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             
             // 200 OK
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-                XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
+                XCTAssertEqual(request.method, HTTPServer.Method(method), "request method (\(method))")
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
                 completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{ \"ok\": true }"))
             }

@@ -174,3 +174,15 @@ private final class Locked<T> {
         f(&_value)
     }
 }
+
+extension HTTPServer.Method {
+    init(_ requestMethod: HTTPManagerRequest.Method) {
+        switch requestMethod {
+        case .GET: self = .GET
+        case .POST: self = .POST
+        case .PUT: self = .PUT
+        case .PATCH: self = .PATCH
+        case .DELETE: self = .DELETE
+        }
+    }
+}
