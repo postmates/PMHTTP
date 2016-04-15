@@ -1350,14 +1350,33 @@ extension SessionDelegate: NSURLSessionDataDelegate {
         case .Data(let data)?:
             completionHandler(NSInputStream(data: data))
         case .FormUrlEncoded(let queryItems)?:
-            completionHandler(NSInputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
+            dispatch_async(dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)) {
+                completionHandler(NSInputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
+            }
         case .JSON(let json)?:
             dispatch_async(dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)) {
                 completionHandler(NSInputStream(data: JSON.encodeAsData(json, pretty: false)))
             }
-        case .MultipartMixed?:
-            // TODO: implement me
-            completionHandler(nil)
+        case let .MultipartMixed(boundary, parameters, bodyParts)?:
+            if bodyParts.contains({ if case .Pending = $0 { return true } else { return false } }) {
+                // We have at least one Pending value, we need to wait for them to evaluate (otherwise we can't
+                // accurately implement the `canRead` stream callback) so we'll do it asynchronously.
+                let group = dispatch_group_create()
+                let qosClass = taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY
+                for case .Pending(let deferred) in bodyParts {
+                    dispatch_group_enter(group)
+                    deferred.async(qosClass) { _ in
+                        dispatch_group_leave(group)
+                    }
+                }
+                dispatch_group_notify(group, dispatch_get_global_queue(qosClass, 0)) {
+                    // All our Pending values have been evaluated.
+                    completionHandler(HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts))
+                }
+            } else {
+                // All our values have been evaluated already, no need to wait.
+                completionHandler(HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts))
+            }
         case nil:
             completionHandler(nil)
         }

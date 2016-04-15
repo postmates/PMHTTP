@@ -13,7 +13,9 @@ internal enum UploadBody {
     case Data(NSData)
     case FormUrlEncoded([NSURLQueryItem])
     case JSON(PMJSON.JSON)
-    case MultipartMixed([NSURLQueryItem], [MultipartBodyPart])
+    /// - Requires: The `boundary` must meet the rules for a valid multipart boundary
+    ///   and must not contain any characters that require quoting.
+    case MultipartMixed(boundary: String, parameters: [NSURLQueryItem], bodyParts: [MultipartBodyPart])
     
     static func dataRepresentationForQueryItems(queryItems: [NSURLQueryItem]) -> NSData {
         guard !queryItems.isEmpty else {
@@ -36,7 +38,7 @@ internal enum UploadBody {
     
     /// Calls `evaluate()` on every pending multipart body.
     internal func evaluatePending() {
-        guard case .MultipartMixed(_, let bodies) = self else { return }
+        guard case .MultipartMixed(_, _, let bodies) = self else { return }
         for case .Pending(let deferred) in bodies {
             deferred.evaluate()
         }
@@ -68,36 +70,9 @@ internal enum MultipartBodyPart {
             self.filename = filename
         }
         
-        /// Data for the headers, including the terminating empty line.
-        lazy var headerData: NSData = {
-            var headers: String = ""
-            headers += "Content-Disposition: form-data;name=\"\(self.name)\""
-            if let filename = self.filename {
-                headers += ";filename=\"\(filename)\""
-            }
-            headers += "\r\n"
-            headers += "Content-Type: \(self.mimeType ?? "text-plain;charset=utf-8")\r\n"
-            headers += "\r\n"
-            return headers.dataUsingEncoding(NSUTF8StringEncoding)!
-        }()
-        
         enum Content {
             case Data(NSData)
             case Text(String)
-            
-            /// Returns the length of the content, in bytes.
-            func contentLength() -> Int64 {
-                switch self {
-                case .Data(let data): return Int64(data.length)
-                case .Text(let str): return Int64(str.lengthOfBytesUsingEncoding(NSUTF8StringEncoding))
-                }
-            }
-        }
-        
-        /// Returns the length of the content, in bytes.
-        /// Does not include the boundary.
-        mutating func contentLength() -> Int64 {
-            return Int64(headerData.length) + content.contentLength()
         }
     }
     
@@ -126,25 +101,31 @@ internal enum MultipartBodyPart {
                 value = self.value
             }
             guard let value_ = value else {
-                fatalError("HTTPManager error: invoked wait() on Deferred without invoking evaluate()")
+                fatalError("HTTPManager internal error: invoked wait() on Deferred without invoking evaluate()")
             }
             return value_
+        }
+        
+        /// Asynchronously executes a given block on an private concurrent queue with the evaluated `Data` values.
+        /// `evaluate()` MUST be invoked at some point before calling `async()`. Calling `async()` without
+        /// calling `evaluate()` first is a programmer error and will result in an assertion failure.
+        func async(qosClass: dispatch_qos_class_t?, handler: [Data] -> Void) {
+            let block: dispatch_block_t = {
+                guard let value = self.value else {
+                    fatalError("HTTPManager internal error: invoked async() on Deferred without invoking evaluate()")
+                }
+                handler(value)
+            }
+            if let qosClass = qosClass {
+                dispatch_async(queue, dispatch_block_create_with_qos_class(DISPATCH_BLOCK_ENFORCE_QOS_CLASS, qosClass, 0, block))
+            } else {
+                dispatch_async(queue, block)
+            }
         }
         
         private let queue = dispatch_queue_create("HTTPManager MultipartBodyPart Deferred queue", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_CONCURRENT, QOS_CLASS_UTILITY, 0))
         private var value: [Data]?
         private let block: HTTPManagerUploadMultipart -> Void
-    }
-    
-    /// Returns the length of the body part, in bytes, or `nil` if no length is known.
-    mutating func contentLength() -> Int64? {
-        switch self {
-        case .Known(var data):
-            defer { self = .Known(data) }
-            return data.contentLength()
-        case .Pending:
-            return nil
-        }
     }
 }
 
