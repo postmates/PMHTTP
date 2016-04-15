@@ -19,6 +19,9 @@ final class HTTPServer {
     typealias HTTPHeaders = HTTPManagerRequest.HTTPHeaders
     
     /// Set this to `true` to cause HTTPServer to print debug logs with `NSLog`.
+    /// - Warning: This property is not an atomic value. It's a boolean, so writes are
+    ///   atomic, but there's no ordering guarantees. Changes to this property should
+    ///   preferably occur when the HTTPServer is not running.
     static var enableDebugLogging: Bool = false
     
     /// Returns the new `HTTPServer` instance.
@@ -321,6 +324,12 @@ final class HTTPServer {
             self.headers = headers
             self.body = body
         }
+        
+        /// Returns the body parsed as a `MultipartBody`.
+        /// - Throws: An error describing why the body cannot be parsed.
+        func parseMultipartBody() throws -> MultipartBody {
+            return try MultipartBody(request: self)
+        }
     }
     
     /// A response to an HTTP request.
@@ -373,6 +382,178 @@ final class HTTPServer {
         
         var description: String {
             return "\(major).\(minor)"
+        }
+    }
+    
+    /// The parsed body of a multipart request.
+    struct MultipartBody {
+        /// One body part of a multipart request.
+        struct Part {
+            var headers: HTTPHeaders
+            /// The `Content-Disposition` header, or `nil` if no such header exists.
+            var contentDisposition: ContentDisposition?
+            /// The `Content-Type` header, or `nil` if no such header exists.
+            var contentType: MediaType?
+            var body: NSData
+            /// The body data parsed as a UTF-8 string, or `nil` if it couldn't be parsed.
+            /// - Note: This ignores any encoding specified in a `"Content-Type"` header on
+            ///   the part.
+            var bodyText: String? {
+                return String(data: body, encoding: NSUTF8StringEncoding)
+            }
+            
+            /// Parses an NSData containing everything between the boundaries.
+            /// Returns `nil` if the headers are not well-formed.
+            init?(content: NSData) {
+                let anchoredEmptyLineRange = content.rangeOfData(CRLF, options: .Anchored, range: NSRange(0..<content.length)).toRange()
+                guard let emptyLineRange = anchoredEmptyLineRange ?? content.rangeOfData(CRLFCRLF, options: [], range: NSRange(0..<content.length)).toRange()
+                    else { return nil }
+                body = content.subdataWithRange(NSRange(emptyLineRange.endIndex..<content.length))
+                let headerData = content.subdataWithRange(NSRange(0..<emptyLineRange.startIndex))
+                guard let headerContent = String(bytes: headerData.bufferPointer, encoding: NSASCIIStringEncoding)?.chomped()
+                    else { return nil }
+                headers = HTTPHeaders()
+                var lines = unfoldLines(headerContent.componentsSeparatedByString("\r\n"))
+                if lines.last == "" {
+                    lines.removeLast()
+                }
+                for line in lines {
+                    guard let idx = line.unicodeScalars.indexOf(":") else { return nil }
+                    let field = String(line.unicodeScalars.prefixUpTo(idx))
+                    var scalars = line.unicodeScalars.suffixFrom(idx.successor())
+                    // skip leading OWS
+                    if let idx = scalars.indexOf({ $0 != " " && $0 != "\t" }) {
+                        scalars = scalars.suffixFrom(idx)
+                        // skip trailing OWS
+                        let idx = scalars.reverse().indexOf({ $0 != " " && $0 != "\t" })!
+                        // idx.base is the successor to the element, so prefixUpTo() cuts off at the right spot
+                        scalars = scalars.prefixUpTo(idx.base)
+                    } else {
+                        scalars = scalars.suffixFrom(scalars.endIndex)
+                    }
+                    headers[field] = String(scalars)
+                }
+                contentDisposition = headers["Content-Disposition"].map({ ContentDisposition($0) })
+                contentType = headers["Content-Type"].map({ MediaType($0) })
+            }
+        }
+        
+        enum Error: ErrorType {
+            case ContentTypeNotMultipart
+            case NoBody
+            case NoBoundary
+            case InvalidBoundary
+            case CannotFindFirstBoundary
+            case CannotFindBoundaryTerminator
+            case InvalidBodyPartHeaders
+        }
+        
+        /// The MIME type of the multipart body, such as `"multipart/form-data"`.
+        /// The `contentType` is guaranteed to start with `"multipart/"`.
+        var contentType: String
+        
+        /// The body parts.
+        var parts: [Part]
+        
+        /// Parses a multipart request.
+        /// - Throws: `MultipartBody.Error` if the `Content-Type` is not
+        ///   multipart or the `body` is not formatted properly.
+        private init(request: Request) throws {
+            guard let contentType = request.headers["Content-Type"].map(MediaType.init)
+                where contentType.type == "multipart"
+                else { throw Error.ContentTypeNotMultipart }
+            guard let boundary = contentType.params.find({ $0.0 == "boundary" })?.1
+                else { throw Error.NoBoundary }
+            guard let body = request.body
+                else { throw Error.NoBody }
+            self.contentType = contentType.typeSubtype
+            guard !boundary.unicodeScalars.contains({ $0 == "\r" || $0 == "\n" }),
+                let boundaryData = "--\(boundary)".dataUsingEncoding(NSUTF8StringEncoding)
+                else { throw Error.InvalidBoundary }
+            let bytes = body.bufferPointer
+            func findBoundary(sourceRange: Range<Int>) -> (range: Range<Int>, isTerminator: Bool)? {
+                var sourceRange = sourceRange
+                repeat {
+                    guard var range = body.rangeOfData(boundaryData, options: [], range: NSRange(sourceRange)).toRange() else {
+                        // Couldn't find a boundary
+                        return nil
+                    }
+                    if range.startIndex >= 2 && (bytes[range.startIndex-2], bytes[range.startIndex-1]) == (0x0D, 0x0A) {
+                        // The boundary is preceeded by CRLF.
+                        // Include the CRLF in the range (as long as it's still within sourceRange)
+                        range.startIndex = max(sourceRange.startIndex, range.startIndex-2)
+                    } else if range.startIndex != 0 {
+                        // The boundary isn't at the start of the data, and isn't preceeded by CRLF.
+                        // `range` doesn't contain any CRLF characters, so we can skip the whole thing.
+                        sourceRange.startIndex = range.endIndex
+                        continue
+                    }
+                    // Is this a terminator?
+                    var isTerminator = false
+                    if range.endIndex + 1 < bytes.endIndex && (bytes[range.endIndex], bytes[range.endIndex+1]) == (0x2D, 0x2D) { // "--"
+                        isTerminator = true
+                        range.endIndex += 2
+                    }
+                    // Skip optional LWS
+                    while range.endIndex != bytes.endIndex && (UnicodeScalar(bytes[range.endIndex]) == " " || UnicodeScalar(bytes[range.endIndex]) == "\t") {
+                        range.endIndex += 1
+                    }
+                    if isTerminator && range.endIndex == bytes.endIndex {
+                        // no more data, which is acceptable for the terminator line
+                        return (range, isTerminator)
+                    } else if range.endIndex + 1 < bytes.endIndex && (bytes[range.endIndex], bytes[range.endIndex+1]) == (0x0D, 0x0A) { // the boundary is preceeded by CRLF
+                        // CRLF terminator
+                        range.endIndex += 2
+                        return (range, isTerminator)
+                    }
+                    // Otherwise, this supposed boundary line isn't a valid boundary. Search again
+                    sourceRange.startIndex = range.endIndex
+                } while true
+            }
+            parts = []
+            var sourceRange = 0..<body.length
+            guard var boundaryInfo = findBoundary(sourceRange)
+                else { throw Error.CannotFindFirstBoundary }
+            while !boundaryInfo.isTerminator {
+                let startIdx = boundaryInfo.range.endIndex
+                sourceRange.startIndex = startIdx
+                guard let nextBoundary = findBoundary(sourceRange)
+                    else { throw Error.CannotFindBoundaryTerminator }
+                boundaryInfo = nextBoundary
+                let content = body.subdataWithRange(NSRange(startIdx..<boundaryInfo.range.startIndex))
+                guard let part = Part(content: content)
+                    else { throw Error.InvalidBodyPartHeaders }
+                parts.append(part)
+            }
+        }
+    }
+    
+    struct ContentDisposition: Equatable, CustomStringConvertible, CustomDebugStringConvertible {
+        /// The dispositon value, not including any parameters, e.g. `"form-data"`.
+        var value: String
+        /// The parameters, if any.
+        var params: DelimitedParameters
+        /// The raw value of the `Content-Disposition` header.
+        let rawValue: String
+        
+        var description: String {
+            return rawValue
+        }
+        
+        var debugDescription: String {
+            return "ContentDisposition(\(String(reflecting: value)), \(String(reflecting: params.rawValue)))"
+        }
+        
+        init(_ rawValue: String) {
+            let rawValue = trimLWS(rawValue)
+            self.rawValue = rawValue
+            if let idx = rawValue.unicodeScalars.indexOf(";") {
+                value = trimLWS(String(rawValue.unicodeScalars.prefixUpTo(idx)))
+                params = DelimitedParameters(String(rawValue.unicodeScalars.suffixFrom(idx.successor())), delimiter: ";")
+            } else {
+                value = rawValue
+                params = DelimitedParameters("", delimiter: ";")
+            }
         }
     }
     
@@ -617,25 +798,6 @@ final class HTTPServer {
                 return nil
             }
             var headers = HTTPHeaders()
-            func unfoldLines(lines: [String]) -> [String] {
-                var result: [String] = []
-                result.reserveCapacity(lines.count)
-                for var line in lines {
-                    if line.hasPrefix("\t") {
-                        line.unicodeScalars.replaceRange(line.unicodeScalars.startIndex...line.unicodeScalars.startIndex, with: CollectionOfOne(" "))
-                    }
-                    if line.hasPrefix(" ") {
-                        if var lastLine = result.popLast() {
-                            lastLine += line
-                            line = lastLine
-                        } else {
-                            line.unicodeScalars.removeFirst()
-                        }
-                    }
-                    result.append(line)
-                }
-                return result
-            }
             var comps = unfoldLines(line.componentsSeparatedByString("\r\n"))
             if comps.last == "" {
                 comps.removeLast()
@@ -651,7 +813,7 @@ final class HTTPServer {
                 if let idx = scalars.indexOf({ $0 != " " && $0 != "\t" }) {
                     scalars = scalars.suffixFrom(idx)
                     // skip trailing OWS
-                    let idx = scalars.lazy.reverse().indexOf({ $0 != " " && $0 != "\t" })!
+                    let idx = scalars.reverse().indexOf({ $0 != " " && $0 != "\t" })!
                     // idx.base is the successor to the element, so prefixUpTo() cuts off at the right spot
                     scalars = scalars.prefixUpTo(idx.base)
                 } else {
@@ -950,32 +1112,37 @@ func ==(lhs: HTTPServer.HTTPVersion, rhs: HTTPServer.HTTPVersion) -> Bool {
     return lhs.major == rhs.major && lhs.minor == rhs.minor
 }
 
+/// Compares two `ContentDisposition`s for equality, ignoring any LWS.
+/// The Parameter names are case-insensitive, but the value and parameter values are case-sensitive.
+/// - Note: The order of parameters is considered significant.
+func ==(lhs: HTTPServer.ContentDisposition, rhs: HTTPServer.ContentDisposition) -> Bool {
+    return lhs.value == rhs.value
+        && lhs.params.elementsEqual(rhs.params, isEquivalent: { $0.0.caseInsensitiveCompare($1.0) == .OrderedSame && $0.1 == $1.1 })
+}
+
+
 func <(lhs: HTTPServer.HTTPVersion, rhs: HTTPServer.HTTPVersion) -> Bool {
     return lhs.major < rhs.major || (lhs.major == rhs.major && lhs.minor < rhs.minor)
 }
 
-/// Normalizes an HTTP header field.
-///
-/// The returned value uses titlecase, including the first letter after `-`.
-/// Known acronyms are preserved in uppercase.
-private func normalizeHTTPHeaderField(field: String) -> String {
-    func normalizeComponent(comp: String) -> String {
-        if comp.caseInsensitiveCompare("WWW") == .OrderedSame {
-            return "WWW"
-        } else if comp.caseInsensitiveCompare("ETag") == .OrderedSame {
-            return "ETag"
-        } else if comp.caseInsensitiveCompare("MD5") == .OrderedSame {
-            return "MD5"
-        } else if comp.caseInsensitiveCompare("TE") == .OrderedSame {
-            return "TE"
-        } else if comp.caseInsensitiveCompare("DNI") == .OrderedSame {
-            return "DNI"
-        } else {
-            return comp.capitalizedString
+func unfoldLines(lines: [String]) -> [String] {
+    var result: [String] = []
+    result.reserveCapacity(lines.count)
+    for var line in lines {
+        if line.hasPrefix("\t") {
+            line.unicodeScalars.replaceRange(line.unicodeScalars.startIndex...line.unicodeScalars.startIndex, with: CollectionOfOne(" "))
         }
+        if line.hasPrefix(" ") {
+            if var lastLine = result.popLast() {
+                lastLine += line
+                line = lastLine
+            } else {
+                line.unicodeScalars.removeFirst()
+            }
+        }
+        result.append(line)
     }
-    
-    return field.componentsSeparatedByString("-").lazy.map(normalizeComponent).joinWithSeparator("-")
+    return result
 }
 
 private struct StringComparable {

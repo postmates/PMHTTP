@@ -181,7 +181,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         super.init()
     }
     
-    internal var _preparedURLRequest: NSMutableURLRequest {
+    internal final var _preparedURLRequest: NSMutableURLRequest {
         func basicAuthentication(credential: NSURLCredential) -> String {
             let phrase = "\(credential.user ?? ""):\(credential.password ?? "")"
             let data = phrase.dataUsingEncoding(NSUTF8StringEncoding)!
@@ -423,9 +423,13 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
             request.HTTPBody = UploadBody.dataRepresentationForQueryItems(queryItems)
         case .JSON(let json)?:
             request.HTTPBody = JSON.encodeAsData(json, pretty: false)
-        case .MultipartMixed?:
-            // TODO: set request HTTPBodyStream
-            break
+        case let .MultipartMixed(boundary, parameters, bodyParts)?:
+            // We have at least one Pending value, we need to wait for them to evaluate (otherwise we can't
+            // accurately implement the `canRead` stream callback).
+            for case .Pending(let deferred) in bodyParts {
+                deferred.wait()
+            }
+            request.HTTPBodyStream = HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts)
         case nil:
             break
         }
@@ -1104,7 +1108,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     /// Specifies a named multipart body for this request.
     ///
     /// The Content-Type of the multipart body will always be
-    /// `text/plain;charset=utf-8`.
+    /// `text/plain; charset=utf-8`.
     ///
     /// Calling this method sets the request's overall Content-Type to
     /// `multipart/form-data`.
@@ -1136,7 +1140,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     ///
     /// - SeeAlso: `addMultipartData(_:withName:mimeType:filename:)`,
     ///   `addMultipartText(_:withName:)`.
-    public func addMultipartBodyWithBlock(block: HTTPManagerUploadMultipart -> Void) {
+    public func addMultipartBodyWithBlock(block: (upload: HTTPManagerUploadMultipart) -> Void) {
         multipartBodies.append(.Pending(.init(block)))
     }
     
@@ -1160,13 +1164,32 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     private var multipartBodies: [MultipartBodyPart] = []
     internal override var uploadBody: UploadBody? {
         if !multipartBodies.isEmpty {
-            return .MultipartMixed(parameters, multipartBodies)
+            return .MultipartMixed(boundary: _boundary, parameters: parameters, bodyParts: multipartBodies)
         } else if !parameters.isEmpty {
             return .FormUrlEncoded(parameters)
         } else {
             return nil
         }
     }
+    
+    internal override func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
+        if !multipartBodies.isEmpty {
+            // We need to attach the boundary to the Content-Type.
+            return { [boundary=_boundary] request in
+                request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    private lazy var _boundary: String = {
+        // WebKit uses a boundary that looks like "----WebKitFormBoundary<suffix>"
+        // where <suffix> is 16 random alphanumeric characters.
+        // We'll just use a UUID for our randomness but we'll go with a similar prefix.
+        let uuid = NSUUID()
+        return "----PMHTTPFormBoundary\(uuid.UUIDString)"
+    }()
 }
 
 /// Helper class for `HTTPManagerUploadFormRequest.addMultipartBodyWithBlock(_:)`.
@@ -1190,7 +1213,7 @@ public final class HTTPManagerUploadMultipart: NSObject {
     /// Specifies a named multipart body for this request.
     ///
     /// The Content-Type of the multipart body will always be
-    /// `text/plain;charset=utf-8`.
+    /// `text/plain; charset=utf-8`.
     ///
     /// Calling this method sets the request's overall Content-Type to
     /// `multipart/form-data`.
