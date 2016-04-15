@@ -270,7 +270,7 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
             typeSubtype = trimLWS(String(rawValue.unicodeScalars.prefixUpTo(idx)))
             params = DelimitedParameters(String(rawValue.unicodeScalars.suffixFrom(idx.successor())), delimiter: ";")
         } else {
-            typeSubtype = trimLWS(rawValue)
+            typeSubtype = rawValue
             params = DelimitedParameters("", delimiter: ";")
         }
         if let slashIdx = typeSubtype.unicodeScalars.indexOf("/") {
@@ -281,7 +281,6 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
             subtype = ""
         }
     }
-    
 }
 
 /// Compares two `MediaType`s for equality, ignoring any LWS.
@@ -316,4 +315,15 @@ func ~=(pattern: MediaType, value: MediaType) -> Bool {
         }
     }
     return true
+}
+
+internal extension SequenceType {
+    func find(@noescape predicate: Generator.Element -> Bool) -> Generator.Element? {
+        for elt in self {
+            if predicate(elt) {
+                return elt
+            }
+        }
+        return nil
+    }
 }
