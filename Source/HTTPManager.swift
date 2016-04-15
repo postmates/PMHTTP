@@ -1180,7 +1180,19 @@ extension HTTPManager {
 }
 
 extension SessionDelegate: NSURLSessionDataDelegate {
+    #if enableDebugLogging
+    func log(msg: String) {
+        let ptr = unsafeBitCast(unsafeAddressOf(self), UInt.self)
+        NSLog("<SessionDelegate: 0x%zx> %@", ptr, msg)
+    }
+    #else
+    // Use @inline(__always) to guarantee the function call is completely removed
+    // and @autoclosure to make sure we don't evaluate the arguments.
+    @inline(__always) func log(@autoclosure _: () -> String) {}
+    #endif
+    
     @objc func URLSession(session: NSURLSession, didBecomeInvalidWithError error: NSError?) {
+        log("didBecomeInvalidWithError: \(error)")
         apiManager?.inner.asyncBarrier { inner in
             if let idx = inner.oldSessions.indexOf({ $0 === self }) {
                 inner.oldSessions.removeAtIndex(idx)
@@ -1196,10 +1208,12 @@ extension SessionDelegate: NSURLSessionDataDelegate {
     
     @objc func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {
         guard var taskInfo = tasks[dataTask.taskIdentifier] else {
+            log("didReceiveResponse; ignoring, task \(dataTask) not tracked")
             completionHandler(.Cancel)
             return
         }
         assert(taskInfo.task.networkTask === dataTask, "internal HTTPManager error: taskInfo out of sync")
+        log("didReceiveResponse for task \(dataTask)")
         if taskInfo.data != nil {
             taskInfo.data = nil
             tasks[dataTask.taskIdentifier] = taskInfo
@@ -1208,8 +1222,12 @@ extension SessionDelegate: NSURLSessionDataDelegate {
     }
     
     @objc func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData data: NSData) {
-        guard var taskInfo = tasks[dataTask.taskIdentifier] else { return }
+        guard var taskInfo = tasks[dataTask.taskIdentifier] else {
+            log("didReceiveData; ignoring, task \(dataTask) not tracked")
+            return
+        }
         assert(taskInfo.task.networkTask === dataTask, "internal HTTPManager error: taskInfo out of sync")
+        log("didReceiveData for task \(dataTask)")
         let taskData: NSMutableData
         if let data = taskInfo.data {
             taskData = data
@@ -1234,9 +1252,13 @@ extension SessionDelegate: NSURLSessionDataDelegate {
         // to processing due to the state being cancelled (which may happen if the task
         // cancellation occurs concurrently with the networking finishing).
         
-        guard let taskInfo = tasks.removeValueForKey(task.taskIdentifier) else { return }
+        guard let taskInfo = tasks.removeValueForKey(task.taskIdentifier) else {
+            log("task:didCompleteWithError; ignoring, task \(task) not tracked")
+            return
+        }
         let apiTask = taskInfo.task
         assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
+        log("task:didCompleteWithError for task \(task), error: \(error)")
         let processor = taskInfo.processor
         
         #if os(iOS)
@@ -1291,10 +1313,12 @@ extension SessionDelegate: NSURLSessionDataDelegate {
     
     @objc func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, willCacheResponse proposedResponse: NSCachedURLResponse, completionHandler: (NSCachedURLResponse?) -> Void) {
         guard var taskInfo = tasks[dataTask.taskIdentifier] else {
+            log("willCacheResponse; ignoring, task \(dataTask) not tracked")
             completionHandler(proposedResponse)
             return
         }
         assert(taskInfo.task.networkTask === dataTask, "internal HTTPManager error: taskInfo out of sync")
+        log("willCacheResponse for task \(dataTask)")
         func hasCachingHeaders(response: NSURLResponse) -> Bool {
             guard let response = response as? NSHTTPURLResponse else { return false }
             if response.allHeaderFields["Expires"] != nil { return true }
@@ -1329,10 +1353,12 @@ extension SessionDelegate: NSURLSessionDataDelegate {
 
     @objc func URLSession(session: NSURLSession, task: NSURLSessionTask, willPerformHTTPRedirection response: NSHTTPURLResponse, newRequest request: NSURLRequest, completionHandler: (NSURLRequest?) -> Void) {
         guard let taskInfo = tasks[task.taskIdentifier] else {
+            log("willPerformHTTPRedirection; ignoring, task \(task) not tracked")
             completionHandler(request)
             return
         }
         assert(taskInfo.task.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
+        log("willPerformHTTPRedirection for task \(task)")
         if taskInfo.task.followRedirects {
             completionHandler(request)
         } else {
@@ -1342,19 +1368,28 @@ extension SessionDelegate: NSURLSessionDataDelegate {
     
     @objc func URLSession(session: NSURLSession, task: NSURLSessionTask, needNewBodyStream completionHandler: (NSInputStream?) -> Void) {
         guard let taskInfo = tasks[task.taskIdentifier] else {
+            log("needNewBodyStream; ignoring, task \(task) not tracked")
             completionHandler(nil)
             return
         }
         assert(taskInfo.task.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
+        log("needNewBodyStream for task \(task)")
         switch taskInfo.uploadBody {
         case .Data(let data)?:
+            log("providing stream for Data")
             completionHandler(NSInputStream(data: data))
         case .FormUrlEncoded(let queryItems)?:
             dispatch_async(dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)) {
+                #if enableDebugLogging
+                    self.log("providing stream for FormUrlEncoded")
+                #endif
                 completionHandler(NSInputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
             }
         case .JSON(let json)?:
             dispatch_async(dispatch_get_global_queue(taskInfo.task.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)) {
+                #if enableDebugLogging
+                    self.log("providing stream for JSON")
+                #endif
                 completionHandler(NSInputStream(data: JSON.encodeAsData(json, pretty: false)))
             }
         case let .MultipartMixed(boundary, parameters, bodyParts)?:
@@ -1369,15 +1404,21 @@ extension SessionDelegate: NSURLSessionDataDelegate {
                         dispatch_group_leave(group)
                     }
                 }
+                log("delaying until body parts have been evaluated")
                 dispatch_group_notify(group, dispatch_get_global_queue(qosClass, 0)) {
                     // All our Pending values have been evaluated.
+                    #if enableDebugLogging
+                        self.log("providing stream for MultipartMixed")
+                    #endif
                     completionHandler(HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts))
                 }
             } else {
                 // All our values have been evaluated already, no need to wait.
+                log("providing stream for MultipartMixed")
                 completionHandler(HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts))
             }
         case nil:
+            self.log("no uploadBody, providing no stream")
             completionHandler(nil)
         }
     }

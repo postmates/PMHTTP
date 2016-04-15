@@ -23,14 +23,20 @@ internal final class HTTPBody {
         callbacks.create = { (stream, info) in
             // Bump the retain count and return the new value.
             let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
+            body.log("create")
             return UnsafeMutablePointer(Unmanaged.passRetained(body).toOpaque())
         }
         callbacks.finalize = { (stream, info) in
             // Decrement the retain count and discard the object.
-            _ = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeRetainedValue()
+            let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeRetainedValue()
+            body.log("finalize")
         }
         callbacks.open = { (stream, error, openComplete, info) in
             // We don't do any work on open.
+            #if enableDebugLogging
+                let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
+                body.log("open")
+            #endif
             openComplete.memory = true
             // Signal that we already have bytes available.
             _CFReadStreamSignalEventDelayed(stream, .HasBytesAvailable, nil)
@@ -38,11 +44,14 @@ internal final class HTTPBody {
         }
         callbacks.read = { (stream, buffer, bufferLength, errorPtr, atEOF, info) in
             let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
+            body.log("read ...")
             do {
                 let (count, eof) = try body.streamRead(stream, buffer, bufferLength)
                 atEOF.memory = DarwinBoolean(eof)
+                body.log("... returning \(count) byte(s), atEOF: \(eof)")
                 return count
             } catch {
+                body.log("... error occurred: \(error)")
                 // NB: Can't use `as` to cast from NSError to CFError even though they're toll-free bridged.
                 let cferr = unsafeBitCast(error as NSError, CFError.self)
                 errorPtr.memory = Unmanaged.passRetained(cferr)
@@ -55,8 +64,10 @@ internal final class HTTPBody {
             let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
             do {
                 let canRead = try body.streamCanRead(stream)
+                body.log("canRead: \(canRead)")
                 return DarwinBoolean(canRead)
             } catch {
+                body.log("canRead; error occurred: \(error)")
                 // NB: Can't use `as` to cast from NSError to CFError even though they're toll-free bridged.
                 let cferr = unsafeBitCast(error as NSError, CFError.self)
                 errorPtr.memory = Unmanaged.passRetained(cferr)
@@ -257,6 +268,14 @@ internal final class HTTPBody {
         }
     }
     
+    #if enableDebugLogging
+    func log(msg: String) {
+        let ptr = unsafeBitCast(unsafeAddressOf(self), UInt.self)
+        NSLog("<HTTPBody: 0x%@> %@", String(ptr, radix: 16), msg)
+    }
+    #else
+    @inline(__always) func log(@autoclosure _: () -> String) {}
+    #endif
 }
 
 /// Returns a string with quotes and line breaks escaped.
