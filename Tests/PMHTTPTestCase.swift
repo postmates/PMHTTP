@@ -93,7 +93,7 @@ class PMHTTPTestCase: XCTestCase {
     
     func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
         request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void
+        completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void = { _ in () }
         ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
@@ -124,7 +124,7 @@ class PMHTTPTestCase: XCTestCase {
     
     func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
         request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void
+        completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void = { _ in () }
         ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
@@ -136,6 +136,37 @@ class PMHTTPTestCase: XCTestCase {
                 completion(task: task, response: response, error: error)
             case .Canceled:
                 XCTFail("network request canceled", file: file, line: line)
+            }
+            expectationTasks.with { tasks in
+                if let idx = tasks.indexOf({ $0 === task }) {
+                    tasks.removeAtIndex(idx)
+                }
+            }
+            expectation.fulfill()
+        }
+        expectationTasks.with { tasks in
+            let _ = tasks.append(task)
+        }
+        if startAutomatically {
+            task.resume()
+        }
+        return task
+    }
+    
+    func expectationForRequestCanceled<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
+        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        completion: (task: HTTPManagerTask) -> Void = { _ in () }
+        ) -> HTTPManagerTask
+    {
+        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
+        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
+            switch result {
+            case .Success(let response, _):
+                XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
+            case .Error(_, let error):
+                XCTFail("network request error: \(error)", file: file, line: line)
+            case .Canceled:
+                completion(task: task)
             }
             expectationTasks.with { tasks in
                 if let idx = tasks.indexOf({ $0 === task }) {

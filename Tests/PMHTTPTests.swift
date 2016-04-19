@@ -72,6 +72,76 @@ final class PMHTTPTests: PMHTTPTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
     }
     
+    func testCancel() {
+        do {
+            // Cancel before we dispatch the request.
+            // Server should never see anything
+            let task = expectationForRequestCanceled(HTTP.request(GET: "foo"), startAutomatically: false)
+            task.cancel()
+            task.resume()
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            // Cancel before the server returns
+            let requestSema = dispatch_semaphore_create(0)
+            let resultSema = dispatch_semaphore_create(0)
+            expectationForHTTPRequest(httpServer, path: "/foo", handler: { (request, completionHandler) in
+                dispatch_semaphore_signal(requestSema)
+                XCTAssert(dispatch_semaphore_wait(resultSema, dispatch_time(DISPATCH_TIME_NOW, 2 * Int64(NSEC_PER_SEC))) == 0, "timeout on dispatch semaphore")
+                completionHandler(HTTPServer.Response(status: .OK))
+            })
+            let task = expectationForRequestCanceled(HTTP.request(GET: "foo"))
+            XCTAssert(dispatch_semaphore_wait(requestSema, dispatch_time(DISPATCH_TIME_NOW, 2 * Int64(NSEC_PER_SEC))) == 0, "timeout on dispatch semaphore")
+            task.cancel()
+            dispatch_semaphore_signal(resultSema)
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            // Cancel during processing
+            let requestSema = dispatch_semaphore_create(0)
+            let resultSema = dispatch_semaphore_create(0)
+            expectationForHTTPRequest(httpServer, path: "/foo", handler: { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .OK))
+            })
+            let req = HTTP.request(GET: "foo")
+                .parseWithHandler({ (response, data) -> Int in
+                    dispatch_semaphore_signal(requestSema)
+                    XCTAssert(dispatch_semaphore_wait(resultSema, dispatch_time(DISPATCH_TIME_NOW, 2 * Int64(NSEC_PER_SEC))) == 0, "timeout on dispatch semaphore")
+                    return 42
+                })
+            let task = expectationForRequestCanceled(req)
+            XCTAssert(dispatch_semaphore_wait(requestSema, dispatch_time(DISPATCH_TIME_NOW, 2 * Int64(NSEC_PER_SEC))) == 0, "timeout on dispatch semaphore")
+            task.cancel()
+            dispatch_semaphore_signal(resultSema)
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+        
+        do {
+            // Cancel after processing is done, before completion block fires.
+            // This one won't cancel as it will already be in the completed state.
+            // To avoid timing issues, we'll use a KVO expectation to actually wait until
+            // the task is in the Completed state before we cancel it.
+            let queue = NSOperationQueue()
+            queue.suspended = true
+            expectationForHTTPRequest(httpServer, path: "/foo", handler: { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .OK))
+            })
+            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"))
+            keyValueObservingExpectationForObject(task, keyPath: "state", handler: { (object, change) -> Bool in
+                let task = object as! HTTPManagerTask
+                if task.state == .Completed {
+                    queue.suspended = false
+                    return true
+                } else {
+                    return false
+                }
+            })
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
+    }
+    
     func testParameters() {
         let queryItems = [NSURLQueryItem(name: "foo", value: "bar"), NSURLQueryItem(name: "baz", value: "wat")]
         var parameters: [String: String] = [:]
