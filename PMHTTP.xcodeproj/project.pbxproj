@@ -67,6 +67,7 @@
 		9E55BD711C5FE25F001CC5D6 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
 		9E67E0BC1CC6DD7D007FE41F /* LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-APACHE"; sourceTree = "<group>"; };
 		9E67E0BD1CC6DD7D007FE41F /* LICENSE-MIT */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-MIT"; sourceTree = "<group>"; };
+		9E67E0BE1CC6DD81007FE41F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		9E681CB71C56EB1000422CE4 /* SipHash.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SipHash.swift; sourceTree = "<group>"; };
 		9E681CB91C56FBF100422CE4 /* SipHashTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SipHashTests.swift; sourceTree = "<group>"; };
 		9E7DDF211C18F2B500EA43AD /* PMHTTP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PMHTTP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -131,6 +132,7 @@
 		9E7DDF171C18F2B500EA43AD = {
 			isa = PBXGroup;
 			children = (
+				9E67E0BE1CC6DD81007FE41F /* README.md */,
 				9E67E0BC1CC6DD7D007FE41F /* LICENSE-APACHE */,
 				9E67E0BD1CC6DD7D007FE41F /* LICENSE-MIT */,
 				9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */,
