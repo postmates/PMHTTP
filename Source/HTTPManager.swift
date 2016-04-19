@@ -1,6 +1,6 @@
 //
 //  HTTPManager.swift
-//  PostmatesNetworking
+//  PMHTTP
 //
 //  Created by Kevin Ballard on 12/10/15.
 //  Copyright © 2015 Postmates.

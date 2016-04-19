@@ -273,7 +273,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PostmatesNetworking" */;
+			buildConfigurationList = 9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PMHTTP" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -541,7 +541,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PostmatesNetworking" */ = {
+		9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PMHTTP" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9E7DDF331C18F2B600EA43AD /* Debug */,

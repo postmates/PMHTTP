@@ -1,6 +1,6 @@
 //
 //  PMHTTPTestCase.swift
-//  PostmatesNetworking
+//  PMHTTP
 //
 //  Created by Kevin Ballard on 1/22/16.
 //  Copyright © 2016 Postmates.

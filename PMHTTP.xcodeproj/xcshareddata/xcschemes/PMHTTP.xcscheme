@@ -17,7 +17,7 @@
                BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
                BuildableName = "PMHTTP.framework"
                BlueprintName = "PMHTTP"
-               ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
+               ReferencedContainer = "container:PMHTTP.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,7 +35,7 @@
                BlueprintIdentifier = "9E7DDF2A1C18F2B600EA43AD"
                BuildableName = "PMHTTPTests.xctest"
                BlueprintName = "PMHTTPTests"
-               ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
+               ReferencedContainer = "container:PMHTTP.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -45,7 +45,7 @@
             BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
             BuildableName = "PMHTTP.framework"
             BlueprintName = "PMHTTP"
-            ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
+            ReferencedContainer = "container:PMHTTP.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -67,7 +67,7 @@
             BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
             BuildableName = "PMHTTP.framework"
             BlueprintName = "PMHTTP"
-            ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
+            ReferencedContainer = "container:PMHTTP.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -85,7 +85,7 @@
             BlueprintIdentifier = "9E7DDF201C18F2B500EA43AD"
             BuildableName = "PMHTTP.framework"
             BlueprintName = "PMHTTP"
-            ReferencedContainer = "container:PostmatesNetworking.xcodeproj">
+            ReferencedContainer = "container:PMHTTP.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

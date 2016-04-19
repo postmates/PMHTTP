@@ -1,6 +1,6 @@
 //
 //  PMHTTPError.m
-//  PostmatesNetworking
+//  PMHTTP
 //
 //  Created by Kevin Ballard on 1/19/16.
 //  Copyright © 2016 Postmates.

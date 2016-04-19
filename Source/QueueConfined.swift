@@ -1,6 +1,6 @@
 //
 //  QueueConfined.swift
-//  PostmatesNetworking
+//  PMHTTP
 //
 //  Created by Kevin Ballard on 12/23/15.
 //  Copyright © 2015 Postmates.
