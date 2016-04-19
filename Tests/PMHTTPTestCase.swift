@@ -92,12 +92,12 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void
         ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion { [expectationTasks] task, result in
+        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
             switch result {
             case let .Success(response, value):
                 completion(task: task, response: response, value: value)
@@ -123,12 +123,12 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void
         ) -> HTTPManagerTask
     {
         let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion { [expectationTasks] task, result in
+        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
             switch result {
             case .Success(let response, _):
                 XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)

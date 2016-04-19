@@ -327,7 +327,7 @@ public class PMHTTPResult: NSObject, NSCopying {
         super.init()
     }
     
-    private convenience init<T: AnyObject>(result: HTTPManagerTaskResult<T>) {
+    private convenience init<T: AnyObject>(_ result: HTTPManagerTaskResult<T>) {
         switch result {
         case let .Success(response, value):
             self.init(value: value, response: response)
@@ -340,7 +340,7 @@ public class PMHTTPResult: NSObject, NSCopying {
         }
     }
     
-    private convenience init<T: AnyObject>(result: HTTPManagerTaskResult<T?>) {
+    private convenience init<T: AnyObject>(_ result: HTTPManagerTaskResult<T?>) {
         switch result {
         case let .Success(response, value):
             self.init(value: value, response: response)
@@ -385,7 +385,7 @@ public final class PMHTTPDataResult: PMHTTPResult {
         super.init(canceled: ())
     }
     
-    private convenience init(result: HTTPManagerTaskResult<NSData>) {
+    private convenience init(_ result: HTTPManagerTaskResult<NSData>) {
         switch result {
         case let .Success(response, data):
             self.init(data: data, response: response)
@@ -398,7 +398,7 @@ public final class PMHTTPDataResult: PMHTTPResult {
         }
     }
     
-    private convenience init(result: HTTPManagerTaskResult<NSData?>) {
+    private convenience init(_ result: HTTPManagerTaskResult<NSData?>) {
         switch result {
         case let .Success(response, data):
             self.init(data: data, response: response)
@@ -508,28 +508,62 @@ extension HTTPManagerNetworkRequest {
         }))
     }
     
-    /// Performs an asynchronous request and calls the specified handler when
-    /// done.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is not guaranteed to be called on any particular thread.
+    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
+    ///
+    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
+    /// the task executing, e.g. if you need to record the task identifier somewhere before the
+    /// completion block fires.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    @objc(performRequestWithCompletion:)
-    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
-        return performRequestWithCompletion { task, result in
-            handler(task: task, result: PMHTTPDataResult(result: result))
+    /// - Important: After you create the task, you must start it by calling the `-resume` method.
+    @objc(createTaskWithCompletion:)
+    public func __objc_createTaskWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return createTaskWithCompletion { task, result in
+            handler(task: task, result: PMHTTPDataResult(result))
+        }
+    }
+    
+    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
+    ///
+    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
+    /// the task executing, e.g. if you need to record the task identifier somewhere before the
+    /// completion block fires.
+    /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
+    ///   be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    /// - Important: After you create the task, you must start it by calling the `resume()` method.
+    @objc(createTaskWithCompletionOnQueue:handler:)
+    public func __objc_createTaskWithCompletion(onQueue queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return createTaskWithCompletion(onQueue: queue) { task, result in
+            handler(task: task, result: PMHTTPDataResult(result))
         }
     }
     
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
-    /// - Parameter queue: The queue to call the handler on.
     /// - Parameter handler: The handler to call when the request is done. This
-    /// handler is called on *queue*.
+    ///   handler is called on a global concurrent queue.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @objc(performRequestWithCompletion:)
+    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return performRequestWithCompletion { task, result in
+            handler(task: task, result: PMHTTPDataResult(result))
+        }
+    }
+    
+    /// Performs an asynchronous request and calls the specified handler when
+    /// done.
+    /// - Parameter queue: The queue to call the handler on. May be `nil`.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     @objc(performRequestWithCompletionOnQueue:handler:)
-    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
-        return performRequestWithCompletionOnQueue(queue) { task, result in
-            handler(task: task, result: PMHTTPDataResult(result: result))
+    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return performRequestWithCompletion(onQueue: queue) { task, result in
+            handler(task: task, result: PMHTTPDataResult(result))
         }
     }
 }
@@ -637,7 +671,7 @@ extension HTTPManagerDataRequest {
 /// An HTTP request that has a parse handler.
 ///
 /// - Note: This class is only meant to be used from Obj-C.
-public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
+public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManagerRequestPerformable {
     // NB: All mutable properties need to be overridden here
     
     public override var url: NSURL {
@@ -741,26 +775,73 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest {
         set { _request.expectedContentTypes = newValue }
     }
     
-    /// Performs an asynchronous request and calls the specified handler when
-    /// done.
-    /// - Parameter handler: The handler to call when the requeset is done. This
-    ///   handler is not guaranteed to be called on any particular thread.
+    /// Performs an asynchronous request and calls the specified handler when done.
+    /// - Parameter queue: (Optional) The queue to call the handler on. The default value
+    ///   of `nil` means the handler will be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. The handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    public func performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
-        return _request.performRequestWithCompletion{ task, result in
-            handler(task: task, result: PMHTTPResult(result: result))
+    @nonobjc
+    public func createTaskWithCompletion(onQueue queue: NSOperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<AnyObject?>) -> Void) -> HTTPManagerTask {
+        return _request.createTaskWithCompletion(onQueue: queue, handler)
+    }
+    
+    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
+    ///
+    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
+    /// the task executing, e.g. if you need to record the task identifier somewhere before the
+    /// completion block fires.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on a global concurrent queue.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    /// - Important: After you create the task, you must start it by calling the `-resume` method.
+    @objc(createTaskWithCompletion:)
+    public func __objc_createTaskWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return createTaskWithCompletion { task, result in
+            handler(task: task, result: PMHTTPResult(result))
+        }
+    }
+    
+    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
+    ///
+    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
+    /// the task executing, e.g. if you need to record the task identifier somewhere before the
+    /// completion block fires.
+    /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
+    ///   be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    /// - Important: After you create the task, you must start it by calling the `resume()` method.
+    @objc(createTaskWithCompletionOnQueue:handler:)
+    public func __objc_createTaskWithCompletion(onQueue queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return createTaskWithCompletion(onQueue: queue) { task, result in
+            handler(task: task, result: PMHTTPResult(result))
         }
     }
     
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
-    /// - Parameter queue: The queue to call the handler on.
     /// - Parameter handler: The handler to call when the request is done. This
-    /// handler is called on *queue*.
+    ///   handler is called on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
-        return _request.performRequestWithCompletionOnQueue(queue) { task, result in
-            handler(task: task, result: PMHTTPResult(result: result))
+    @objc(performRequestWithCompletion:)
+    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return performRequestWithCompletion { task, result in
+            handler(task: task, result: PMHTTPResult(result))
+        }
+    }
+    
+    /// Performs an asynchronous request and calls the specified handler when
+    /// done.
+    /// - Parameter queue: The queue to call the handler on. May be `nil`.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @objc(performRequestWithCompletionOnQueue:handler:)
+    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return performRequestWithCompletion(onQueue: queue) { task, result in
+            handler(task: task, result: PMHTTPResult(result))
         }
     }
     

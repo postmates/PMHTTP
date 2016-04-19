@@ -459,11 +459,13 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
     /// the task executing, e.g. if you need to record the task identifier somewhere before the
     /// completion block fires.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is not guaranteed to be called on any particular thread.
+    /// - Parameter queue: (Optional) The queue to call the handler on. The default value
+    ///   of `nil` means the handler will be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTaskWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
+    public func createTaskWithCompletion(onQueue queue: NSOperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
             if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
@@ -471,44 +473,20 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
                     if shouldRetry, let apiManager = apiManager where retry(apiManager) {
                         // The task is now retrying
                         return
+                    } else if let queue = queue {
+                        queue.addOperationWithBlock {
+                            HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                        }
                     } else {
                         HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
                     }
                 })
-            } else {
-                HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
-            }
-            })
-    }
-    
-    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
-    ///
-    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
-    /// the task executing, e.g. if you need to record the task identifier somewhere before the
-    /// completion block fires.
-    /// - Parameter queue: The queue to call the handler on.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is called on *queue*.
-    /// - Returns: An `HTTPManagerTask` that represents the operation.
-    /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTaskWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<NSData>) -> Void) -> HTTPManagerTask {
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
-            let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
-            if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
-                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
-                    if shouldRetry, let apiManager = apiManager where retry(apiManager) {
-                        // The task is now retrying
-                        return
-                    } else {
-                        queue.addOperationWithBlock {
-                            HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
-                        }
-                    }
-                })
-            } else {
+            } else if let queue = queue {
                 queue.addOperationWithBlock {
                     HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
                 }
+            } else {
+                HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
             }
             })
     }
@@ -571,49 +549,36 @@ public protocol HTTPManagerRequestPerformable {
     associatedtype ResultValue
     
     /// Performs an asynchronous request and calls the specified handler when done.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is not guaranteed to be called on any particular thread.
+    /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
+    ///   be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    func performRequestWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
-    /// Performs an asynchronous request and calls the specified handler when done.
-    /// - Parameter queue: The queue to call the handler on.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is called on *queue*.
-    /// - Returns: An `HTTPManagerTask` that represents the operation.
-    func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func performRequestWithCompletion(onQueue queue: NSOperationQueue?, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
     
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
     ///
     /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
     /// the task executing, e.g. if you need to record the task identifier somewhere before the
     /// completion block fires.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is not guaranteed to be called on any particular thread.
+    /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
+    ///   be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    func createTaskWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
-    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
-    ///
-    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
-    /// the task executing, e.g. if you need to record the task identifier somewhere before the
-    /// completion block fires.
-    /// - Parameter queue: The queue to call the handler on.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is called on *queue*.
-    /// - Returns: An `HTTPManagerTask` that represents the operation.
-    /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    func createTaskWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func createTaskWithCompletion(onQueue queue: NSOperationQueue?, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
 }
 
 extension HTTPManagerRequestPerformable {
-    public func performRequestWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
-        let task = createTaskWithCompletion(handler)
-        task.resume()
-        return task
-    }
-    
-    public func performRequestWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
-        let task = createTaskWithCompletionOnQueue(queue, handler: handler)
+    /// Performs an asynchronous request and calls the specified handler when done.
+    /// - Parameter queue: (Optional) The queue to call the handler on. The default value
+    ///   of `nil` means the handler will be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. The handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
+    /// - Returns: An `HTTPManagerTask` that represents the operation.
+    public func performRequestWithCompletion(onQueue queue: NSOperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
+        let task = createTaskWithCompletion(onQueue: queue, handler)
         task.resume()
         return task
     }
@@ -740,11 +705,13 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
     /// the task executing, e.g. if you need to record the task identifier somewhere before the
     /// completion block fires.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is not guaranteed to be called on any particular thread.
+    /// - Parameter queue: (Optional) The queue to call the handler on. The default value
+    ///   of `nil` means the handler will be called on a global concurrent queue.
+    /// - Parameter handler: The handler to call when the request is done. This handler
+    ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTaskWithCompletion(handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
+    public func createTaskWithCompletion(onQueue queue: NSOperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
         let parseHandler: (NSURLResponse, NSData) throws -> T
         let expectedContentTypes: [String]
         if let dataMock = dataMock {
@@ -761,53 +728,20 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     if shouldRetry, let apiManager = apiManager where retry(apiManager) {
                         // The task is now retrying
                         return
+                    } else if let queue = queue {
+                        queue.addOperationWithBlock {
+                            HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                        }
                     } else {
                         HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
                     }
                 })
-            } else {
-                HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
-            }
-            })
-    }
-    
-    /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
-    ///
-    /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
-    /// the task executing, e.g. if you need to record the task identifier somewhere before the
-    /// completion block fires.
-    /// - Parameter queue: The queue to call the handler on.
-    /// - Parameter handler: The handler to call when the request is done. This
-    ///   handler is called on *queue*.
-    /// - Returns: An `HTTPManagerTask` that represents the operation.
-    /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTaskWithCompletionOnQueue(queue: NSOperationQueue, handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
-        let parseHandler: (NSURLResponse, NSData) throws -> T
-        let expectedContentTypes: [String]
-        if let dataMock = dataMock {
-            parseHandler = { _ in dataMock() }
-            expectedContentTypes = [] // skip Content-Type handling in the task processor
-        } else {
-            parseHandler = self.parseHandler
-            expectedContentTypes = self.expectedContentTypes
-        }
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
-            let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
-            if case .Error(_, let error) = result, let retryBehavior = task.retryBehavior {
-                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
-                    if shouldRetry, let apiManager = apiManager where retry(apiManager) {
-                        // The task is now retrying
-                        return
-                    } else {
-                        queue.addOperationWithBlock {
-                            HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
-                        }
-                    }
-                })
-            } else {
+            } else if let queue = queue {
                 queue.addOperationWithBlock {
                     HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
                 }
+            } else {
+                HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
             }
             })
     }
