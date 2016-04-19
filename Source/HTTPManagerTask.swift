@@ -25,6 +25,19 @@ public final class HTTPManagerTask: NSObject {
         get { return _stateBox.networkTask }
     }
     
+    /// `true` if the request is idempotent, otherwise `false`. A request is idempotent if
+    /// the side-effects of N > 0 identical requests is the same as for a single request,
+    /// or in other words, the request can be repeated without changing anything.
+    ///
+    /// - Note: A sequence of several idempotent requests may not be idempotent as a whole.
+    ///   This could be because a later request in the sequence changes something that
+    ///   affects an earlier request.
+    ///
+    /// This property normally only affects retry behavior for failed requests, although
+    /// it could be used for external functionality such as showing a Retry button in an
+    /// error dialog.
+    @nonobjc public let idempotent: Bool
+    
     /// The `NSURLCredential` used to authenticate the request, if any.
     public let credential: NSURLCredential?
     
@@ -85,13 +98,14 @@ public final class HTTPManagerTask: NSObject {
     
     internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
         _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState, networkTask: networkTask)
-        self.credential = request.credential
-        self.userInitiated = request.userInitiated
-        self.followRedirects = request.shouldFollowRedirects
-        self.defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
-        self.retryBehavior = request.retryBehavior
+        idempotent = request.idempotent
+        credential = request.credential
+        userInitiated = request.userInitiated
+        followRedirects = request.shouldFollowRedirects
+        defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
+        retryBehavior = request.retryBehavior
         #if os(iOS)
-            self.trackingNetworkActivity = request.affectsNetworkActivityIndicator
+            trackingNetworkActivity = request.affectsNetworkActivityIndicator
         #endif
         super.init()
     }

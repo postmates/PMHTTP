@@ -412,12 +412,58 @@ public final class PMHTTPDataResult: PMHTTPResult {
     }
 }
 
+// MARK: - Task
+
+extension HTTPManagerTask {
+    /// `true` if the request is idempotent, otherwise `false`. A request is idempotent if
+    /// the side-effects of N > 0 identical requests is the same as for a single request,
+    /// or in other words, the request can be repeated without changing anything.
+    ///
+    /// - Note: A sequence of several idempotent requests may not be idempotent as a whole.
+    ///   This could be because a later request in the sequence changes something that
+    ///   affects an earlier request.
+    ///
+    /// This property normally only affects retry behavior for failed requests, although
+    /// it could be used for external functionality such as showing a Retry button in an
+    /// error dialog.
+    @objc(idempotent)
+    public var __objc_idempotent: Bool {
+        @objc(isIdempotent) get { return idempotent }
+    }
+}
+
 // MARK: - Request
 
 extension HTTPManagerRequest {
     /// The request method.
     @objc(requestMethod) public var __objc_requestMethod: String {
         return requestMethod.rawValue
+    }
+    
+    /// `true` if the request is idempotent, otherwise `false`. A request is idempotent if
+    /// the side-effects of N > 0 identical requests is the same as for a single request,
+    /// or in other words, the request can be repeated without changing anything.
+    ///
+    /// - Note: A sequence of several idempotent requests may not be idempotent as a whole.
+    ///   This could be because a later request in the sequence changes something that
+    ///   affects an earlier request.
+    ///
+    /// This property normally only affects retry behavior for failed requests, although
+    /// it could be used for external functionality such as showing a Retry button in an
+    /// error dialog. The value of this property is exposed on `HTTPManagerTask` as well.
+    ///
+    /// - Note: When writing external functionality that uses `idempotent` (such as showing
+    ///   a Retry button) it's generally a good idea to only repeat requests that failed.
+    ///   It should be safe to repeat successful idempotent network requests, but parse requests
+    ///   may have parse handlers with side-effects. If you care about idempotence for successful
+    ///   or canceled requests, you should ensure that all parse handlers are idempotent or
+    ///   mark any relevant parse requests as non-idempotent.
+    ///
+    /// The default value is `true` for GET, HEAD, PUT, DELETE, OPTIONS, and TRACE requests,
+    /// and `false` for POST, PATCH, CONNECT, or unknown request methods.
+    @objc(idempotent) public var __objc_idempotent: Bool {
+        @objc(isIdempotent) get { return idempotent }
+        set { idempotent = newValue }
     }
     
     /// The timeout interval of the request, in seconds. If `nil`, the session's default
@@ -673,6 +719,11 @@ extension HTTPManagerDataRequest {
 /// - Note: This class is only meant to be used from Obj-C.
 public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManagerRequestPerformable {
     // NB: All mutable properties need to be overridden here
+    
+    @nonobjc public override var idempotent: Bool {
+        get { return _request.idempotent }
+        set { _request.idempotent = newValue }
+    }
     
     public override var url: NSURL {
         return _request.url

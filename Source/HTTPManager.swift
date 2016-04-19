@@ -718,7 +718,8 @@ private func describeData(data: NSData) -> String {
 /// convenience methods are provided for some of the more common behaviors.
 ///
 /// Unless otherwise specified, retry behaviors are only evaluated for idempotent requests.
-/// This includes GET, HEAD, PUT, DELETE, OPTIONS, and TRACE.
+/// This is controlled by the `idempotent` property of `HTTPManagerRequest`, which defaults to
+/// `true` for GET, HEAD, PUT, DELETE, OPTIONS, and TRACE requests, and `false` otherwise.
 ///
 /// - Note: Retry behaviors are evaluated on an arbitrary dispatch queue.
 public final class HTTPManagerRetryBehavior: NSObject {
@@ -748,9 +749,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   **Requires:** This block must not be executed more than once.
     public init(_ handler: (task: HTTPManagerTask, error: ErrorType, attempt: Int, callback: Bool -> Void) -> Void) {
         self.handler = { task, error, attempt, callback in
-            // NSURLSessionTask.originalRequest may be nil if this is a stream task. We don't use stream tasks,
-            // so this should never apply to us.
-            if task.networkTask.originalRequest?.isIdempotent() ?? false {
+            if task.idempotent {
                 handler(task: task, error: error, attempt: attempt, callback: callback)
             } else {
                 callback(false)
@@ -839,7 +838,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     /// - Parameter strategy: The strategy to use when retrying.
     public static func retryNetworkFailure(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
         return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
-            if task.networkTask.originalRequest?.isIdempotent() ?? false {
+            if task.idempotent {
                 if error.isTransientNetworkingError() {
                     strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
                 } else {
@@ -870,7 +869,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     /// - Parameter strategy: The strategy to use when retrying.
     public static func retryNetworkFailureOrServiceUnavailable(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
         return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
-            if task.networkTask.originalRequest?.isIdempotent() ?? false {
+            if task.idempotent {
                 if error.isTransientNetworkingError() || error.is503ServiceUnavailable() {
                     strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
                 } else {
@@ -967,21 +966,6 @@ private extension ErrorType {
             default:
                 return false
             }
-        default:
-            return false
-        }
-    }
-}
-
-private extension NSURLRequest {
-    /// Returns `true` if the request is idempotent (if the HTTP method is GET, HEAD, PUT,
-    /// DELETE, OPTIONS, or TRACE).
-    func isIdempotent() -> Bool {
-        // HTTPMethod is optional, but it's unclear what happens if you assign nil.
-        // I'm assuming it performs the default behavior, which is GET.
-        switch HTTPMethod ?? "GET" {
-        case "GET", "HEAD", "PUT", "DELETE", "OPTIONS", "TRACE":
-            return true
         default:
             return false
         }
