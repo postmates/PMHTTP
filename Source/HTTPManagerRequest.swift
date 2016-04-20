@@ -24,7 +24,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     public enum Method: String {
         case GET, POST, PUT, PATCH, DELETE
         
-        private var idempotent: Bool {
+        private var isIdempotent: Bool {
             switch self {
             case .GET, .PUT, .DELETE: return true
             case .POST, .PATCH: return false
@@ -64,7 +64,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// it could be used for external functionality such as showing a Retry button in an
     /// error dialog. The value of this property is exposed on `HTTPManagerTask` as well.
     ///
-    /// - Note: When writing external functionality that uses `idempotent` (such as showing
+    /// - Note: When writing external functionality that uses `isIdempotent` (such as showing
     ///   a Retry button) it's generally a good idea to only repeat requests that failed.
     ///   It should be safe to repeat successful idempotent network requests, but parse requests
     ///   may have parse handlers with side-effects. If you care about idempotence for successful
@@ -73,7 +73,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     ///
     /// The default value is `true` for GET, HEAD, PUT, DELETE, OPTIONS, and TRACE requests,
     /// and `false` for POST, PATCH, CONNECT, or unknown request methods.
-    @nonobjc public var idempotent: Bool
+    @nonobjc public var isIdempotent: Bool
     
     /// The Content-Type for the request.
     /// If no data is being submitted in the request body, the `contentType`
@@ -186,7 +186,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         self.apiManager = apiManager
         baseURL = url
         requestMethod = method
-        idempotent = method.idempotent
+        isIdempotent = method.isIdempotent
         self.parameters = parameters
         super.init()
     }
@@ -201,7 +201,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         apiManager = request.apiManager
         baseURL = request.baseURL
         requestMethod = request.requestMethod
-        idempotent = request.idempotent
+        isIdempotent = request.isIdempotent
         parameters = request.parameters
         credential = request.credential
         timeoutInterval = request.timeoutInterval
@@ -487,9 +487,9 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// - Warning: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    /// - Warning: The parse request inherits the `idempotent` value of `self`.
+    /// - Warning: The parse request inherits the `isIdempotent` value of `self`.
     ///   If the parse handler has side effects and can throw, you should either
-    ///   ensure that it's safe to run the parse handler again or set `idempotent`
+    ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
     public func parseWithHandler<T>(handler: (response: NSURLResponse, data: NSData) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
@@ -662,9 +662,9 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// - Warning: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    /// - Warning: The parse request inherits the `idempotent` value of `self`.
+    /// - Warning: The parse request inherits the `isIdempotent` value of `self`.
     ///   If the parse handler has side effects and can throw, you should either
-    ///   ensure that it's safe to run the parse handler again or set `idempotent`
+    ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
     public func parseAsJSONWithHandler<T>(handler: (response: NSURLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in
@@ -880,7 +880,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         self.uploadBody = uploadBody
         self.expectedContentTypes = expectedContentType.map({ [$0] }) ?? []
         super.init(apiManager: request.apiManager, URL: request.url, method: request.requestMethod, parameters: request.parameters)
-        idempotent = request.idempotent
+        isIdempotent = request.isIdempotent
         credential = request.credential
         timeoutInterval = request.timeoutInterval
         cachePolicy = request.cachePolicy
@@ -1004,9 +1004,9 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     /// - Warning: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
-    /// - Warning: The parse request inherits the `idempotent` value of `self`.
+    /// - Warning: The parse request inherits the `isIdempotent` value of `self`.
     ///   If the parse handler has side effects and can throw, you should either
-    ///   ensure that it's safe to run the parse handler again or set `idempotent`
+    ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
     public func parseAsJSONWithHandler<T>(handler: (result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .NotAllowed, parseHandler: { response, data in

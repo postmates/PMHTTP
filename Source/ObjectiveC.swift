@@ -434,7 +434,7 @@ extension HTTPManagerTask {
     /// error dialog.
     @objc(idempotent)
     public var __objc_idempotent: Bool {
-        @objc(isIdempotent) get { return idempotent }
+        @objc(isIdempotent) get { return isIdempotent }
     }
 }
 
@@ -458,7 +458,7 @@ extension HTTPManagerRequest {
     /// it could be used for external functionality such as showing a Retry button in an
     /// error dialog. The value of this property is exposed on `HTTPManagerTask` as well.
     ///
-    /// - Note: When writing external functionality that uses `idempotent` (such as showing
+    /// - Note: When writing external functionality that uses `isIdempotent` (such as showing
     ///   a Retry button) it's generally a good idea to only repeat requests that failed.
     ///   It should be safe to repeat successful idempotent network requests, but parse requests
     ///   may have parse handlers with side-effects. If you care about idempotence for successful
@@ -468,8 +468,8 @@ extension HTTPManagerRequest {
     /// The default value is `true` for GET, HEAD, PUT, DELETE, OPTIONS, and TRACE requests,
     /// and `false` for POST, PATCH, CONNECT, or unknown request methods.
     @objc(idempotent) public var __objc_idempotent: Bool {
-        @objc(isIdempotent) get { return idempotent }
-        set { idempotent = newValue }
+        @objc(isIdempotent) get { return isIdempotent }
+        set { isIdempotent = newValue }
     }
     
     /// The timeout interval of the request, in seconds. If `nil`, the session's default
@@ -726,9 +726,9 @@ extension HTTPManagerDataRequest {
 public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManagerRequestPerformable {
     // NB: All mutable properties need to be overridden here
     
-    @nonobjc public override var idempotent: Bool {
-        get { return _request.idempotent }
-        set { _request.idempotent = newValue }
+    @nonobjc public override var isIdempotent: Bool {
+        get { return _request.isIdempotent }
+        set { _request.isIdempotent = newValue }
     }
     
     public override var url: NSURL {

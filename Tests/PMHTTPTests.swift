@@ -149,44 +149,44 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testIdempotence() {
-        XCTAssertTrue(HTTP.request(GET: "foo").idempotent, "GET request")
-        XCTAssertTrue(HTTP.request(PUT: "foo").idempotent, "PUT request")
-        XCTAssertTrue(HTTP.request(DELETE: "foo").idempotent, "DELETE request")
-        XCTAssertFalse(HTTP.request(POST: "foo").idempotent, "POST request")
-        XCTAssertFalse(HTTP.request(PATCH: "foo").idempotent, "PATCH request")
+        XCTAssertTrue(HTTP.request(GET: "foo").isIdempotent, "GET request")
+        XCTAssertTrue(HTTP.request(PUT: "foo").isIdempotent, "PUT request")
+        XCTAssertTrue(HTTP.request(DELETE: "foo").isIdempotent, "DELETE request")
+        XCTAssertFalse(HTTP.request(POST: "foo").isIdempotent, "POST request")
+        XCTAssertFalse(HTTP.request(PATCH: "foo").isIdempotent, "PATCH request")
         
-        XCTAssertTrue(HTTP.request(GET: "foo").parseAsJSON().idempotent, "GET request")
-        XCTAssertTrue(HTTP.request(PUT: "foo").parseAsJSON().idempotent, "PUT request")
-        XCTAssertTrue(HTTP.request(DELETE: "foo").parseAsJSON().idempotent, "DELETE request")
-        XCTAssertFalse(HTTP.request(POST: "foo").parseAsJSON().idempotent, "POST request")
-        XCTAssertFalse(HTTP.request(PATCH: "foo").parseAsJSON().idempotent, "PATCH request")
+        XCTAssertTrue(HTTP.request(GET: "foo").parseAsJSON().isIdempotent, "GET request")
+        XCTAssertTrue(HTTP.request(PUT: "foo").parseAsJSON().isIdempotent, "PUT request")
+        XCTAssertTrue(HTTP.request(DELETE: "foo").parseAsJSON().isIdempotent, "DELETE request")
+        XCTAssertFalse(HTTP.request(POST: "foo").parseAsJSON().isIdempotent, "POST request")
+        XCTAssertFalse(HTTP.request(PATCH: "foo").parseAsJSON().isIdempotent, "PATCH request")
         
-        XCTAssertFalse(HTTP.request(GET: "foo").with({ $0.idempotent = false }).idempotent, "GET request")
-        XCTAssertTrue(HTTP.request(POST: "foo").with({ $0.idempotent = true }).idempotent, "POST request")
+        XCTAssertFalse(HTTP.request(GET: "foo").with({ $0.isIdempotent = false }).isIdempotent, "GET request")
+        XCTAssertTrue(HTTP.request(POST: "foo").with({ $0.isIdempotent = true }).isIdempotent, "POST request")
         
         do {
             let task = expectationForRequestCanceled(HTTP.request(GET: "foo"), startAutomatically: false)
             task.cancel()
             task.resume()
-            XCTAssertTrue(task.idempotent, "idempotent GET request")
+            XCTAssertTrue(task.isIdempotent, "idempotent GET request")
         }
         do {
-            let task = expectationForRequestCanceled(HTTP.request(GET: "foo").with({ $0.idempotent = false }))
+            let task = expectationForRequestCanceled(HTTP.request(GET: "foo").with({ $0.isIdempotent = false }))
             task.cancel()
             task.resume()
-            XCTAssertFalse(task.idempotent, "non-idempotent GET request")
+            XCTAssertFalse(task.isIdempotent, "non-idempotent GET request")
         }
         do {
             let task = expectationForRequestCanceled(HTTP.request(POST: "foo"), startAutomatically: false)
             task.cancel()
             task.resume()
-            XCTAssertFalse(task.idempotent, "non-idempotent POST request")
+            XCTAssertFalse(task.isIdempotent, "non-idempotent POST request")
         }
         do {
-            let task = expectationForRequestCanceled(HTTP.request(POST: "foo").with({ $0.idempotent = true }))
+            let task = expectationForRequestCanceled(HTTP.request(POST: "foo").with({ $0.isIdempotent = true }))
             task.cancel()
             task.resume()
-            XCTAssertTrue(task.idempotent, "idempotent POST request")
+            XCTAssertTrue(task.isIdempotent, "idempotent POST request")
         }
         waitForExpectationsWithTimeout(5, handler: nil)
     }

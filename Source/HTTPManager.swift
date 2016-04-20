@@ -724,7 +724,7 @@ private func describeData(data: NSData) -> String {
 /// convenience methods are provided for some of the more common behaviors.
 ///
 /// Unless otherwise specified, retry behaviors are only evaluated for idempotent requests.
-/// This is controlled by the `idempotent` property of `HTTPManagerRequest`, which defaults to
+/// This is controlled by the `isIdempotent` property of `HTTPManagerRequest`, which defaults to
 /// `true` for GET, HEAD, PUT, DELETE, OPTIONS, and TRACE requests, and `false` otherwise.
 ///
 /// - Note: Retry behaviors are evaluated on an arbitrary dispatch queue.
@@ -755,7 +755,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   **Requires:** This block must not be executed more than once.
     public init(_ handler: (task: HTTPManagerTask, error: ErrorType, attempt: Int, callback: Bool -> Void) -> Void) {
         self.handler = { task, error, attempt, callback in
-            if task.idempotent {
+            if task.isIdempotent {
                 handler(task: task, error: error, attempt: attempt, callback: callback)
             } else {
                 callback(false)
@@ -844,7 +844,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     /// - Parameter strategy: The strategy to use when retrying.
     public static func retryNetworkFailure(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
         return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
-            if task.idempotent {
+            if task.isIdempotent {
                 if error.isTransientNetworkingError() {
                     strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
                 } else {
@@ -875,7 +875,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     /// - Parameter strategy: The strategy to use when retrying.
     public static func retryNetworkFailureOrServiceUnavailable(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
         return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
-            if task.idempotent {
+            if task.isIdempotent {
                 if error.isTransientNetworkingError() || error.is503ServiceUnavailable() {
                     strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
                 } else {

@@ -42,7 +42,7 @@ public final class HTTPManagerTask: NSObject {
     /// This property normally only affects retry behavior for failed requests, although
     /// it could be used for external functionality such as showing a Retry button in an
     /// error dialog.
-    @nonobjc public let idempotent: Bool
+    @nonobjc public let isIdempotent: Bool
     
     /// The `NSURLCredential` used to authenticate the request, if any.
     public let credential: NSURLCredential?
@@ -104,7 +104,7 @@ public final class HTTPManagerTask: NSObject {
     
     internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
         _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState, networkTask: networkTask)
-        idempotent = request.idempotent
+        isIdempotent = request.isIdempotent
         credential = request.credential
         userInitiated = request.userInitiated
         followRedirects = request.shouldFollowRedirects
