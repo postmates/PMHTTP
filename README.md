@@ -99,6 +99,30 @@ let task = req.parseAsJSONWithHandler({ try SubmitCatResponse(json: $1) })
 }
 ```
 
+#### Setup
+
+You can modify the properties of the global `HTTPManager` object at any time, but to make setup
+easier, if your `UIApplicationDelegate` or `NSApplicationDelegate` object conforms to the
+`HTTPManagerConfigurable` protocol it will be asked to configure the `HTTPManager` the first time
+the `HTTP` global variable is accessed. This might look like:
+
+```swift
+extension AppDelegate: HTTPManagerConfigurable {
+    public func configureHTTPManager(httpManager: HTTPManager) {
+        httpManager.environment = HTTPManager.Environment(string: /* ... */)
+        let config = NSURLSessionConfiguration.defaultSessionConfiguration()
+        config.timeoutIntervalForRequest = 10
+        // PMHTTP defines a default User-Agent but we can supply our own
+        config.HTTPAdditionalHeaders = ["User-Agent": myUserAgent]
+        httpManager.sessionConfiguration = config
+        if let (username, apiKey) = getAPICredentials() {
+            httpManager.defaultCredential = NSURLCredential(user username, password: apiKey, persistence: .ForSession)
+        }
+        httpManager.defaultRetryBehavior = HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryTwiceWithDefaultDelay)
+    }
+}
+```
+
 ### Cache Handling
 
 PMHTTP implements intelligent cache handling for JSON responses. The HTTP standard allows user
