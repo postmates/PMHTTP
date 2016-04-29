@@ -1036,7 +1036,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
         return self
     }
     
-    public override init(apiManager: HTTPManager, URL url: NSURL, method: Method, parameters: [NSURLQueryItem]) {
+    internal override init(apiManager: HTTPManager, URL url: NSURL, method: Method, parameters: [NSURLQueryItem]) {
         super.init(apiManager: apiManager, URL: url, method: method, parameters: parameters)
         cachePolicy = .ReloadIgnoringLocalCacheData
     }
