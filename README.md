@@ -170,6 +170,12 @@ the normal entry point for your application (e.g. inside some class's `+load` me
 however, that this method will be executed on whatever thread is first accessing the `HTTP`
 property, and so it should be safe to run from any thread.
 
+**Important:** The shared `HTTP` instance is a convenience intended for use by the application. If
+you're writing a shared component (e.g. a framework) that uses PMHTTP, you need to carefully
+consider whether using `HTTP` is appropriate or whether you should be using a separate instance of
+`HTTPManager`. The use of `HTTP` is only appropriate if you want to automatically adopt any
+configuration the application provides (including environment and default credential).
+
 #### Environments
 
 `HTTPManager` has a property `environment` of type `HTTPManager.Environment`. An environment is a
@@ -184,6 +190,11 @@ extension HTTPManager.Environment {
     @nonobjc static let Staging = HTTPManager.Environment(baseURL: stagingURL)
 }
 ```
+
+The environment is also used to determine whether a given request should adopt the default
+credential configured on the `HTTPManager`. Only requests for URLs that are prefixed by the
+environment will use the default credential. Requests for any other URL will have no credential by
+default, though a credential can always be added to any request.
 
 #### Requests
 
