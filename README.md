@@ -317,9 +317,11 @@ Obj-C–specific API is not currently tested, see
 [issue #7](https://github.com/postmates/PMHTTP/issues/7)). The tests are run against a custom
 HTTP/1.1 server implemented in the test bundle that listens on the loopback interface. This allows
 for testing all the functionality without any dependencies on external services and ensures the
-tests are very fast. The HTTP/1.1 server currently relies on CocoaAsyncSocket, which can be
+tests are very fast. The HTTP/1.1 server currently relies on [CocoaAsyncSocket][], which can be
 installed with `carthage bootstrap`. This dependency is not exposed to clients of PMHTTP as it's
 only used by the test suite.
+
+[CocoaAsyncSocket]: https://github.com/robbiehanson/CocoaAsyncSocket
 
 The HTTP/1.1 server implements just about everything that I thought was useful. It has a few minor
 dependencies on PMHTTP itself (most notably, it uses `HTTPManagerRequest.HTTPHeaders` instead of
@@ -337,10 +339,12 @@ Requires a minimum of iOS 8, OS X 10.9, watchOS 2.0, or tvOS 9.0.
 
 ### watchOS and extensions
 
-The framework project declares support for watchOS, but because of the network activity indicator
-code it can't be built with `APPLICATION_EXTENSION_API_ONLY`. I'm not sure offhand if watchOS 2.0
-requires that setting or if it's only required for watchOS 1.x and other extensions (see
-[issue #6](https://github.com/postmates/PMHTTP/issues/6)).
+The project declares support for watchOS, but it's using a semi-unsupported method of turning
+`APPLICATION_EXTENSION_API_ONLY` on for watchOS. As far as I can tell it works, but I haven't
+actually used PMHTTP in a real watchOS app so I don't know for certain. As for application
+extensions, when built for iOS `APPLICATION_EXTENSION_API_ONLY` must be off because of the network
+activity indicator support, so I don't believe PMHTTP is usable from application extensions. See
+[issue #6](https://github.com/postmates/PMHTTP/issues/6) for details.
 
 ## Installation
 
