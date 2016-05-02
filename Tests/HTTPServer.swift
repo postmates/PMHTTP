@@ -117,14 +117,53 @@ final class HTTPServer {
         return token
     }
     
-    /// Registers a request callback that fires for any request whose path exactly matches `path`.
-    /// The path is compared in a case-sensitive manner after decoding any percent escapes.
+    /// Registers a request callback that fires for any request whose path matches `path`.
+    /// The comparison is done on each path component after decoding any percent escapes.
+    /// If `path` contains an invalid percent escape it will never match.
+    ///
     /// See `registerRequestCallback(_:)` for details.
     ///
+    /// - Note: If `path` does not start with `"/"` it is treated as if it did.
+    ///
+    /// - Parameter path: The path to compare against.
+    /// - Parameter ignoresTrailingSlash: If `true`, a trailing slash on `path` and the
+    ///   request path is ignored, otherwise it is significant. Defaults to `false`.
+    /// - Parameter callback: A callback that's invoked on an arbitrary background queue to
+    ///   process the request.
+    /// - Returns: A `CallbackToken` that can be given to `unregisterRequestCallback(_:)` to
+    ///   unregister just this callback.
+    ///
     /// - SeeAlso: `registerRequestCallback(_:)`.
-    func registerRequestCallbackForPath(path: String, callback: (request: Request, completionHandler: Response? -> Void) -> Void) -> CallbackToken {
+    func registerRequestCallbackForPath(path: String, ignoresTrailingSlash: Bool = false, callback: (request: Request, completionHandler: Response? -> Void) -> Void) -> CallbackToken {
+        var path = path
+        if !path.hasPrefix("/") {
+            path = "/\(path)"
+        }
+        func pathComponents(path: String, includesTrailingSlash: Bool) -> [String]? {
+            let comps = path.unicodeScalars.split("/")
+            let hasLeadingSlash = path.hasPrefix("/")
+            let hasTrailingSlash = includesTrailingSlash && path.hasSuffix("/")
+            var result: [String] = []
+            result.reserveCapacity(comps.count + (hasLeadingSlash ? 1 : 0) + (hasTrailingSlash ? 1 : 0))
+            if hasLeadingSlash {
+                result.append("/")
+            }
+            for comp in comps {
+                guard let elt = String(comp).stringByRemovingPercentEncoding else {
+                    return nil
+                }
+                result.append(elt)
+            }
+            if hasTrailingSlash {
+                result.append("/")
+            }
+            return result
+        }
+        let pathComps = pathComponents(path, includesTrailingSlash: !ignoresTrailingSlash)
         return registerRequestCallback { request, completionHandler in
-            if request.urlComponents.path == path {
+            if let pathComps = pathComps,
+                requestPathComps = pathComponents(request.urlComponents.percentEncodedPath ?? "", includesTrailingSlash: !ignoresTrailingSlash)
+                where pathComps == requestPathComps {
                 callback(request: request, completionHandler: completionHandler)
             } else {
                 completionHandler(nil)
