@@ -333,3 +333,48 @@ internal extension SequenceType {
         return nil
     }
 }
+
+internal extension SequenceType {
+    func chain<Seq: SequenceType where Seq.Generator.Element == Self.Generator.Element>(seq: Seq) -> Chain<Self, Seq> {
+        return Chain(self, seq)
+    }
+}
+
+internal struct Chain<First: SequenceType, Second: SequenceType where First.Generator.Element == Second.Generator.Element>: SequenceType {
+    init(_ first: First, _ second: Second) {
+        self.first = first
+        self.second = second
+    }
+    
+    func generate() -> ChainGenerator<First.Generator, Second.Generator> {
+        return ChainGenerator(first.generate(), second.generate())
+    }
+    
+    func underestimateCount() -> Int {
+        return first.underestimateCount() + second.underestimateCount()
+    }
+    
+    private let first: First
+    private let second: Second
+}
+
+internal struct ChainGenerator<First: GeneratorType, Second: GeneratorType where First.Element == Second.Element>: GeneratorType {
+    init(_ first: First, _ second: Second) {
+        self.first = first
+        self.second = second
+    }
+    
+    mutating func next() -> First.Element? {
+        if !firstDone {
+            switch first.next() {
+            case let x?: return x
+            case nil: firstDone = true
+            }
+        }
+        return second.next()
+    }
+    
+    private var first: First
+    private var second: Second
+    private var firstDone: Bool = false
+}

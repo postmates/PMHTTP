@@ -543,66 +543,60 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
             handleURL = { _ in .NoMatch}
             return
         }
-        let pathComps = (comps.path ?? "").unicodeScalars.split("/").map(String.init)
-        if pathComps.contains({ $0.hasPrefix(":") && $0 != ":" }) {
-            // We have at least one :name token.
-            let startsWithPath = comps.scheme == nil && comps.user == nil && comps.password == nil && comps.host == nil && comps.port == nil
-            handleURL = { (requestComponents, environment) in
-                let absoluteComps: NSURLComponents
-                if startsWithPath {
-                    // NB: Because of the aforementioned ":foo/bar" thing we can't just create a relative URL.
-                    guard let environment = environment,
-                        path = comps.percentEncodedPath,
-                        absoluteComps_ = NSURLComponents(URL: environment.baseURL.URLByAppendingPathComponent(path), resolvingAgainstBaseURL: true)
-                        else { return .NoMatch }
-                    absoluteComps = absoluteComps_
-                    if let query = comps.percentEncodedQuery {
-                        absoluteComps.percentEncodedQuery = query
-                    }
-                } else if comps.host == nil {
-                    // The URL is relative.
-                    guard let environment = environment,
-                        absoluteComps_ = comps.URLRelativeToURL(environment.baseURL).flatMap({ NSURLComponents(URL: $0, resolvingAgainstBaseURL: true) })
-                        else { return .NoMatch }
-                    absoluteComps = absoluteComps_
+        // Don't convert comps into absolute yet as environment changes should affect relative mocks.
+        // But do parse out the :tokens right now so that way :tokens in the environment path aren't treated as parameters.
+        enum Component {
+            case String(Swift.String)
+            case Token(Swift.String)
+            init(_ string: Swift.String) {
+                if string.hasPrefix(":") && string != ":" {
+                    self = .Token(Swift.String(string.unicodeScalars.dropFirst()))
                 } else {
-                    // The URL is absolute.
-                    absoluteComps = comps
-                }
-                guard requestComponents.matchesComponents(absoluteComps, includePath: false) else { return .NoMatch }
-                let requestPathComps = requestComponents.URL?.pathComponents ?? []
-                let pathComps = absoluteComps.URL?.pathComponents ?? []
-                guard requestPathComps.count == pathComps.count else { return .NoMatch }
-                // Walk the paths and handle any :name tokens.
-                var parameters: [String: String] = [:]
-                for (urlComp, comp) in zip(requestPathComps, pathComps) {
-                    if comp.hasPrefix(":") && comp != ":" {
-                        parameters[String(comp.unicodeScalars.dropFirst())] = urlComp
-                    } else if comp != urlComp {
-                        return .NoMatch
-                    }
-                }
-                return .Matches(parameters: parameters)
-            }
-        } else {
-            // no :name tokens, we can do a straightforward comparison
-            handleURL = { (requestComponents, environment) in
-                let absoluteComps: NSURLComponents
-                if comps.host == nil {
-                    // The URL is relative.
-                    guard let environment = environment,
-                        absoluteComps_ = comps.URLRelativeToURL(environment.baseURL).flatMap({ NSURLComponents(URL: $0, resolvingAgainstBaseURL: true) })
-                        else { return .NoMatch }
-                    absoluteComps = absoluteComps_
-                } else {
-                    absoluteComps = comps
-                }
-                if requestComponents.matchesComponents(absoluteComps, includePath: true) {
-                    return .Matches(parameters: [:])
-                } else {
-                    return .NoMatch
+                    self = .String(string)
                 }
             }
+        }
+        let mockComps: [Component]
+        do {
+            var pathComps = comps.pathComponents ?? []
+            // Drop the leading "/" if present since we'll test that against the absolute path instead.
+            if pathComps.first == "/" {
+                pathComps.removeFirst()
+                comps.percentEncodedPath = "/"
+            } else {
+                comps.percentEncodedPath = ""
+            }
+            mockComps = pathComps.map(Component.init)
+        }
+        
+        handleURL = { (requestComponents, environment) in
+            let absoluteComps: NSURLComponents
+            if comps.scheme != nil {
+                // Absolute URL.
+                absoluteComps = comps
+            } else {
+                // Relative URL.
+                guard let environment = environment,
+                    baseComps = NSURLComponents(URL: environment.baseURL, resolvingAgainstBaseURL: true)
+                    else { return .NoMatch }
+                absoluteComps = comps.componentsRelativeTo(baseComps)
+            }
+            guard requestComponents.matchesComponents(absoluteComps, includePath: false) else { return .NoMatch }
+            guard let requestPathComps = requestComponents.pathComponents.map({ $0.isEmpty ? ["/"] : $0 }),
+                pathComps = absoluteComps.pathComponents.map({ $0.isEmpty ? ["/"] : $0 })
+                else { return .NoMatch }
+            guard requestPathComps.count == (pathComps.count + mockComps.count) else { return .NoMatch }
+            // Walk the paths and handle any :name tokens (if any).
+            var parameters: [String: String] = [:]
+            for (urlComp, comp) in zip(requestPathComps, pathComps.lazy.map(Component.String).chain(mockComps)) {
+                switch comp {
+                case .String(urlComp): break
+                case .Token(let token):
+                    parameters[token] = urlComp
+                case .String: return .NoMatch
+                }
+            }
+            return .Matches(parameters: parameters)
         }
     }
     
@@ -659,8 +653,13 @@ private extension NSURLComponents {
             && (components.percentEncodedUser.map({ caseInsensitiveCompare(percentEncodedUser, $0) }) ?? true)
             && (components.percentEncodedPassword.map({ caseInsensitiveCompare(percentEncodedPassword, $0) }) ?? true)
             && getPort(self) == getPort(components, fallbackScheme: scheme)
-            && (!includePath || (percentEncodedPath ?? "") == (components.percentEncodedPath ?? ""))
             else { return false }
+        if includePath {
+            // if `self` or `components` has a non-parseable path we treat that as a match failure
+            guard let ourPath = pathComponents, theirPath = components.pathComponents
+                where ourPath == theirPath
+                else { return false }
+        }
         if let queryItems = components.queryItems where !queryItems.isEmpty {
             var querySet = Set(queryItems)
             querySet.subtractInPlace(self.queryItems ?? [])
@@ -670,6 +669,86 @@ private extension NSURLComponents {
             }
         }
         return true
+    }
+    
+    /// An array containing the path components.
+    ///
+    /// The array contains the individual path components unescaped using `stringByRemovingPercentEncoding`.
+    /// If the path begins with `"/"` the returned array will start with the component `"/"`.
+    /// Doubled slashes in the path (e.g. `"foo//bar"`) or a trailing slash will be ignored.
+    ///
+    /// - Returns: An array containing the path components, or `nil` if the path contains an illegal
+    ///   percent-encoding sequence. If `self` has no path, `[]` will be returned.
+    var pathComponents: [String]? {
+        guard let path = percentEncodedPath else { return [] }
+        let comps = path.unicodeScalars.split("/")
+        let hasLeadingSlash = path.hasPrefix("/")
+        var result: [String] = []
+        result.reserveCapacity(comps.count + (hasLeadingSlash ? 1 : 0))
+        if hasLeadingSlash {
+            result.append("/")
+        }
+        for comp in comps {
+            guard let elt = String(comp).stringByRemovingPercentEncoding else {
+                return nil
+            }
+            result.append(elt)
+        }
+        return result
+    }
+    
+    /// Returns an `NSURLComponents` that represents `self` resolved against a base components.
+    ///
+    /// This is roughly equivalent to `NSURLComponents.URLRelativeToURL(_:)?.absoluteURL` except
+    /// it doesn't touch `NSURL` and so preserves RFC 3986 behavior throughout. Notably, this
+    /// correctly handles paths beginning with `:`.
+    func componentsRelativeTo(components: NSURLComponents) -> NSURLComponents {
+        let result: NSURLComponents = unsafeDowncast(copy())
+        guard result.scheme == nil else {
+            // URL is absolute. We still return a copy so the caller can mutate the result.
+            return result
+        }
+        result.scheme = components.scheme
+        // The authority section is all-or-none, e.g. if we have a host, we don't copy the user/password from components.
+        guard !result.hasAuthority else { return result }
+        (result.percentEncodedUser, result.percentEncodedPassword) = (components.percentEncodedUser, components.percentEncodedPassword)
+        (result.percentEncodedHost, result.port) = (components.percentEncodedHost, components.port)
+        if let path = result.percentEncodedPath where !path.isEmpty {
+            if !path.hasPrefix("/") {
+                // relative path
+                if let basePath = components.percentEncodedPath where !basePath.isEmpty {
+                    result.percentEncodedPath = basePath.hasSuffix("/") ? "\(basePath)\(path)" : "\(basePath)/\(path)"
+                } else if !result.startsWithPath {
+                    // We need a / prefix
+                    result.percentEncodedPath = "/\(path)"
+                }
+            }
+            return result
+        }
+        result.percentEncodedPath = components.percentEncodedPath
+        guard result.percentEncodedQuery == nil else { return result }
+        result.percentEncodedQuery = components.percentEncodedQuery
+        guard result.percentEncodedFragment == nil else { return result }
+        result.percentEncodedFragment = components.percentEncodedFragment
+        return result
+    }
+    
+    /// `true` iff `self` starts with a (non-empty) path.
+    var startsWithPath: Bool {
+        if #available(iOS 9, OSX 10.11, *) {
+            let range = rangeOfPath
+            return range.location == 0 && range.length > 0
+        } else {
+            return scheme == nil && !hasAuthority && !(percentEncodedPath?.isEmpty ?? true)
+        }
+    }
+    
+    /// `true` iff `self` has an authority component (user, password, host, or port).
+    var hasAuthority: Bool {
+        // If user/password are `""` that counts, but `host` may be `""` without affecting anything,
+        // because the former produces a URL like `//@` and the latter just produces `//`
+        return percentEncodedUser != nil || percentEncodedPassword != nil
+            || !(percentEncodedHost?.isEmpty ?? true) || port != nil
     }
 }
 
