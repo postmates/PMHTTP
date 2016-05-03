@@ -29,12 +29,13 @@
 		9E7DDF4B1C1A388400EA43AD /* HTTPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */; };
 		9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */; };
 		9E8C1E441CAF50A6000D7FA2 /* PMHTTPRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */; };
+		9E9B5B421CD9575D006395A6 /* PMHTTPManagerBodyStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E9B5B401CD9575D006395A6 /* PMHTTPManagerBodyStream.h */; };
+		9E9B5B431CD9575D006395A6 /* PMHTTPManagerBodyStream.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9E9B5B411CD9575D006395A6 /* PMHTTPManagerBodyStream.mm */; };
+		9E9B5B441CD96194006395A6 /* HTTPBodyStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */; };
 		9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4EE341CB71E4F00E4E531 /* Mocking.swift */; };
 		9EA4EE371CBC197D00E4E531 /* MockingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4EE361CBC197D00E4E531 /* MockingTests.swift */; };
 		9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */; };
 		9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */; };
-		9ED4FA121CC01563001A0693 /* CFStreamAbstract.h in Headers */ = {isa = PBXBuildFile; fileRef = 9ED4FA111CC01563001A0693 /* CFStreamAbstract.h */; };
-		9ED4FA161CC01E54001A0693 /* HTTPBodyStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */; };
 		9ED4FA181CC072F2001A0693 /* MultipartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA171CC072F2001A0693 /* MultipartTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -79,12 +80,12 @@
 		9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManager.swift; sourceTree = "<group>"; };
 		9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPTestCase.swift; sourceTree = "<group>"; };
 		9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPRetryTests.swift; sourceTree = "<group>"; };
+		9E9B5B401CD9575D006395A6 /* PMHTTPManagerBodyStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerBodyStream.h; sourceTree = "<group>"; };
+		9E9B5B411CD9575D006395A6 /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
 		9EA4EE341CB71E4F00E4E531 /* Mocking.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Mocking.swift; sourceTree = "<group>"; };
 		9EA4EE361CBC197D00E4E531 /* MockingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MockingTests.swift; sourceTree = "<group>"; };
 		9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
 		9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTest+HTTPServerExpectation.swift"; sourceTree = "<group>"; };
-		9ED4FA111CC01563001A0693 /* CFStreamAbstract.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CFStreamAbstract.h; sourceTree = "<group>"; };
-		9ED4FA131CC0156D001A0693 /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
 		9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPBodyStream.swift; sourceTree = "<group>"; };
 		9ED4FA171CC072F2001A0693 /* MultipartTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipartTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -115,8 +116,8 @@
 				9E4C77D51C3C9D90000FF8AC /* module.modulemap */,
 				9E4C77CE1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h */,
 				9E4C77CF1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m */,
-				9ED4FA111CC01563001A0693 /* CFStreamAbstract.h */,
-				9ED4FA131CC0156D001A0693 /* README.txt */,
+				9E9B5B401CD9575D006395A6 /* PMHTTPManagerBodyStream.h */,
+				9E9B5B411CD9575D006395A6 /* PMHTTPManagerBodyStream.mm */,
 			);
 			path = Private;
 			sourceTree = "<group>";
@@ -210,8 +211,8 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9E9B5B421CD9575D006395A6 /* PMHTTPManagerBodyStream.h in Headers */,
 				9E4C77D01C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h in Headers */,
-				9ED4FA121CC01563001A0693 /* CFStreamAbstract.h in Headers */,
 				9E7DDF251C18F2B600EA43AD /* PMHTTP.h in Headers */,
 				9E139FA61C4EC9EE00A764BD /* PMHTTPError.h in Headers */,
 			);
@@ -338,11 +339,12 @@
 				9E4C77C91C3B568C000FF8AC /* HTTPManagerRequest.swift in Sources */,
 				9E7DDF4B1C1A388400EA43AD /* HTTPManager.swift in Sources */,
 				9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */,
+				9E9B5B441CD96194006395A6 /* HTTPBodyStream.swift in Sources */,
 				9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */,
 				9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */,
+				9E9B5B431CD9575D006395A6 /* PMHTTPManagerBodyStream.mm in Sources */,
 				9E681CB81C56EB1000422CE4 /* SipHash.swift in Sources */,
 				9E4C77D11C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m in Sources */,
-				9ED4FA161CC01E54001A0693 /* HTTPBodyStream.swift in Sources */,
 				9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */,
 				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,

@@ -19,71 +19,12 @@ import PMHTTPPrivate
 internal final class HTTPBody {
     /// Returns an `NSInputStream` that produces a multipart/mixed HTTP body.
     /// - Note: Any `.Pending` body part must be evaluated before calling this
-    ///   method, and should be waited on to guarantee the value is ready. If
-    ///   the body part isn't waited on, the returned stream will have an
-    ///   incorrect value for `CFReadStreamHasBytesAvailable(_:)`.
+    ///   method, and should be waited on to guarantee the value is ready.
     class func createMultipartMixedStream(boundary: String, parameters: [NSURLQueryItem], bodyParts: [MultipartBodyPart]) -> NSInputStream {
         let body = HTTPBody(boundary: boundary, parameters: parameters, bodyParts: bodyParts)
-        var callbacks = CFReadStreamCallBacks()
-        callbacks.version = 2
-        callbacks.create = { (stream, info) in
-            // Bump the retain count and return the new value.
-            let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
-            body.log("create")
-            return UnsafeMutablePointer(Unmanaged.passRetained(body).toOpaque())
-        }
-        callbacks.finalize = { (stream, info) in
-            // Decrement the retain count and discard the object.
-            let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeRetainedValue()
-            body.log("finalize")
-        }
-        callbacks.open = { (stream, error, openComplete, info) in
-            // We don't do any work on open.
-            #if enableDebugLogging
-                let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
-                body.log("open")
-            #endif
-            openComplete.memory = true
-            // Signal that we already have bytes available.
-            _CFReadStreamSignalEventDelayed(stream, .HasBytesAvailable, nil)
-            return true
-        }
-        callbacks.read = { (stream, buffer, bufferLength, errorPtr, atEOF, info) in
-            let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
-            body.log("read ...")
-            do {
-                let (count, eof) = try body.streamRead(stream, buffer, bufferLength)
-                atEOF.memory = DarwinBoolean(eof)
-                body.log("... returning \(count) byte(s), atEOF: \(eof)")
-                return count
-            } catch {
-                body.log("... error occurred: \(error)")
-                // NB: Can't use `as` to cast from NSError to CFError even though they're toll-free bridged.
-                let cferr = unsafeBitCast(error as NSError, CFError.self)
-                errorPtr.memory = Unmanaged.passRetained(cferr)
-                atEOF.memory = false
-                CFReadStreamSignalEvent(stream, .ErrorOccurred, UnsafePointer(Unmanaged.passUnretained(cferr).toOpaque()))
-                return 0
-            }
-        }
-        callbacks.canRead = { (stream, errorPtr, info) in
-            let body = Unmanaged<HTTPBody>.fromOpaque(COpaquePointer(info)).takeUnretainedValue()
-            do {
-                let canRead = try body.streamCanRead(stream)
-                body.log("canRead: \(canRead)")
-                return DarwinBoolean(canRead)
-            } catch {
-                body.log("canRead; error occurred: \(error)")
-                // NB: Can't use `as` to cast from NSError to CFError even though they're toll-free bridged.
-                let cferr = unsafeBitCast(error as NSError, CFError.self)
-                errorPtr.memory = Unmanaged.passRetained(cferr)
-                CFReadStreamSignalEvent(stream, .ErrorOccurred, UnsafePointer(Unmanaged.passUnretained(cferr).toOpaque()))
-                return false
-            }
-        }
-        // All non-implemented callbacks are optional.
-        
-        return CFReadStreamCreate(kCFAllocatorDefault, &callbacks, UnsafeMutablePointer(Unmanaged.passUnretained(body).toOpaque())).takeRetainedValue() as NSInputStream
+        return PMHTTPManagerBodyStream(handler: { (buffer, maxLength) -> Int in
+            return body.readIntoBuffer(buffer, maxLength)
+        })
     }
     
     private let boundary: String
@@ -115,12 +56,7 @@ internal final class HTTPBody {
         advanceState()
     }
     
-    private func streamRead(stream: CFReadStream, _ bufferPtr: UnsafeMutablePointer<UInt8>, _ bufferLength: Int) throws -> (count: Int, atEOF: Bool) {
-        guard bufferLength > 0 else {
-            // This really shouldn't happen
-            struct InvalidStreamReadError: ErrorType {}
-            throw InvalidStreamReadError()
-        }
+    private func readIntoBuffer(bufferPtr: UnsafeMutablePointer<UInt8>, _ bufferLength: Int) -> Int {
         var buffer = UnsafeMutableBufferPointer(start: bufferPtr, count: bufferLength)
         func copyUTF8(inout buffer: UnsafeMutableBufferPointer<UInt8>, utf8: String.UTF8View) -> String.UTF8View.Index? {
             var count = 0
@@ -176,22 +112,7 @@ internal final class HTTPBody {
                 fatalError("HTTPManager internal error: unreachable state .Initial in streamRead()")
             }
         }
-        let count = buffer.baseAddress - bufferPtr
-        switch state {
-        case .EOF:
-            _CFReadStreamSignalEventDelayed(stream, .EndEncountered, nil)
-            return (count, true)
-        default:
-            _CFReadStreamSignalEventDelayed(stream, .HasBytesAvailable, nil)
-            return (count, false)
-        }
-    }
-    
-    private func streamCanRead(stream: CFReadStream) throws -> Bool {
-        switch state {
-        case .EOF: return false
-        default: return true
-        }
+        return buffer.baseAddress - bufferPtr
     }
     
     /// Sets `state` to the appropriate state for the next part.

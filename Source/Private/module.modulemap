@@ -1,5 +1,5 @@
 module PMHTTPPrivate {
     header "PMHTTPManagerTaskStateBox.h"
-    header "CFStreamAbstract.h"
+    header "PMHTTPManagerBodyStream.h"
     export *
 }
