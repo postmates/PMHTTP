@@ -716,4 +716,33 @@ class MockingTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
     }
+    
+    func testMockHTTPMethods() {
+        // By default mocks match any HTTP method
+        HTTP.mockManager.addMock("foo", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
+            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Mock response", "body text")
+        }
+        expectationForRequestSuccess(HTTP.request(POST: "foo")) { (task, response, value) in
+            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Mock response", "body text")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock("foo", httpMethod: "POST", statusCode: 200, text: "Mock response")
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .OK, text: "Server response"))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
+            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Server response", "body text")
+        }
+        expectationForRequestSuccess(HTTP.request(POST: "foo")) { (task, response, value) in
+            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Mock response", "body text")
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+    }
 }

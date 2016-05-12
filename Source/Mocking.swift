@@ -62,6 +62,8 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter url: The URL to mock. This may be a relative URL, which is evaluated against the
     ///   environment active at the time the request is made, or it may be an absolute URL. The URL
     ///   may include path components of the form `:name` to match any (non-empty) component value.
+    /// - Parameter httpMethod: (Optional) The HTTP method to be mocked. The default value of `nil`
+    ///   means this mock will match any HTTP method.
     /// - Parameter statusCode: The HTTP status code to return.
     /// - Parameter headers: (Optional) A collection of HTTP headers to return.
     /// - Parameter data: (Optional) The body of the response. If the `headers` does not provide a
@@ -69,12 +71,12 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
-    public func addMock(url: String, statusCode: Int, headers: [String: String] = [:], data: NSData = NSData(), delay: NSTimeInterval = 0.03) -> HTTPMockToken {
+    public func addMock(url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: NSData = NSData(), delay: NSTimeInterval = 0.03) -> HTTPMockToken {
         var headers = headers
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.length)
         }
-        return addMock(url, queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), handler: { (request, parameters, completion) in
+        return addMock(url, httpMethod: httpMethod, queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), handler: { (request, parameters, completion) in
             let response = NSHTTPURLResponse(URL: request.URL!, statusCode: statusCode, HTTPVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(delay * NSTimeInterval(NSEC_PER_SEC))), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0)) {
@@ -93,6 +95,8 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter url: The URL to mock. This may be a relative URL, which is evaluated against the
     ///   environment active at the time the request is made, or it may be an absolute URL. The URL
     ///   may include path components of the form `:name` to match any (non-empty) component value.
+    /// - Parameter httpMethod: (Optional) The HTTP method to be mocked. The default value of `nil`
+    ///   means this mock will match any HTTP method.
     /// - Parameter statusCode: The HTTP status code to return.
     /// - Parameter headers: (Optional) A collection of HTTP headers to return. If `"Content-Type"`
     ///   is not specified, it will default to `"text/plain"`.
@@ -101,13 +105,13 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
-    public func addMock(url: String, statusCode: Int, headers: [String: String] = [:], text: String, delay: NSTimeInterval = 0.03) -> HTTPMockToken {
+    public func addMock(url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: NSTimeInterval = 0.03) -> HTTPMockToken {
         let data = text.dataUsingEncoding(NSUTF8StringEncoding) ?? NSData()
         var headers = headers
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = "text/plain; charset=utf-8"
         }
-        return addMock(url, statusCode: statusCode, headers: headers, data: data, delay: delay)
+        return addMock(url, httpMethod: httpMethod, statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
     /// Adds a mock to the mock manager that returns a given JSON response.
@@ -117,6 +121,8 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter url: The URL to mock. This may be a relative URL, which is evaluated against the
     ///   environment active at the time the request is made, or it may be an absolute URL. The URL
     ///   may include path components of the form `:name` to match any (non-empty) component value.
+    /// - Parameter httpMethod: (Optional) The HTTP method to be mocked. The default value of `nil`
+    ///   means this mock will match any HTTP method.
     /// - Parameter statusCode: The HTTP status code to return.
     /// - Parameter headers: (Optional) A collection of HTTP headers to return. If `"Content-Type"`
     ///   is not specified, it will default to `"application/json"`.
@@ -125,13 +131,13 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
-    public func addMock(url: String, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: NSTimeInterval = 0.03) -> HTTPMockToken {
+    public func addMock(url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: NSTimeInterval = 0.03) -> HTTPMockToken {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = "application/json"
         }
-        return addMock(url, statusCode: statusCode, headers: headers, data: data, delay: delay)
+        return addMock(url, httpMethod: httpMethod, statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
     /// Adds a mock to the mock manager that returns a given sequence of responses.
@@ -141,13 +147,15 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter url: The URL to mock. This may be a relative URL, which is evaluated against the
     ///   environment active at the time the request is made, or it may be an absolute URL. The URL
     ///   may include path components of the form `:name` to match any (non-empty) component value.
+    /// - Parameter httpMethod: (Optional) The HTTP method to be mocked. The default value of `nil`
+    ///   means this mock will match any HTTP method.
     /// - Parameter sequence: an `HTTPMockSequence` with the sequence of responses to provide.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
-    public func addMock(url: String, sequence: HTTPMockSequence) -> HTTPMockToken {
+    public func addMock(url: String, httpMethod: String? = nil, sequence: HTTPMockSequence) -> HTTPMockToken {
         var mockGen = Optional.Some(sequence.mocks.generate())
         var nextMock = mockGen?.next()
         let repeatsLastResponse = sequence.repeatsLastResponse
-        return addMock(url, handler: { (request, parameters, completion) in
+        return addMock(url, httpMethod: httpMethod, handler: { (request, parameters, completion) in
             guard let mock = nextMock else {
                 let data = "Mock sequence exhausted".dataUsingEncoding(NSUTF8StringEncoding)!
                 completion(response: NSHTTPURLResponse(URL: request.URL!, statusCode: 500, HTTPVersion: "HTTP/1.1", headerFields: ["Content-Type": "text/plain"])!, body: data)
@@ -195,6 +203,8 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter url: The URL to mock. This may be a relative URL, which is evaluated against the
     ///   environment active at the time the request is made, or it may be an absolute URL. The URL
     ///   may include path components of the form `:name` to match any (non-empty) component value.
+    /// - Parameter httpMethod: (Optional) The HTTP method to be mocked. The default value of `nil`
+    ///   means this mock will match any HTTP method.
     /// - Parameter queue: (Optional) A `dispatch_queue_t` to run the handler on. The default value
     ///   of `nil` means to use a private serial queue.
     /// - Parameter handler: A block to execute in order to provide the mock response. The block
@@ -204,8 +214,8 @@ public final class HTTPMockManager: NSObject {
     ///   block that must be invoked to provide the response. The `completion` block may be invoked
     ///   from any queue, but it is an error to not invoke it at all or to invoke it twice.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
-    public func addMock(url: String, queue: dispatch_queue_t? = nil, handler: (request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) -> HTTPMockToken {
-        let mock = HTTPMock(url: url, queue: queue ?? dispatch_queue_create("HTTPMock queue", DISPATCH_QUEUE_SERIAL)!, handler: handler)
+    public func addMock(url: String, httpMethod: String? = nil, queue: dispatch_queue_t? = nil, handler: (request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) -> HTTPMockToken {
+        let mock = HTTPMock(url: url, httpMethod: httpMethod, queue: queue ?? dispatch_queue_create("HTTPMock queue", DISPATCH_QUEUE_SERIAL)!, handler: handler)
         inner.asyncBarrier { inner in
             inner.mocks.append(mock)
         }
@@ -220,6 +230,8 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter url: The URL to mock. This may be a relative URL, which is evaluated against the
     ///   environment active at the time the request is made, or it may be an absolute URL. The URL
     ///   may include path components of the form `:name` to match any (non-empty) component value.
+    /// - Parameter httpMethod: (Optional) The HTTP method to be mocked. The default value of `nil`
+    ///   means this mock will match any HTTP method.
     /// - Parameter state: A value that is provided (as an `inout` parameter) to the block. This is
     ///   really just a convenient way to create mutable state that the block can access.
     /// - Parameter handler: A block to execute in order to provide the mock response. The block
@@ -231,9 +243,9 @@ public final class HTTPMockManager: NSObject {
     ///   The `completion` block may be invoked from any queue, but it is an error to not invoke it at
     ///   all or to invoke it twice.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
-    public func addMock<T>(url: String, state: T, handler: (inout state: T, request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) -> HTTPMockToken {
+    public func addMock<T>(url: String, httpMethod: String? = nil, state: T, handler: (inout state: T, request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) -> HTTPMockToken {
         var state = state
-        return addMock(url, handler: { (request, parameters, completion) in
+        return addMock(url, httpMethod: httpMethod, handler: { (request, parameters, completion) in
             handler(state: &state, request: request, parameters: parameters, completion: completion)
         })
     }
@@ -268,9 +280,10 @@ public final class HTTPMockManager: NSObject {
     
     internal func mockForRequest(request: NSURLRequest, environment: HTTPManager.Environment?) -> HTTPMockInstance? {
         guard let url = request.URL, components = NSURLComponents(URL: url, resolvingAgainstBaseURL: true) else { return nil }
+        let method = request.HTTPMethod
         return inner.sync { inner in
             for mock in inner.mocks.reverse() {
-                if case .Matches(let parameters) = mock.handleURL(components, environment: environment) {
+                if case .Matches(let parameters) = mock.handleURL(components, httpMethod: method, environment: environment) {
                     return HTTPMockInstance(queue: mock.queue, parameters: parameters, handler: mock.handler)
                 }
             }
@@ -526,15 +539,18 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
         case Matches(parameters: [String: String])
     }
     
-    let handleURL: (NSURLComponents, environment: HTTPManager.Environment?) -> MatchResult
+    let handleURL: (NSURLComponents, httpMethod: String?, environment: HTTPManager.Environment?) -> MatchResult
     
     private let handler: (request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void
     private let queue: dispatch_queue_t
     /// The `url` parameter provided to `init`. Only used for `description`.
     private let urlString: String
+    /// The `httpMethod` parameter provided to `init`. Only used for `description`.
+    private let httpMethod: String?
     
-    init(url: String, queue: dispatch_queue_t, handler: (request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) {
+    init(url: String, httpMethod: String?, queue: dispatch_queue_t, handler: (request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) {
         urlString = url
+        self.httpMethod = httpMethod
         self.queue = queue
         self.handler = handler
         // NB: NSURLComponents parses ":foo/bar" as a path but NSURL does not.
@@ -569,7 +585,15 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
             mockComps = pathComps.map(Component.init)
         }
         
-        handleURL = { (requestComponents, environment) in
+        handleURL = { (requestComponents, requestMethod, environment) in
+            // Compare HTTP method
+            switch (httpMethod, requestMethod) {
+            case (nil, _): break
+            case let (a?, b?) where a.caseInsensitiveCompare(b) == .OrderedSame: break
+            default: return .NoMatch
+            }
+            
+            // Compare URL
             let absoluteComps: NSURLComponents
             if comps.scheme != nil {
                 // Absolute URL.
@@ -602,7 +626,7 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
     
     var description: String {
         let ptr = unsafeBitCast(unsafeAddressOf(self), UInt.self)
-        return "<HTTPMock: 0x\(String(ptr, radix: 16)) \(String(reflecting: urlString))>"
+        return "<HTTPMock: 0x\(String(ptr, radix: 16)) \(String(reflecting: urlString))\(httpMethod.map({ " \($0)" }) ?? "")>"
     }
 }
 
