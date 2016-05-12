@@ -14,7 +14,7 @@
 
 import XCTest
 import PMJSON
-import PMHTTP
+@testable import PMHTTP
 
 class MockingTests: PMHTTPTestCase {
     func testBasicMock() {
@@ -715,6 +715,62 @@ class MockingTests: PMHTTPTestCase {
             XCTAssert((0.15...0.25).contains(delay), "response delay: expected 150ms...250ms, found \(delay*1000)ms")
         }
         waitForExpectationsWithTimeout(5, handler: nil)
+    }
+    
+    func testMockRequestBody() {
+        // NSData upload
+        HTTP.mockManager.addMock("foo") { (request, parameters, completion) in
+            XCTAssertEqual(String(data: HTTP.mockManager.dataFromRequest(request), encoding: NSUTF8StringEncoding), "Hello world", "request body")
+            completion(response: NSHTTPURLResponse(URL: request.URL!, statusCode: 200, HTTPVersion: "HTTP/1.1", headerFields: nil)!, body: NSData())
+        }
+        expectationForRequestSuccess(HTTP.request(POST: "foo", contentType: "text/plain", data: "Hello world".dataUsingEncoding(NSUTF8StringEncoding)!))
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        // JSON upload
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock("foo") { (request, parameters, completion) in
+            do {
+                let json = try JSON.decode(HTTP.mockManager.dataFromRequest(request))
+                XCTAssertEqual(json, ["ok": true, "foo": "bar"], "request body json")
+            } catch {
+                XCTFail("error decoding JSON: \(error)")
+            }
+            completion(response: NSHTTPURLResponse(URL: request.URL!, statusCode: 200, HTTPVersion: "HTTP/1.1", headerFields: nil)!, body: NSData())
+        }
+        expectationForRequestSuccess(HTTP.request(POST: "foo", json: ["ok": true, "foo": "bar"]))
+        waitForExpectationsWithTimeout(5, handler: nil)
+        
+        // Multipart upload
+        do {
+            HTTP.mockManager.removeAllMocks()
+            HTTP.mockManager.addMock("foo") { (request, parameters, completion) in
+                let data = HTTP.mockManager.dataFromRequest(request)
+                // we can't parse a multipart body right now, and HTTPServer doesn't expose its parser in a way we can use.
+                // So we'll just make sure our two texts are in there and all the boundaries are there
+                XCTAssertNotNil(data.rangeOfData("Hello world".dataUsingEncoding(NSUTF8StringEncoding)!, options: [], range: NSRange(0..<data.length)).toRange(), "range of first message")
+                XCTAssertNotNil(data.rangeOfData("Goodbye world".dataUsingEncoding(NSUTF8StringEncoding)!, options: [], range: NSRange(0..<data.length)).toRange(), "range of second message")
+                outer: if let boundary = request.valueForHTTPHeaderField("Content-Type").map(MediaType.init)?.params.find({ $0.0 == "boundary" })?.1 {
+                    // We should find 2 regular boundaries and one terminator boundary
+                    // The spec allows boundaries to be followed by LWS, but we don't do that so just search for --boundary\r\n
+                    let boundaryData = "--\(boundary)\r\n".dataUsingEncoding(NSUTF8StringEncoding)!
+                    let terminatorData = "--\(boundary)--".dataUsingEncoding(NSUTF8StringEncoding)!
+                    var range = 0..<data.length
+                    for i in 1...2 {
+                        let found = data.rangeOfData(boundaryData, options: [], range: NSRange(range)).toRange()
+                        XCTAssertNotNil(found, "range of boundary \(i)")
+                        guard let found_ = found else { break outer }
+                        range.startIndex = found_.endIndex
+                    }
+                    XCTAssertNotNil(data.rangeOfData(terminatorData, options: [], range: NSRange(range)).toRange(), "range of terminator boundary")
+                }
+                completion(response: NSHTTPURLResponse(URL: request.URL!, statusCode: 200, HTTPVersion: "HTTP/1.1", headerFields: nil)!, body: NSData())
+            }
+            let req = HTTP.request(POST: "foo")
+            req.addMultipartText("Hello world", withName: "message")
+            req.addMultipartData("Goodbye world".dataUsingEncoding(NSUTF8StringEncoding)!, withName: "data")
+            expectationForRequestSuccess(req)
+            waitForExpectationsWithTimeout(5, handler: nil)
+        }
     }
     
     func testMockHTTPMethods() {

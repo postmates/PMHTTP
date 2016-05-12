@@ -378,3 +378,25 @@ internal struct ChainGenerator<First: GeneratorType, Second: GeneratorType where
     private var second: Second
     private var firstDone: Bool = false
 }
+
+/// Returns the mach absolute time in nanoseconds.
+/// This is a monotonic clock that is suitable for measuring short durations.
+/// - Bug: This function might overflow when converting to the timebase.
+///   The overflow will not trap, but will likely result in an incorrect value.
+internal func getMachAbsoluteTimeInNanoseconds() -> UInt64 {
+    struct Static {
+        static let timebase: mach_timebase_info = {
+            var timebase = mach_timebase_info(numer: 0, denom: 0)
+            let err = mach_timebase_info(&timebase)
+            if err != 0 {
+                print("Error in mach_timebase_info: \(err)")
+                exit(1)
+            }
+            return timebase
+        }()
+    }
+    
+    let timebase = Static.timebase
+    let time = mach_absolute_time()
+    return time &* UInt64(timebase.numer) / UInt64(timebase.denom)
+}

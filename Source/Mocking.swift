@@ -313,6 +313,61 @@ public final class HTTPMockManager: NSObject {
     }
 }
 
+public extension HTTPMockManager {
+    /// A convenience function for reading the body data from an `NSURLRequest`.
+    ///
+    /// If the request has `HTTPBody` set, it is returned, otherwise if it has `HTTPBodyStream`,
+    /// the stream is read to exhaustion. If the request has no body, an empty `NSData` is returned.
+    ///
+    /// - Warning: If the request has an `HTTPBodyStream` but it cannot be opened (e.g. because it
+    ///   has already been read), an empty `NSData` is returned. Similarly, if the stream takes longer
+    ///   than 400ms to open, an empty `NSData` is returned.
+    ///
+    /// This function is primarily intended to be used from within a handler block passed to
+    /// `addMock(_:httpMethod:queue:handler:)`.
+    func dataFromRequest(request: NSURLRequest) -> NSData {
+        if let body = request.HTTPBody {
+            return body
+        }
+        if let stream = request.HTTPBodyStream {
+            stream.open()
+            switch stream.streamStatus {
+            case .Opening:
+                // I don't think any of the streams we expect to get have an Opening phase but
+                // we'll handle it anyway by polling for up to the fairly arbitrarily-chosen 400ms.
+                let start = getMachAbsoluteTimeInNanoseconds()
+                repeat {
+                    // yield to the scheduler so we're not actually spinning too much
+                    sched_yield()
+                } while stream.streamStatus == .Opening && getMachAbsoluteTimeInNanoseconds() &- start < 400_000_000
+            case .Open:
+                break
+            default:
+                // We couldn't open it
+                return NSData()
+            }
+            defer { stream.close() }
+            let data = NSMutableData()
+            let bufferSize = 64 * 1024 // 64kB
+            let buffer = UnsafeMutablePointer<UInt8>.alloc(bufferSize)
+            defer { buffer.dealloc(bufferSize) }
+            loop: repeat {
+                switch stream.read(buffer, maxLength: bufferSize) {
+                case 0: // EOF
+                    break loop
+                case let count where count > 0:
+                    data.appendBytes(buffer, length: count)
+                default: // error occurred
+                    // if we can't read, just return what we have
+                    break loop
+                }
+            } while true
+            return data
+        }
+        return NSData()
+    }
+}
+
 /// Represents a sequence of mock responses that will be returned from successive requests
 /// that are handled by the same mock.
 ///
