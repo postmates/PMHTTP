@@ -430,7 +430,7 @@ public final class HTTPMockSequence: NSObject {
 }
 
 public extension HTTPManagerNetworkRequest {
-    /// Modifies the request to return a mock response.
+    /// Returns a new request that returns a mock response.
     ///
     /// - Parameter statusCode: The HTTP status code to return.
     /// - Parameter headers: (Optional) A collection of HTTP headers to return.
@@ -438,12 +438,15 @@ public extension HTTPManagerNetworkRequest {
     ///   `"Content-Length"` header, one is synthesized from the data.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], data: NSData = NSData(), delay: NSTimeInterval = 0.03) {
+    /// - Returns: A copy of `self` that returns a mock response.
+    @warn_unused_result
+    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], data: NSData = NSData(), delay: NSTimeInterval = 0.03) -> Self {
+        let newRequest = self.dynamicType.init(__copyOfRequest: self)
         var headers = headers
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.length)
         }
-        mock = HTTPMockInstance(queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), parameters: [:], handler: { (request, parameters, completion) in
+        newRequest.mock = HTTPMockInstance(queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), parameters: [:], handler: { (request, parameters, completion) in
             let response = NSHTTPURLResponse(URL: request.URL!, statusCode: statusCode, HTTPVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(delay * NSTimeInterval(NSEC_PER_SEC))), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0)) {
@@ -453,9 +456,10 @@ public extension HTTPManagerNetworkRequest {
                 completion(response: response, body: data)
             }
         })
+        return newRequest
     }
     
-    /// Modifies the request to return a mock plain text response.
+    /// Retursn a new request that returns a mock plain text response.
     ///
     /// - Parameter statusCode: The HTTP status code to return.
     /// - Parameter headers: (Optional) A collection of HTTP headers to return. If `"Content-Type"`
@@ -464,16 +468,18 @@ public extension HTTPManagerNetworkRequest {
     ///   `"Content-Length"` header, one is synthesized from the text.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], text: String, delay: NSTimeInterval = 0.03) {
+    /// - Returns: A copy of `self` that returns a mock plain text response.
+    @warn_unused_result
+    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], text: String, delay: NSTimeInterval = 0.03) -> Self {
         let data = text.dataUsingEncoding(NSUTF8StringEncoding) ?? NSData()
         var headers = headers
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = "text/plain; charset=utf-8"
         }
-        mock(statusCode: statusCode, headers: headers, data: data, delay: delay)
+        return mock(statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
-    /// Modifies the request to return a mock JSON response.
+    /// Returns a new request that returns a mock JSON response.
     ///
     /// - Parameter statusCode: The HTTP status code to return.
     /// - Parameter headers: (Optional) A collection of HTTP headers to return. If `"Content-Type"`
@@ -482,23 +488,20 @@ public extension HTTPManagerNetworkRequest {
     ///   `"Content-Length"` header, one is synthesized from the encoded JSON.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], json: JSON, delay: NSTimeInterval = 0.03) {
+    /// - Returns: A copy of `self` that returns a mock JSON response.
+    @warn_unused_result
+    public func mock(statusCode statusCode: Int, headers: [String: String] = [:], json: JSON, delay: NSTimeInterval = 0.03) -> Self {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = "application/json"
         }
-        mock(statusCode: statusCode, headers: headers, data: data, delay: delay)
-    }
-    
-    /// Removes any mock previously added with `mock(...)`.
-    public func clearMock() {
-        mock = nil
+        return mock(statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
 }
 
 public extension HTTPManagerParseRequest {
-    /// Modifies the request to return a mock response.
+    /// Returns a new request that returns a mock response.
     ///
     /// Requests with a mock response will not hit the network and will not invoke the
     /// parse handler.
@@ -510,16 +513,19 @@ public extension HTTPManagerParseRequest {
     /// - Parameter value: The parsed value to return.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
+    /// - Returns: A copy of `self` that returns a mock response.
     ///
     /// - Note: If the parse result type `T` is `JSON` and `headers` does not define the
     ///   `"Content-Type"` header, a default value of `"application/json"` will be used.
-    public func mock(headers headers: [String: String] = [:], value: T, delay: NSTimeInterval = 0.03) {
+    @warn_unused_result
+    public func mock(headers headers: [String: String] = [:], value: T, delay: NSTimeInterval = 0.03) -> Self {
+        let newRequest = self.dynamicType.init(__copyOfRequest: self)
         var headers = headers
         if T.self is JSON.Type && headers["Content-Type"] == nil {
             headers["Content-Type"] = "application/json"
         }
         // Add a network mock that returns a 200 response with no data.
-        mock = HTTPMockInstance(queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), parameters: [:], handler: { (request, parameters, completion) in
+        newRequest.mock = HTTPMockInstance(queue: dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), parameters: [:], handler: { (request, parameters, completion) in
             let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 200, HTTPVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(delay * NSTimeInterval(NSEC_PER_SEC))), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0)) {
@@ -531,21 +537,13 @@ public extension HTTPManagerParseRequest {
         })
         // NB: Don't use @autoclosure(escaping) on `value` because that has surprising behavior when
         // closing over a mutable variable (e.g. it doesn't make a copy of the value).
-        dataMock = { value }
-    }
-    
-    /// Removes any mock previously added with `mock(...)`.
-    ///
-    /// This removes both the parse result mock added with `HTTPManagerParseRequest.mock(...)`
-    /// as well as any inherited network mock added with `HTTPManagerNetworkRequest.mock(...)`.
-    public func clearMock() {
-        mock = nil
-        dataMock = nil
+        newRequest.dataMock = { value }
+        return newRequest
     }
 }
 
 public extension HTTPManagerObjectParseRequest {
-    /// Modifies the request to return a mock response.
+    /// Returns a new request that returns a mock response.
     ///
     /// Requests with a mock response will not hit the network and will not invoke the
     /// parse handler.
@@ -554,13 +552,15 @@ public extension HTTPManagerObjectParseRequest {
     /// by this method.
     ///
     /// - Parameter value: The parsed value to return.
+    /// - Returns: A copy of `self` that returns a mock response.
     ///
     /// - SeeAlso: `mock(headers:value:delay:)`.
-    public func mock(value: AnyObject?) {
-        _request.mock(value: value)
+    @warn_unused_result
+    public func mock(value: AnyObject?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: _request.mock(value: value))
     }
     
-    /// Modifies the request to return a mock response.
+    /// Returns a new request that returns a mock response.
     ///
     /// Requests with a mock response will not hit the network and will not invoke the
     /// parse handler.
@@ -572,16 +572,10 @@ public extension HTTPManagerObjectParseRequest {
     /// - Parameter value: The parsed object to return.
     /// - Parameter delay: The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func mock(headers headers: [String: String], value: AnyObject?, delay: NSTimeInterval) {
-        _request.mock(headers: headers, value: value, delay: delay)
-    }
-    
-    /// Removes any mock previously added with `mock(...)`.
-    ///
-    /// This removes both the parse result mock added with `HTTPManagerParseRequest.mock(...)`
-    /// as well as any inherited network mock added with `HTTPManagerNetworkRequest.mock(...)`.
-    public func clearMock() {
-        _request.clearMock()
+    /// - Returns: A copy of `self` that returns a mock response.
+    @warn_unused_result
+    public func mock(headers headers: [String: String], value: AnyObject?, delay: NSTimeInterval) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: _request.mock(headers: headers, value: value, delay: delay))
     }
 }
 

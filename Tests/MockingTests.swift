@@ -261,21 +261,19 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockRequest() {
-        let req = HTTP.request(GET: "foo")
-        req.mock(statusCode: 200, text: "Mock response")
+        var req = HTTP.request(GET: "foo")
+            .mock(statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(req) { (task, response, value) in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "mock response status code")
             XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Mock response", "mock response body text")
         }
         waitForExpectationsWithTimeout(5, handler: nil)
         
-        req.clearMock()
-        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .OK, text: "Server response"))
-        }
+        // Calling .mock again should override the previous mock
+        req = req.mock(statusCode: 201, text: "Second response")
         expectationForRequestSuccess(req) { (task, response, value) in
-            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "server response status code")
-            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Server response", "server response body text")
+            XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 201, "mock response status code")
+            XCTAssertEqual(String(data: value, encoding: NSUTF8StringEncoding), "Second response", "mock response body text")
         }
         waitForExpectationsWithTimeout(5, handler: nil)
     }
@@ -292,7 +290,7 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockRequestJSON() {
         let req = HTTP.request(GET: "foo")
-        req.mock(statusCode: 200, headers: ["Content-Type": "application/json"], text: "{ \"ok\": true, \"elts\": [1,2,3,4,5] }")
+            .mock(statusCode: 200, headers: ["Content-Type": "application/json"], text: "{ \"ok\": true, \"elts\": [1,2,3,4,5] }")
         expectationForRequestSuccess(req.parseAsJSON()) { (task, response, json) in
             XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(response.MIMEType, "application/json", "MIME type")
@@ -345,8 +343,8 @@ class MockingTests: PMHTTPTestCase {
         // Ensure the response is always delayed by at least the given delay.
         // Give it up to 100ms longer than the delay for the actual response since we cannot rely on the precise timing
         // of asynchronous operations.
-        let req = HTTP.request(GET: "foo")
-        req.mock(statusCode: 200, delay: 0.05)
+        let baseReq = HTTP.request(GET: "foo")
+        var req = baseReq.mock(statusCode: 200, delay: 0.05)
         var start = CACurrentMediaTime()
         expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -354,7 +352,7 @@ class MockingTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
         
-        req.mock(statusCode: 200, delay: 0)
+        req = baseReq.mock(statusCode: 200, delay: 0)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -362,7 +360,7 @@ class MockingTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
         
-        req.mock(statusCode: 200, delay: 0.15)
+        req = baseReq.mock(statusCode: 200, delay: 0.15)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -630,8 +628,8 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockParse() {
         do {
-            let req = HTTP.request(GET: "foo").parseAsJSON()
-            req.mock(value: ["ok": true, "elts": [1,2,3]])
+            var req = HTTP.request(GET: "foo").parseAsJSON()
+                .mock(value: ["ok": true, "elts": [1,2,3]])
             expectationForRequestSuccess(req) { (task, response, json) in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "Content-Type header")
@@ -639,25 +637,33 @@ class MockingTests: PMHTTPTestCase {
             }
             waitForExpectationsWithTimeout(5, handler: nil)
             
-            req.clearMock()
-            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-                completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Type": "application/json"], body: "{\"ok\": true}"))
-            }
+            // Calling .mock again should override the previous mock
+            req = req.mock(value: ["foo": "bar"])
             expectationForRequestSuccess(req) { (task, response, json) in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "Content-Type header")
-                XCTAssertEqual(json, ["ok": true], "body JSON")
+                XCTAssertEqual(json, ["foo": "bar"], "body JSON")
             }
             waitForExpectationsWithTimeout(5, handler: nil)
         }
         
         do {
-            let req = HTTP.request(GET: "foo").parseAsJSON()
-            req.mock(headers: ["Content-Type": "text/plain"], value: ["foo": "bar"])
+            var req = HTTP.request(GET: "foo").parseAsJSON()
+                .mock(headers: ["Content-Type": "text/plain"], value: ["foo": "bar"])
             expectationForRequestSuccess(req) { (task, response, json) in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "Content-Type header")
                 XCTAssertEqual(json, ["foo": "bar"], "body JSON")
+            }
+            waitForExpectationsWithTimeout(5, handler: nil)
+            
+            // Overriding the mock should override headers too
+            req = req.mock(headers: ["X-Foo": "qux"], value: ["ok": true])
+            expectationForRequestSuccess(req) { (task, response, json) in
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "Content-Type header")
+                XCTAssertEqual((response as? NSHTTPURLResponse)?.allHeaderFields["X-Foo"] as? String, "qux", "X-Foo header")
+                XCTAssertEqual(json, ["ok": true], "body JSON")
             }
             waitForExpectationsWithTimeout(5, handler: nil)
         }
@@ -666,8 +672,7 @@ class MockingTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo").parseWithHandler({ _ -> Int in
                 XCTFail("Parse handler unexpectedly called")
                 return 42
-            })
-            req.mock(value: 123)
+            }).mock(value: 123)
             expectationForRequestSuccess(req, completion: { (task, response, value) in
                 XCTAssertEqual(value, 123, "parsed body")
             })
@@ -676,10 +681,10 @@ class MockingTests: PMHTTPTestCase {
         
         do {
             let req = HTTP.request(GET: "foo")
-            req.mock(statusCode: 500)
-            let req_ = req.parseAsJSON()
-            req_.mock(value: ["ok": true]) // this should override the network mock
-            expectationForRequestSuccess(req_, completion: { (task, response, json) in
+                .mock(statusCode: 500)
+                .parseAsJSON()
+                .mock(value: ["ok": true]) // this should override the network mock
+            expectationForRequestSuccess(req, completion: { (task, response, json) in
                 XCTAssertEqual((response as? NSHTTPURLResponse)?.statusCode, 200, "status code")
                 XCTAssertEqual(json, ["ok": true], "body JSON")
             })
@@ -691,8 +696,8 @@ class MockingTests: PMHTTPTestCase {
         // Ensure the response is always delayed by at least the given delay.
         // Give it up to 100ms longer than the delay for the actual response since we cannot rely on the precise timing
         // of asynchronous operations.
-        let req = HTTP.request(GET: "foo").parseAsJSON()
-        req.mock(value: ["ok": true], delay: 0.05)
+        let baseReq = HTTP.request(GET: "foo").parseAsJSON()
+        var req = baseReq.mock(value: ["ok": true], delay: 0.05)
         var start = CACurrentMediaTime()
         expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -700,7 +705,7 @@ class MockingTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
         
-        req.mock(value: ["ok": true], delay: 0)
+        req = baseReq.mock(value: ["ok": true], delay: 0)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -708,7 +713,7 @@ class MockingTests: PMHTTPTestCase {
         }
         waitForExpectationsWithTimeout(5, handler: nil)
         
-        req.mock(value: ["ok": true], delay: 0.15)
+        req = baseReq.mock(value: ["ok": true], delay: 0.15)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(req) { (task, response, value) in
             let delay = CACurrentMediaTime() - start

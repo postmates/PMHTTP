@@ -904,7 +904,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     
     internal let _request: HTTPManagerParseRequest<AnyObject?>
     
-    private init(request: HTTPManagerParseRequest<AnyObject?>) {
+    internal init(request: HTTPManagerParseRequest<AnyObject?>) {
         _request = request
         super.init(apiManager: request.apiManager, URL: request.baseURL, method: request.requestMethod, parameters: [])
     }
