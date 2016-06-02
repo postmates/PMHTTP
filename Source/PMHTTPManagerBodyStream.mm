@@ -30,7 +30,7 @@
 - (nonnull instancetype)init NS_DESIGNATED_INITIALIZER;
 @end
 
-@interface PMHTTPManagerBodyStream () <NSStreamDelegate>
+@interface _PMHTTPManagerBodyStream () <NSStreamDelegate>
 - (nonnull instancetype)init NS_UNAVAILABLE;
 @end
 
@@ -68,7 +68,7 @@ public:
     }
 };
 
-@implementation PMHTTPManagerBodyStream {
+@implementation _PMHTTPManagerBodyStream {
     std::atomic<NSStreamStatus> _streamStatus;
     std::atomic<void *> _delegate;
     std::atomic<NSStreamStatus> _lastStatus;
@@ -91,7 +91,7 @@ public:
 
 - (instancetype)init {
     // For some reason clang insists on us implementing -init or it'll emit a warning.
-    @throw [NSException exceptionWithName:NSInternalInconsistencyException reason:@"-[PMHTTPManagerBodyStream init] is not available; use -initWithHandler:" userInfo:nil];
+    @throw [NSException exceptionWithName:NSInternalInconsistencyException reason:@"-[_PMHTTPManagerBodyStream init] is not available; use -initWithHandler:" userInfo:nil];
 }
 
 - (id<NSStreamDelegate>)delegate {
@@ -202,7 +202,7 @@ public:
             .retain = CFRetain,
             .release = CFRelease,
             .perform = [](void *info){
-                auto stream = (__bridge PMHTTPManagerBodyStream *)(info);
+                auto stream = (__bridge _PMHTTPManagerBodyStream *)(info);
                 auto delegate = stream.delegate;
                 if (![delegate respondsToSelector:@selector(stream:handleEvent:)]) return;
                 auto status = stream->_streamStatus.load(std::memory_order_relaxed);

@@ -16,8 +16,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface PMHTTPManagerBodyStream : NSInputStream
-/// Returns a new \c PMHTTPManagerBodyStream that uses a given handler to provide the data.
+/// A private implementation detail of PMHTTP. Do not use this class.
+__attribute__((visibility("hidden")))
+@interface _PMHTTPManagerBodyStream : NSInputStream
+/// Returns a new \c _PMHTTPManagerBodyStream that uses a given handler to provide the data.
 ///
 /// \param handler A handler function that is executed to fill a buffer. The handler must return
 ///        the number of bytes written. The handler returns \c 0 to indicate EOF, at which point

@@ -14,7 +14,7 @@
 
 import Foundation
 import PMJSON
-import PMHTTPPrivate
+import PMHTTP.Private
 
 internal final class HTTPBody {
     /// Returns an `NSInputStream` that produces a multipart/mixed HTTP body.
@@ -22,7 +22,7 @@ internal final class HTTPBody {
     ///   method, and should be waited on to guarantee the value is ready.
     class func createMultipartMixedStream(boundary: String, parameters: [NSURLQueryItem], bodyParts: [MultipartBodyPart]) -> NSInputStream {
         let body = HTTPBody(boundary: boundary, parameters: parameters, bodyParts: bodyParts)
-        return PMHTTPManagerBodyStream(handler: { (buffer, maxLength) -> Int in
+        return _PMHTTPManagerBodyStream(handler: { (buffer, maxLength) -> Int in
             return body.readIntoBuffer(buffer, maxLength)
         })
     }

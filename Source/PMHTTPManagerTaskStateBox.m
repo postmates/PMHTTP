@@ -32,13 +32,13 @@ typedef struct TaskList {
     const void * _Nonnull object;
 } TaskList;
 
-@implementation PMHTTPManagerTaskStateBox {
+@implementation _PMHTTPManagerTaskStateBox {
     atomic_uchar _state;
     _Atomic(const void * _Nonnull) _networkTask;
     _Atomic(TaskList * _Nullable) _taskListHead;
 }
 
-- (nonnull instancetype)initWithState:(PMHTTPManagerTaskStateBoxState)state networkTask:(nonnull NSURLSessionTask *)networkTask {
+- (nonnull instancetype)initWithState:(_PMHTTPManagerTaskStateBoxState)state networkTask:(nonnull NSURLSessionTask *)networkTask {
     if ((self = [super init])) {
         atomic_init(&_state, state);
         atomic_init(&_networkTask, (__bridge_retained const void *)networkTask);
@@ -62,7 +62,7 @@ typedef struct TaskList {
     }
 }
 
-- (PMHTTPManagerTaskStateBoxState)state {
+- (_PMHTTPManagerTaskStateBoxState)state {
     return atomic_load_explicit(&_state, memory_order_relaxed);
 }
 
@@ -88,43 +88,43 @@ typedef struct TaskList {
     }
 }
 
-- (PMHTTPManagerTaskStateBoxResult)transitionStateTo:(PMHTTPManagerTaskStateBoxState)newState {
+- (_PMHTTPManagerTaskStateBoxResult)transitionStateTo:(_PMHTTPManagerTaskStateBoxState)newState {
     switch (newState) {
-        case PMHTTPManagerTaskStateBoxStateRunning: {
+        case _PMHTTPManagerTaskStateBoxStateRunning: {
             // We can only transfer here from Processing (this is done when a failed task is retried).
-            PMHTTPManagerTaskStateBoxState expected = PMHTTPManagerTaskStateBoxStateProcessing;
+            _PMHTTPManagerTaskStateBoxState expected = _PMHTTPManagerTaskStateBoxStateProcessing;
             _Bool success = atomic_compare_exchange_strong_explicit(&_state, &expected, newState, memory_order_relaxed, memory_order_relaxed);
-            return (PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
+            return (_PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
         }
-        case PMHTTPManagerTaskStateBoxStateProcessing: {
+        case _PMHTTPManagerTaskStateBoxStateProcessing: {
             // We can only transition here from Running.
-            PMHTTPManagerTaskStateBoxState expected = PMHTTPManagerTaskStateBoxStateRunning;
+            _PMHTTPManagerTaskStateBoxState expected = _PMHTTPManagerTaskStateBoxStateRunning;
             _Bool success = atomic_compare_exchange_strong_explicit(&_state, &expected, newState, memory_order_relaxed, memory_order_relaxed);
-            return (PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
+            return (_PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
         }
-        case PMHTTPManagerTaskStateBoxStateCanceled: {
+        case _PMHTTPManagerTaskStateBoxStateCanceled: {
             // Transition from Running or Processing.
-            PMHTTPManagerTaskStateBoxState expected = PMHTTPManagerTaskStateBoxStateRunning;
+            _PMHTTPManagerTaskStateBoxState expected = _PMHTTPManagerTaskStateBoxStateRunning;
             while (1) {
                 if (atomic_compare_exchange_weak_explicit(&_state, &expected, newState, memory_order_relaxed, memory_order_relaxed)) {
-                    return (PMHTTPManagerTaskStateBoxResult){true, expected};
+                    return (_PMHTTPManagerTaskStateBoxResult){true, expected};
                 }
                 switch (expected) {
-                    case PMHTTPManagerTaskStateBoxStateRunning:
-                    case PMHTTPManagerTaskStateBoxStateProcessing:
+                    case _PMHTTPManagerTaskStateBoxStateRunning:
+                    case _PMHTTPManagerTaskStateBoxStateProcessing:
                         break;
-                    case PMHTTPManagerTaskStateBoxStateCanceled:
-                        return (PMHTTPManagerTaskStateBoxResult){true, expected};
-                    case PMHTTPManagerTaskStateBoxStateCompleted:
-                        return (PMHTTPManagerTaskStateBoxResult){false, expected};
+                    case _PMHTTPManagerTaskStateBoxStateCanceled:
+                        return (_PMHTTPManagerTaskStateBoxResult){true, expected};
+                    case _PMHTTPManagerTaskStateBoxStateCompleted:
+                        return (_PMHTTPManagerTaskStateBoxResult){false, expected};
                 }
             }
         }
-        case PMHTTPManagerTaskStateBoxStateCompleted: {
+        case _PMHTTPManagerTaskStateBoxStateCompleted: {
             // We can transition only from Processing.
-            PMHTTPManagerTaskStateBoxState expected = PMHTTPManagerTaskStateBoxStateProcessing;
+            _PMHTTPManagerTaskStateBoxState expected = _PMHTTPManagerTaskStateBoxStateProcessing;
             _Bool success = atomic_compare_exchange_strong_explicit(&_state, &expected, newState, memory_order_relaxed, memory_order_relaxed);
-            return (PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
+            return (_PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
         }
     }
 }

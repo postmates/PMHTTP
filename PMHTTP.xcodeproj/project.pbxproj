@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A7677EC1CFFE2C2005D160D /* PMHTTPManagerBodyStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		0A7677ED1CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */; };
+		0A7677EE1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		0A7677EF1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m in Sources */ = {isa = PBXBuildFile; fileRef = 0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */; };
 		9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E139FA31C4EC82F00A764BD /* PMHTTPError.m */; };
 		9E139FA61C4EC9EE00A764BD /* PMHTTPError.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E139FA51C4EC83800A764BD /* PMHTTPError.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E22DD291C88CEF200C49993 /* DateParsing.swift */; };
@@ -18,8 +22,6 @@
 		9E4C77C91C3B568C000FF8AC /* HTTPManagerRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */; };
 		9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */; };
 		9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */; };
-		9E4C77D01C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E4C77CE1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h */; };
-		9E4C77D11C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CF1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m */; };
 		9E55BD721C5FE25F001CC5D6 /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E55BD711C5FE25F001CC5D6 /* CFNetwork.framework */; };
 		9E681CB81C56EB1000422CE4 /* SipHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E681CB71C56EB1000422CE4 /* SipHash.swift */; };
 		9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E681CB91C56FBF100422CE4 /* SipHashTests.swift */; };
@@ -29,8 +31,6 @@
 		9E7DDF4B1C1A388400EA43AD /* HTTPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */; };
 		9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */; };
 		9E8C1E441CAF50A6000D7FA2 /* PMHTTPRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */; };
-		9E9B5B421CD9575D006395A6 /* PMHTTPManagerBodyStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E9B5B401CD9575D006395A6 /* PMHTTPManagerBodyStream.h */; };
-		9E9B5B431CD9575D006395A6 /* PMHTTPManagerBodyStream.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9E9B5B411CD9575D006395A6 /* PMHTTPManagerBodyStream.mm */; };
 		9E9B5B441CD96194006395A6 /* HTTPBodyStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */; };
 		9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4EE341CB71E4F00E4E531 /* Mocking.swift */; };
 		9EA4EE371CBC197D00E4E531 /* MockingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4EE361CBC197D00E4E531 /* MockingTests.swift */; };
@@ -50,6 +50,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0A7677E61CFFD8DF005D160D /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerBodyStream.h; sourceTree = "<group>"; };
+		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
+		0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
+		0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPManagerTaskStateBox.m; sourceTree = "<group>"; };
 		9E139FA31C4EC82F00A764BD /* PMHTTPError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPError.m; sourceTree = "<group>"; };
 		9E139FA51C4EC83800A764BD /* PMHTTPError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMHTTPError.h; sourceTree = "<group>"; };
 		9E22DD291C88CEF200C49993 /* DateParsing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateParsing.swift; sourceTree = "<group>"; };
@@ -62,9 +67,6 @@
 		9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManagerRequest.swift; sourceTree = "<group>"; };
 		9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManagerTask.swift; sourceTree = "<group>"; };
 		9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UploadSupport.swift; sourceTree = "<group>"; };
-		9E4C77CE1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
-		9E4C77CF1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPManagerTaskStateBox.m; sourceTree = "<group>"; };
-		9E4C77D51C3C9D90000FF8AC /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		9E55BD711C5FE25F001CC5D6 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
 		9E67E0BC1CC6DD7D007FE41F /* LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-APACHE"; sourceTree = "<group>"; };
 		9E67E0BD1CC6DD7D007FE41F /* LICENSE-MIT */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-MIT"; sourceTree = "<group>"; };
@@ -80,8 +82,6 @@
 		9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManager.swift; sourceTree = "<group>"; };
 		9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPTestCase.swift; sourceTree = "<group>"; };
 		9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPRetryTests.swift; sourceTree = "<group>"; };
-		9E9B5B401CD9575D006395A6 /* PMHTTPManagerBodyStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerBodyStream.h; sourceTree = "<group>"; };
-		9E9B5B411CD9575D006395A6 /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
 		9EA4EE341CB71E4F00E4E531 /* Mocking.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Mocking.swift; sourceTree = "<group>"; };
 		9EA4EE361CBC197D00E4E531 /* MockingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MockingTests.swift; sourceTree = "<group>"; };
 		9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
@@ -110,16 +110,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		9E4C77D41C3C9D7F000FF8AC /* Private */ = {
+		0A7677E71CFFE2B3005D160D /* Private */ = {
 			isa = PBXGroup;
 			children = (
-				9E4C77D51C3C9D90000FF8AC /* module.modulemap */,
-				9E4C77CE1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h */,
-				9E4C77CF1C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m */,
-				9E9B5B401CD9575D006395A6 /* PMHTTPManagerBodyStream.h */,
-				9E9B5B411CD9575D006395A6 /* PMHTTPManagerBodyStream.mm */,
+				0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */,
+				0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */,
+				0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */,
+				0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */,
 			);
-			path = Private;
+			name = Private;
 			sourceTree = "<group>";
 		};
 		9E55BD701C5FE252001CC5D6 /* Frameworks */ = {
@@ -170,7 +169,8 @@
 				9E139FA31C4EC82F00A764BD /* PMHTTPError.m */,
 				9E4C77821C2B792A000FF8AC /* QueueConfined.swift */,
 				9E681CB71C56EB1000422CE4 /* SipHash.swift */,
-				9E4C77D41C3C9D7F000FF8AC /* Private */,
+				0A7677E71CFFE2B3005D160D /* Private */,
+				0A7677E61CFFD8DF005D160D /* module.modulemap */,
 				9E7DDF261C18F2B600EA43AD /* Info.plist */,
 				9E55BD701C5FE252001CC5D6 /* Frameworks */,
 			);
@@ -211,10 +211,10 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9E9B5B421CD9575D006395A6 /* PMHTTPManagerBodyStream.h in Headers */,
-				9E4C77D01C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.h in Headers */,
 				9E7DDF251C18F2B600EA43AD /* PMHTTP.h in Headers */,
 				9E139FA61C4EC9EE00A764BD /* PMHTTPError.h in Headers */,
+				0A7677EE1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h in Headers */,
+				0A7677EC1CFFE2C2005D160D /* PMHTTPManagerBodyStream.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,12 +339,12 @@
 				9E4C77C91C3B568C000FF8AC /* HTTPManagerRequest.swift in Sources */,
 				9E7DDF4B1C1A388400EA43AD /* HTTPManager.swift in Sources */,
 				9E4C77831C2B792A000FF8AC /* QueueConfined.swift in Sources */,
+				0A7677EF1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m in Sources */,
 				9E9B5B441CD96194006395A6 /* HTTPBodyStream.swift in Sources */,
+				0A7677ED1CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm in Sources */,
 				9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */,
 				9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */,
-				9E9B5B431CD9575D006395A6 /* PMHTTPManagerBodyStream.mm in Sources */,
 				9E681CB81C56EB1000422CE4 /* SipHash.swift in Sources */,
-				9E4C77D11C3C9D25000FF8AC /* PMHTTPManagerTaskStateBox.m in Sources */,
 				9E39E9C01C3E100D005F7A95 /* NetworkActivityManager.swift in Sources */,
 				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,
@@ -490,10 +490,10 @@
 				INFOPLIST_FILE = Source/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = Source/module.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMHTTP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Source/Private/";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -510,10 +510,10 @@
 				INFOPLIST_FILE = Source/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = Source/module.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMHTTP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Source/Private/";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Release;

@@ -13,7 +13,7 @@
 //
 
 import Foundation
-import PMHTTPPrivate
+import PMHTTP.Private
 
 /// An initiated HTTP operation.
 ///
@@ -103,7 +103,7 @@ public final class HTTPManagerTask: NSObject {
     #endif
     
     internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
-        _stateBox = PMHTTPManagerTaskStateBox(state: State.Running.boxState, networkTask: networkTask)
+        _stateBox = _PMHTTPManagerTaskStateBox(state: State.Running.boxState, networkTask: networkTask)
         isIdempotent = request.isIdempotent
         credential = request.credential
         userInitiated = request.userInitiated
@@ -143,7 +143,7 @@ public final class HTTPManagerTask: NSObject {
         return (result.completed, State(result.oldState))
     }
     
-    private let _stateBox: PMHTTPManagerTaskStateBox
+    private let _stateBox: _PMHTTPManagerTaskStateBox
 }
 
 extension HTTPManagerTask {
@@ -185,7 +185,7 @@ extension HTTPManagerTask {
 
 /// The state of an `HTTPManagerTask`.
 @objc public enum HTTPManagerTaskState: CUnsignedChar, CustomStringConvertible {
-    // Important: The constants here must match those defined in PMHTTPManagerTaskStateBoxState
+    // Important: The constants here must match those defined in _PMHTTPManagerTaskStateBoxState
     
     /// The task is currently running.
     case Running = 0
@@ -207,12 +207,12 @@ extension HTTPManagerTask {
         }
     }
     
-    private init(_ boxState: PMHTTPManagerTaskStateBoxState) {
+    private init(_ boxState: _PMHTTPManagerTaskStateBoxState) {
         self = unsafeBitCast(boxState, HTTPManagerTaskState.self)
     }
     
-    private var boxState: PMHTTPManagerTaskStateBoxState {
-        return unsafeBitCast(self, PMHTTPManagerTaskStateBoxState.self)
+    private var boxState: _PMHTTPManagerTaskStateBoxState {
+        return unsafeBitCast(self, _PMHTTPManagerTaskStateBoxState.self)
     }
 }
 

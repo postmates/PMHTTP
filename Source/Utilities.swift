@@ -12,6 +12,8 @@
 //  except according to those terms.
 //
 
+import Darwin
+
 /// Returns `true` iff the unicode scalar is a Linear White Space character
 /// (as defined by RFC 2616).
 internal func isLWS(us: UnicodeScalar) -> Bool {

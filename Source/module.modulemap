@@ -1,0 +1,10 @@
+framework module PMHTTP {
+    umbrella header "PMHTTP.h"
+    export PMHTTP.PMHTTPError
+}
+
+explicit module PMHTTP.Private {
+    header "PMHTTPManagerTaskStateBox.h"
+    header "PMHTTPManagerBodyStream.h"
+    export *
+}

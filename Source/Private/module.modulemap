@@ -1,5 +1,0 @@
-module PMHTTPPrivate {
-    header "PMHTTPManagerTaskStateBox.h"
-    header "PMHTTPManagerBodyStream.h"
-    export *
-}

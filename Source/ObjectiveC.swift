@@ -12,6 +12,7 @@
 //  except according to those terms.
 //
 
+import Foundation
 import PMJSON
 
 // obj-c helpers

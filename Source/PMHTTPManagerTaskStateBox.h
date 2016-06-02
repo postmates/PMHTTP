@@ -14,32 +14,36 @@
 
 @import Foundation;
 
-typedef NS_ENUM(unsigned char, PMHTTPManagerTaskStateBoxState) {
+/// A private implementation detail of PMHTTP. Do not use this enum.
+typedef NS_ENUM(unsigned char, _PMHTTPManagerTaskStateBoxState) {
     /// The Running state. This state can transition into Processing and Canceled.
-    PMHTTPManagerTaskStateBoxStateRunning = 0,
+    _PMHTTPManagerTaskStateBoxStateRunning = 0,
     /// The Processing state. This state can transition into any state. Transitioning
     /// back into Running occurs when the task fails and is automatically retried.
-    PMHTTPManagerTaskStateBoxStateProcessing = 1,
+    _PMHTTPManagerTaskStateBoxStateProcessing = 1,
     /// The Canceled state. This state cannot transition anywhere.
-    PMHTTPManagerTaskStateBoxStateCanceled = 2,
+    _PMHTTPManagerTaskStateBoxStateCanceled = 2,
     /// The Completed state. This state cannot transition anywhere.
-    PMHTTPManagerTaskStateBoxStateCompleted = 3
+    _PMHTTPManagerTaskStateBoxStateCompleted = 3
 };
 
-typedef struct PMHTTPManagerTaskStateBoxResult {
+/// A private implementation detail of PMHTTP. Do not use this struct.
+typedef struct _PMHTTPManagerTaskStateBoxResult {
     /// `true` if the state is now in the desired state, whether
     /// or not a transition actually happened.
     _Bool completed;
     /// The state that it was in before.
-    PMHTTPManagerTaskStateBoxState oldState;
-} PMHTTPManagerTaskStateBoxResult;
+    _PMHTTPManagerTaskStateBoxState oldState;
+} _PMHTTPManagerTaskStateBoxResult;
 
+/// A private implementation detail of PMHTTP. Do not use this class.
 __attribute__((objc_subclassing_restricted))
-@interface PMHTTPManagerTaskStateBox : NSObject
-@property (atomic, readonly) PMHTTPManagerTaskStateBoxState state;
+__attribute__((visibility("hidden")))
+@interface _PMHTTPManagerTaskStateBox : NSObject
+@property (atomic, readonly) _PMHTTPManagerTaskStateBoxState state;
 @property (atomic, nonnull) NSURLSessionTask *networkTask;
-- (nonnull instancetype)initWithState:(PMHTTPManagerTaskStateBoxState)state networkTask:(nonnull NSURLSessionTask *)task NS_DESIGNATED_INITIALIZER;
+- (nonnull instancetype)initWithState:(_PMHTTPManagerTaskStateBoxState)state networkTask:(nonnull NSURLSessionTask *)task NS_DESIGNATED_INITIALIZER;
 - (nonnull instancetype)init NS_UNAVAILABLE;
 /// Transitions the state to \c newState if possible.
-- (PMHTTPManagerTaskStateBoxResult)transitionStateTo:(PMHTTPManagerTaskStateBoxState)newState;
+- (_PMHTTPManagerTaskStateBoxResult)transitionStateTo:(_PMHTTPManagerTaskStateBoxState)newState;
 @end
