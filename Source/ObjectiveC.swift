@@ -778,12 +778,10 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         set { _request.retryBehavior = newValue }
     }
     
-    #if os(iOS)
     public override var affectsNetworkActivityIndicator: Bool {
         get { return _request.affectsNetworkActivityIndicator }
         set { _request.affectsNetworkActivityIndicator = newValue }
     }
-    #endif
     
     public override var headerFields: HTTPHeaders {
         get { return _request.headerFields }

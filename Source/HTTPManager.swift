@@ -35,6 +35,22 @@ public let HTTP = HTTPManager(shared: true)
 public final class HTTPManager: NSObject {
     public typealias Environment = HTTPManagerEnvironment
     
+    /// A block that is invoked whenever the number of outstanding `HTTPManagerTask`s changes.
+    ///
+    /// If the value of this property changes while there are outstanding tasks, the old
+    /// value is not invoked, but the new value will be invoked asynchronously with the current
+    /// number of tasks. If there are no outstanding tasks the new value will not be invoked.
+    ///
+    /// - Note: This block is always invoked on the main thread.
+    public static var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)? {
+        get {
+            return NetworkActivityManager.shared.networkActivityHandler
+        }
+        set {
+            NetworkActivityManager.shared.networkActivityHandler = newValue
+        }
+    }
+    
     /// The current environment. The default value is `nil`.
     ///
     /// Changes to this property affects any newly-created requests but do not
@@ -162,15 +178,6 @@ public final class HTTPManager: NSObject {
         }
     }
     
-    #if os(iOS)
-    /// Tracks a given `NSURLSessionTask` for the network activity indicator.
-    /// Only use this if you create a task yourself, any tasks created by
-    /// `HTTPManager` are automatically tracked (unless disabled by the request).
-    public static func trackNetworkActivityForTask(task: NSURLSessionTask) {
-        NetworkActivityManager.shared.trackTask(task)
-    }
-    #endif
-    
     /// Creates and returns a new `HTTPManager`.
     ///
     /// The returned `HTTPManager` needs its `environment` set, but is otherwise ready
@@ -254,7 +261,9 @@ public final class HTTPManager: NSObject {
         var classes = config.protocolClasses ?? []
         classes.insert(HTTPMockURLProtocol.self, atIndex: 0)
         config.protocolClasses = classes
-        inner.session = NSURLSession(configuration: config, delegate: sessionDelegate, delegateQueue: nil)
+        let session = NSURLSession(configuration: config, delegate: sessionDelegate, delegateQueue: nil)
+        inner.session = session
+        session.delegateQueue.name = "HTTPManager session delegate queue"
     }
 }
 
@@ -1096,7 +1105,7 @@ extension HTTPManager {
             case nil:
                 networkTask = inner.session.dataTaskWithRequest(urlRequest)
             }
-            let apiTask = HTTPManagerTask(networkTask: networkTask, request: request)
+            let apiTask = HTTPManagerTask(networkTask: networkTask, request: request, sessionDelegateQueue: inner.session.delegateQueue)
             let taskInfo = SessionDelegate.TaskInfo(task: apiTask, uploadBody: uploadBody, processor: processor)
             inner.session.delegateQueue.addOperationWithBlock { [sessionDelegate=inner.sessionDelegate] in
                 assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
@@ -1104,11 +1113,6 @@ extension HTTPManager {
             }
             return apiTask
         }
-        #if os(iOS)
-            if apiTask.trackingNetworkActivity {
-                NetworkActivityManager.shared.incrementCounter()
-            }
-        #endif
         if apiTask.userInitiated {
             apiTask.networkTask.priority = NSURLSessionTaskPriorityHigh
         }
@@ -1124,10 +1128,9 @@ extension HTTPManager {
     /// The newly-created `NSURLSessionTask` is automatically resumed.
     ///
     /// - Parameter taskInfo: The `TaskInfo` object representing the task to retry.
-    /// - Returns: An `NSURLSessionTask` for the retry, or `nil` if the task could not be retried
+    /// - Returns: `true` if the task is retrying, or `false` if it could not be retried
     ///   (e.g. because it's already been canceled).
-    /// - Important: After creating the new network task, you must start it by calling the `resume()` method.
-    private func retryNetworkTask(taskInfo: SessionDelegate.TaskInfo) -> NSURLSessionTask? {
+    private func retryNetworkTask(taskInfo: SessionDelegate.TaskInfo) -> Bool {
         guard let request = taskInfo.task.networkTask.originalRequest else {
             preconditionFailure("internal HTTPManager error: networkTask.originalRequest is nil")
         }
@@ -1156,16 +1159,17 @@ extension HTTPManager {
             return networkTask
         }
         if let networkTask = networkTask {
-            #if os(iOS)
-                if taskInfo.task.trackingNetworkActivity {
-                    NetworkActivityManager.shared.incrementCounter()
-                }
-            #endif
+            if taskInfo.task.affectsNetworkActivityIndicator {
+                taskInfo.task.setTrackingNetworkActivity()
+            }
             if taskInfo.task.userInitiated {
                 networkTask.priority = NSURLSessionTaskPriorityHigh
             }
+            networkTask.resume()
+            return true
+        } else {
+            return false
         }
-        return networkTask
     }
 }
 
@@ -1188,11 +1192,9 @@ extension SessionDelegate: NSURLSessionDataDelegate {
                 inner.oldSessions.removeAtIndex(idx)
             }
         }
-        #if os(iOS)
-            for taskInfo in tasks.values where taskInfo.task.trackingNetworkActivity {
-                NetworkActivityManager.shared.decrementCounter()
-            }
-        #endif
+        for taskInfo in tasks.values {
+            taskInfo.task.clearTrackingNetworkActivity()
+        }
         tasks.removeAll()
     }
     
@@ -1251,11 +1253,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
         log("task:didCompleteWithError for task \(task), error: \(error)")
         let processor = taskInfo.processor
         
-        #if os(iOS)
-            if apiTask.trackingNetworkActivity {
-                NetworkActivityManager.shared.decrementCounter()
-            }
-        #endif
+        apiTask.clearTrackingNetworkActivity()
         
         let queue = dispatch_get_global_queue(apiTask.userInitiated ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0)
         if let error = error where error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
@@ -1273,11 +1271,7 @@ extension SessionDelegate: NSURLSessionDataDelegate {
                 assert(result.oldState == .Running, "internal HTTPManager error: tried to process task that's already processing")
                 dispatch_async(queue) {
                     func retry(apiManager: HTTPManager) -> Bool {
-                        guard let networkTask = apiManager.retryNetworkTask(taskInfo) else {
-                            return false
-                        }
-                        networkTask.resume()
-                        return true
+                        return apiManager.retryNetworkTask(taskInfo)
                     }
                     if let error = error {
                         processor(apiTask, .Error(task.response, error), attempt: taskInfo.attempt, retry: retry)

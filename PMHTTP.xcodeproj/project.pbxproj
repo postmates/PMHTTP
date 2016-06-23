@@ -11,6 +11,7 @@
 		0A7677ED1CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */; };
 		0A7677EE1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0A7677EF1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m in Sources */ = {isa = PBXBuildFile; fileRef = 0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */; };
+		9E11A8DC1D1B4AC100D63318 /* NetworkActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */; };
 		9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E139FA31C4EC82F00A764BD /* PMHTTPError.m */; };
 		9E139FA61C4EC9EE00A764BD /* PMHTTPError.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E139FA51C4EC83800A764BD /* PMHTTPError.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E22DD291C88CEF200C49993 /* DateParsing.swift */; };
@@ -55,6 +56,7 @@
 		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
 		0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
 		0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPManagerTaskStateBox.m; sourceTree = "<group>"; };
+		9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityTests.swift; sourceTree = "<group>"; };
 		9E139FA31C4EC82F00A764BD /* PMHTTPError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPError.m; sourceTree = "<group>"; };
 		9E139FA51C4EC83800A764BD /* PMHTTPError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMHTTPError.h; sourceTree = "<group>"; };
 		9E22DD291C88CEF200C49993 /* DateParsing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateParsing.swift; sourceTree = "<group>"; };
@@ -187,6 +189,7 @@
 				9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */,
 				9ED4FA171CC072F2001A0693 /* MultipartTests.swift */,
 				9EA4EE361CBC197D00E4E531 /* MockingTests.swift */,
+				9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */,
 				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
 				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
@@ -264,7 +267,7 @@
 		9E7DDF181C18F2B500EA43AD /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 0720;
+				LastSwiftUpdateCheck = 0730;
 				LastUpgradeCheck = 0730;
 				ORGANIZATIONNAME = Postmates;
 				TargetAttributes = {
@@ -282,6 +285,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = 9E7DDF171C18F2B500EA43AD;
 			productRefGroup = 9E7DDF221C18F2B500EA43AD /* Products */;
@@ -365,6 +369,7 @@
 				9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */,
 				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
 				9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */,
+				9E11A8DC1D1B4AC100D63318 /* NetworkActivityTests.swift in Sources */,
 				9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */,
 				9E8C1E441CAF50A6000D7FA2 /* PMHTTPRetryTests.swift in Sources */,
 			);

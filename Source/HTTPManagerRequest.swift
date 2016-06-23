@@ -142,11 +142,12 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// `HTTPManager.defaultRetryBehavior`.
     public var retryBehavior: HTTPManagerRetryBehavior?
     
-    #if os(iOS)
     /// Whether tasks created from this request should affect the visiblity of the
     /// network activity indicator. Default is `true`.
+    ///
+    /// Strictly speaking, this controls whether the task is visible to the network activity
+    /// handler (if any), and it's the handler's job to show the activity indicator.
     public var affectsNetworkActivityIndicator: Bool = true
-    #endif
     
     /// Additional HTTP header fields to pass in the request. Default is `[:]`.
     ///
@@ -212,9 +213,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
         mock = request.mock
-        #if os(iOS)
-            affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
-        #endif
+        affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         headerFields = request.headerFields
         super.init()
     }
@@ -890,9 +889,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
         mock = request.mock
-        #if os(iOS)
-            affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
-        #endif
+        affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         headerFields = request.headerFields
     }
     

@@ -1,5 +1,5 @@
 //
-//  HTTPManagerNetworkActivityManager.swift
+//  NetworkActivityManager.swift
 //  PMHTTP
 //
 //  Created by Kevin Ballard on 1/6/16.
@@ -12,75 +12,103 @@
 //  except according to those terms.
 //
 
-#if os(iOS)
+import Foundation
+
+internal final class NetworkActivityManager: NSObject {
+    static let shared = NetworkActivityManager()
     
-    import Foundation
-    import UIKit
-    
-    @available(iOSApplicationExtension, unavailable)
-    internal final class NetworkActivityManager: NSObject {
-        static let shared = NetworkActivityManager()
-        
-        /// Increments the global network activity counter.
-        func incrementCounter() {
-            dispatch_source_merge_data(source, 1)
-        }
-        
-        /// Decrements the global network activity counter.
-        func decrementCounter() {
-            dispatch_source_merge_data(source, UInt(bitPattern: -1))
-        }
-        
-        /// Starts tracking a given task.
-        func trackTask(task: NSURLSessionTask) {
-            task.addObserver(self, forKeyPath: "state", options: [.Initial, .Old, .New], context: &kvoContext)
-        }
-        
-        override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
-            guard context == &kvoContext else {
-                return super.observeValueForKeyPath(keyPath, ofObject: object, change: change, context: context)
-            }
-            let old = (change?[NSKeyValueChangeOldKey] as? Int).flatMap(NSURLSessionTaskState.init)
-            guard let new = (change?[NSKeyValueChangeNewKey] as? Int).flatMap(NSURLSessionTaskState.init) else { return }
-            switch (old, new) {
-            case (nil, .Running), (.Suspended?, .Running):
-                incrementCounter()
-            case (.Running?, .Suspended):
-                decrementCounter()
-            case (.Running?, .Canceling), (.Running?, .Completed):
-                decrementCounter()
-                fallthrough
-            case (_, .Canceling), (_, .Completed):
-                (object as? NSObject)?.removeObserver(self, forKeyPath: "state", context: &kvoContext)
-            default:
-                break
+    var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)? {
+        get {
+            if NSThread.isMainThread() {
+                return data.networkActivityHandler
+            } else {
+                return inner.sync({ $0.networkActivityHandler })
             }
         }
-        
-        private let source: dispatch_source_t
-        private var counter: Int = 0
-        
-        private override init() {
-            source = dispatch_source_create(DISPATCH_SOURCE_TYPE_DATA_ADD, 0, 0, dispatch_get_main_queue())
-            super.init()
-            dispatch_source_set_cancel_handler(source) {
-                UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+        set {
+            // This is a little complicated. The main thread is the source of truth for this, but we need
+            // to avoid having the background reference get out of sync. To that end, if we're not on the main
+            // thread already, we schedule a block to update the background reference first. Then we update the
+            // reference on the main thread, and from there we schedule another block to ensure the background
+            // reference is up-to-date. This means that the background reference is guaranteed to sync back up
+            // with the main thread even if someone else mucks with this property concurrently. And the initial
+            // background assignment exists so that way the property can be queried immediately after being set
+            // and it will return the correct value.
+            func handler() {
+                data.networkActivityHandler = newValue
+                inner.asyncBarrier {
+                    $0.networkActivityHandler = newValue
+                }
+                if data.counter > 0 && newValue != nil && !data.pendingHandlerInvocation {
+                    data.pendingHandlerInvocation = true
+                    dispatch_async(dispatch_get_main_queue()) { [data] in
+                        data.pendingHandlerInvocation = false
+                        if data.counter > 0, let handler = data.networkActivityHandler {
+                            handler(numberOfActiveTasks: data.counter)
+                        }
+                    }
+                }
             }
-            dispatch_source_set_event_handler(source) { [source] in
-                let data = Int(bitPattern: dispatch_source_get_data(source))
-                self.counter = max(self.counter + data, 0)
-                UIApplication.sharedApplication().networkActivityIndicatorVisible = self.counter > 0
+            if NSThread.isMainThread() {
+                handler()
+            } else {
+                inner.asyncBarrier {
+                    $0.networkActivityHandler = newValue
+                }
+                dispatch_async(dispatch_get_main_queue(), handler)
             }
-            dispatch_resume(source)
-        }
-        
-        deinit {
-            // We can't support deinit if we're KVOing tasks without a lot of extra work.
-            // Since we're actually a singleton, we should never deinit anyway.
-            fatalError("NetworkActivityManager should never deinit")
         }
     }
     
-    private var kvoContext: ()?
+    /// Increments the global network activity counter.
+    func incrementCounter() {
+        dispatch_source_merge_data(source, 1)
+    }
     
-#endif
+    /// Decrements the global network activity counter.
+    func decrementCounter() {
+        dispatch_source_merge_data(source, UInt(bitPattern: -1))
+    }
+    
+    private var inner = QueueConfined(label: "NetworkActivityManager internal queue", value: Inner())
+    
+    private class Inner {
+        /// A reference to the network activity handler that can only be accessed via a queue.
+        var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)?
+    }
+    
+    /// Data for the network activity indicator.
+    /// - Important: This must be accessed from the main thread only.
+    private class Data {
+        var counter: Int = 0
+        /// A reference to the network activity handler that is only safe to access from the main thread.
+        /// This exists so we don't have to go through a queue on every state change, since all our interactions
+        /// with the handler are expected to occur on the main thread.
+        var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)?
+        /// Set to `true` when modifying the `networkActivityHandler` property to indicate that an asynchronous
+        /// invocation of the property has been scheduled.
+        var pendingHandlerInvocation = false
+    }
+    
+    private let source: dispatch_source_t
+    private let data = Data()
+    
+    private override init() {
+        source = dispatch_source_create(DISPATCH_SOURCE_TYPE_DATA_ADD, 0, 0, dispatch_get_main_queue())
+        super.init()
+        dispatch_source_set_cancel_handler(source) { [data] in
+            data.counter = 0
+            data.networkActivityHandler?(numberOfActiveTasks: 0)
+        }
+        dispatch_source_set_event_handler(source) { [data, source] in
+            let delta = Int(bitPattern: dispatch_source_get_data(source))
+            data.counter = data.counter + delta
+            data.networkActivityHandler?(numberOfActiveTasks: max(data.counter, 0))
+        }
+        dispatch_resume(source)
+    }
+    
+    deinit {
+        dispatch_source_cancel(source)
+    }
+}

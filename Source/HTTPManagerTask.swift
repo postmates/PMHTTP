@@ -60,9 +60,26 @@ public final class HTTPManagerTask: NSObject {
     }
     
     /// Invokes `resume()` on the underlying `NSURLSessionTask`.
+    ///
+    /// - Important: You should always use this method instead of invoking `resume()`
+    ///   on the `networkTask`.
+    ///
     /// - Note: To suspend the underlying task you can access it with the
-    ///   `networkTask` property.
+    ///   `networkTask` property. However, suspending the task will not remove it from
+    ///   the list of outstanding tasks used to control the network activity indicator.
     public func resume() {
+        if affectsNetworkActivityIndicator {
+            // We need to hop onto our session delegate queue in order to inspect our state,
+            // otherwise we might show the activity indicator after we've transitioned out of running.
+            // We can't check it here because that leads to a race condition between this thread and
+            // the session delegate queue. But we know that all transitions into and out of the Running
+            // state happen on that queue, so we can safely inspect the state there.
+            sessionDelegateQueue.addOperationWithBlock {
+                if self.state == .Running {
+                    self.setTrackingNetworkActivity()
+                }
+            }
+        }
         networkTask.resume()
     }
     
@@ -98,11 +115,10 @@ public final class HTTPManagerTask: NSObject {
     internal let followRedirects: Bool
     internal let defaultResponseCacheStoragePolicy: NSURLCacheStoragePolicy
     internal let retryBehavior: HTTPManagerRetryBehavior?
-    #if os(iOS)
-    internal let trackingNetworkActivity: Bool
-    #endif
+    internal let affectsNetworkActivityIndicator: Bool
+    private let sessionDelegateQueue: NSOperationQueue
     
-    internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest) {
+    internal init(networkTask: NSURLSessionTask, request: HTTPManagerRequest, sessionDelegateQueue: NSOperationQueue) {
         _stateBox = _PMHTTPManagerTaskStateBox(state: State.Running.boxState, networkTask: networkTask)
         isIdempotent = request.isIdempotent
         credential = request.credential
@@ -110,9 +126,8 @@ public final class HTTPManagerTask: NSObject {
         followRedirects = request.shouldFollowRedirects
         defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
         retryBehavior = request.retryBehavior
-        #if os(iOS)
-            trackingNetworkActivity = request.affectsNetworkActivityIndicator
-        #endif
+        affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
+        self.sessionDelegateQueue = sessionDelegateQueue
         super.init()
     }
     
@@ -143,6 +158,22 @@ public final class HTTPManagerTask: NSObject {
         return (result.completed, State(result.oldState))
     }
     
+    /// Sets the tracking network activity flag and increments the `NetworkActivityManager` counter
+    /// if the flag wasn't previously set.
+    internal func setTrackingNetworkActivity() {
+        if !_stateBox.setTrackingNetworkActivity() {
+            NetworkActivityManager.shared.incrementCounter()
+        }
+    }
+    
+    /// Clears the tracking network activity flag and decrements the `NetworkActivityManager` counter
+    /// if the flag was previously set.
+    internal func clearTrackingNetworkActivity() {
+        if _stateBox.clearTrackingNetworkActivity() {
+            NetworkActivityManager.shared.decrementCounter()
+        }
+    }
+    
     private let _stateBox: _PMHTTPManagerTaskStateBox
 }
 
@@ -168,11 +199,9 @@ extension HTTPManagerTask {
         if followRedirects {
             s += " followRedirects"
         }
-        #if os(iOS)
-            if trackingNetworkActivity {
-                s += " trackingNetworkActivity"
-            }
-        #endif
+        if affectsNetworkActivityIndicator {
+            s += " affectsNetworkActivityIndicator"
+        }
         if debug {
             s += " networkTask=\(networkTask)"
         }

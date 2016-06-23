@@ -16,6 +16,8 @@
 
 /// A private implementation detail of PMHTTP. Do not use this enum.
 typedef NS_ENUM(unsigned char, _PMHTTPManagerTaskStateBoxState) {
+    // Important: The constants here must match those defined in HTTPManagerTaskState
+    
     /// The Running state. This state can transition into Processing and Canceled.
     _PMHTTPManagerTaskStateBoxStateRunning = 0,
     /// The Processing state. This state can transition into any state. Transitioning
@@ -46,4 +48,8 @@ __attribute__((visibility("hidden")))
 - (nonnull instancetype)init NS_UNAVAILABLE;
 /// Transitions the state to \c newState if possible.
 - (_PMHTTPManagerTaskStateBoxResult)transitionStateTo:(_PMHTTPManagerTaskStateBoxState)newState;
+/// Sets the tracking network activity flag and returns the previous value.
+- (BOOL)setTrackingNetworkActivity;
+/// Clears the tracking network activity flag and returns the previous value.
+- (BOOL)clearTrackingNetworkActivity;
 @end

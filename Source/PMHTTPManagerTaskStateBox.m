@@ -34,6 +34,8 @@ typedef struct TaskList {
 
 @implementation _PMHTTPManagerTaskStateBox {
     atomic_uchar _state;
+    // We can't use atomic_flag because atomic_flag_clear() doesn't return the previous value.
+    atomic_bool _trackingNetworkActivity;
     _Atomic(const void * _Nonnull) _networkTask;
     _Atomic(TaskList * _Nullable) _taskListHead;
 }
@@ -42,6 +44,7 @@ typedef struct TaskList {
     if ((self = [super init])) {
         atomic_init(&_state, state);
         atomic_init(&_networkTask, (__bridge_retained const void *)networkTask);
+        atomic_init(&_trackingNetworkActivity, false);
     }
     return self;
 }
@@ -88,10 +91,18 @@ typedef struct TaskList {
     }
 }
 
+- (BOOL)setTrackingNetworkActivity {
+    return atomic_exchange_explicit(&_trackingNetworkActivity, true, memory_order_relaxed);
+}
+
+- (BOOL)clearTrackingNetworkActivity {
+    return atomic_exchange_explicit(&_trackingNetworkActivity, false, memory_order_relaxed);
+}
+
 - (_PMHTTPManagerTaskStateBoxResult)transitionStateTo:(_PMHTTPManagerTaskStateBoxState)newState {
     switch (newState) {
         case _PMHTTPManagerTaskStateBoxStateRunning: {
-            // We can only transfer here from Processing (this is done when a failed task is retried).
+            // We can only transition here from Processing (this is done when a failed task is retried).
             _PMHTTPManagerTaskStateBoxState expected = _PMHTTPManagerTaskStateBoxStateProcessing;
             _Bool success = atomic_compare_exchange_strong_explicit(&_state, &expected, newState, memory_order_relaxed, memory_order_relaxed);
             return (_PMHTTPManagerTaskStateBoxResult){success || expected == newState, expected};
