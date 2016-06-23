@@ -222,10 +222,22 @@ public final class HTTPManager: NSObject {
             let setup: HTTPManagerConfigurable?
             #if os(OSX)
                 setup = NSApplication.sharedApplication().delegate as? HTTPManagerConfigurable
-            #elseif os(iOS) || os(tvOS)
+            #elseif os(tvOS)
                 setup = UIApplication.sharedApplication().delegate as? HTTPManagerConfigurable
             #elseif os(watchOS)
                 setup = WKExtension.sharedExtension().delegate as? HTTPManagerConfigurable
+            #elseif os(iOS)
+                // We have to detect if we're in an app extension, because we can't access UIApplication.sharedApplication().
+                // In that event, we can't configure ourselves and the extension must do it for us.
+                // We'll check for the presence of the NSExtension key in the Info.plist.
+                if NSBundle.mainBundle().infoDictionary?["NSExtension"] != nil {
+                    // This appears to be an application extension. No configuration allowed.
+                    setup = nil
+                } else {
+                    // This is an application. We still can't invoke UIApplication.sharedApplication directly,
+                    // but we can use `valueForKey(_:)` to get it, and application extensions can still reference the type.
+                    setup = (UIApplication.valueForKey("sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
+                }
             #endif
             setup?.configureHTTPManager(self)
         }
