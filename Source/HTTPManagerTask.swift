@@ -131,6 +131,12 @@ public final class HTTPManagerTask: NSObject {
         super.init()
     }
     
+    deinit {
+        // clear associated objects now so that way KVO libraries that use associated objects
+        // can deregister before we release our properties
+        objc_removeAssociatedObjects(self)
+    }
+    
     internal func transitionStateTo(newState: State) -> (ok: Bool, oldState: State) {
         willChangeValueForKey("state")
         defer { didChangeValueForKey("state") }
