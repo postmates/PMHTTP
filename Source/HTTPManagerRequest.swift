@@ -142,6 +142,15 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// `HTTPManager.defaultRetryBehavior`.
     public var retryBehavior: HTTPManagerRetryBehavior?
     
+    /// Whether errors should be assumed to be JSON.
+    ///
+    /// If `true`, all error bodies are parsed as JSON regardless of their declared
+    /// Content-Type. This setting is intended to work around bad servers that
+    /// don't declare their Content-Types properly.
+    ///
+    /// The default value is provided by `HTTPManager.defaultAssumeErrorsAreJSON`.
+    public var assumeErrorsAreJSON: Bool = false
+    
     /// Whether tasks created from this request should affect the visiblity of the
     /// network activity indicator. Default is `true`.
     ///
@@ -212,6 +221,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
+        assumeErrorsAreJSON = request.assumeErrorsAreJSON
         mock = request.mock
         affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         headerFields = request.headerFields
@@ -553,6 +563,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
             if let response = response as? NSHTTPURLResponse, case let statusCode = response.statusCode where !(200...399).contains(statusCode) {
                 let json: JSON?
                 switch response.MIMEType.map(MediaType.init) {
+                case _ where task.assumeErrorsAreJSON: fallthrough
                 case MediaType("application/json")?: json = try? JSON.decode(data)
                 default: json = nil
                 }
@@ -822,6 +833,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                 } else if !(200...299).contains(statusCode) {
                     let json: JSON?
                     switch response.MIMEType.map(MediaType.init) {
+                    case _ where task.assumeErrorsAreJSON: fallthrough
                     case MediaType("application/json")?: json = try? JSON.decode(data)
                     default: json = nil
                     }
@@ -888,6 +900,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         allowsCellularAccess = request.allowsCellularAccess
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
+        assumeErrorsAreJSON = request.assumeErrorsAreJSON
         mock = request.mock
         affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         headerFields = request.headerFields

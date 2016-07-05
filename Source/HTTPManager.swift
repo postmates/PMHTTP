@@ -156,6 +156,22 @@ public final class HTTPManager: NSObject {
         }
     }
     
+    /// Whether errors should be assumed to be JSON. The default value is `false`.
+    ///
+    /// If `true`, all error bodies are parsed as JSON regardless of their declared
+    /// Content-Type. This setting is intended to work around bad servers that
+    /// don't declare their Content-Types properly.
+    public var defaultAssumeErrorsAreJSON: Bool {
+        get {
+            return inner.sync({ $0.defaultAssumeErrorsAreJSON })
+        }
+        set {
+            inner.asyncBarrier {
+                $0.defaultAssumeErrorsAreJSON = newValue
+            }
+        }
+    }
+    
     /// The user agent that's passed to every request.
     public var userAgent: String {
         return inner.sync({
@@ -197,6 +213,7 @@ public final class HTTPManager: NSObject {
         var sessionConfiguration: NSURLSessionConfiguration = .defaultSessionConfiguration()
         var defaultCredential: NSURLCredential?
         var defaultRetryBehavior: HTTPManagerRetryBehavior?
+        var defaultAssumeErrorsAreJSON: Bool = false
 
         var session: NSURLSession!
         var sessionDelegate: SessionDelegate!
@@ -594,8 +611,8 @@ extension HTTPManager {
     }
     
     private func constructRequest<T: HTTPManagerRequest>(path: String, @noescape f: NSURL -> T) -> T? {
-        let (environment, credential, defaultRetryBehavior) = inner.sync({ inner -> (Environment?, NSURLCredential?, HTTPManagerRetryBehavior?) in
-            return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior)
+        let (environment, credential, defaultRetryBehavior, assumeErrorsAreJSON) = inner.sync({ inner -> (Environment?, NSURLCredential?, HTTPManagerRetryBehavior?, Bool) in
+            return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
         })
         guard let url = NSURL(string: path, relativeToURL: environment?.baseURL) else { return nil }
         let request = f(url)
@@ -606,6 +623,7 @@ extension HTTPManager {
             }
         }
         request.retryBehavior = defaultRetryBehavior
+        request.assumeErrorsAreJSON = assumeErrorsAreJSON
         return request
     }
 }

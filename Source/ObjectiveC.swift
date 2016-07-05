@@ -807,6 +807,11 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         set { _request.retryBehavior = newValue }
     }
     
+    public override var assumeErrorsAreJSON: Bool {
+        get { return _request.assumeErrorsAreJSON }
+        set { _request.assumeErrorsAreJSON = newValue }
+    }
+    
     public override var affectsNetworkActivityIndicator: Bool {
         get { return _request.affectsNetworkActivityIndicator }
         set { _request.affectsNetworkActivityIndicator = newValue }
