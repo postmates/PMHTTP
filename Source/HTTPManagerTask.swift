@@ -286,6 +286,14 @@ public enum HTTPManagerTaskResult<Value> {
         }
     }
     
+    /// Returns the `Value` from a successful task result, otherwise returns `nil`.
+    public var value: Value? {
+        switch self {
+        case .Success(_, let value): return value
+        default: return nil
+        }
+    }
+    
     /// Returns the `ErrorType` from an errored task result, otherwise returns `nil`.
     public var error: ErrorType? {
         switch self {
