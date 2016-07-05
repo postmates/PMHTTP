@@ -278,6 +278,22 @@ extension HTTPManagerRetryBehavior {
 
 // MARK: - Result
 
+public extension HTTPManagerTaskResult {
+    /// Returns the error or canceled state as an `NSError`, or `nil` if successful.
+    ///
+    /// Canceled results are converted into `NSURLErrorCancelled` errors.
+    var objcError: NSError? {
+        switch self {
+        case .Success:
+            return nil
+        case .Error(_, let error):
+            return HTTPManagerError.toNSError(error)
+        case .Canceled:
+            return NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil)
+        }
+    }
+}
+
 /// The results of an HTTP request.
 public class PMHTTPResult: NSObject, NSCopying {
     /// `true` iff the task finished successfully.
