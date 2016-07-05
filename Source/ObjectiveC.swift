@@ -36,6 +36,19 @@ extension HTTPManager {
 }
 
 extension HTTPManagerError {
+    /// Returns an `NSError` that represents a given `ErrorType`.
+    ///
+    /// This method handles `HTTPManagerError`s specially by creating an `NSError` using the
+    /// `PMHTTPError` constants for Objective-C. All other errors are converted to `NSError`
+    /// using the built-in casting.
+    public static func toNSError(error: ErrorType) -> NSError {
+        if let error = error as? HTTPManagerError {
+            return error.toNSError()
+        } else {
+            return error as NSError
+        }
+    }
+    
     /// Returns an `NSError` using the `PMHTTPError` constants for use by Objective-C.
     /// - Important: This is different than the `NSError` produced by casting the error using
     /// `error as NSError`, and cannot be casted back to `HTTPManagerError` using
