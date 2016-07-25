@@ -135,7 +135,7 @@ extension AppDelegate: HTTPManagerConfigurable {
         config.HTTPAdditionalHeaders = ["User-Agent": myUserAgent]
         httpManager.sessionConfiguration = config
         if let (username, apiKey) = getAPICredentials() {
-            httpManager.defaultCredential = NSURLCredential(user username, password: apiKey, persistence: .ForSession)
+            httpManager.defaultCredential = NSURLCredential(user: username, password: apiKey, persistence: .ForSession)
         }
         httpManager.defaultRetryBehavior = HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryTwiceWithDefaultDelay)
     }
@@ -215,12 +215,12 @@ Requests are split into a hierarchy of classes:
     * `HTTPManagerActionRequest` - The class or parent class for POST/PUT/PATCH/DELETE requests that
       do not have a parse handler.
       * `HTTPManagerUploadFormRequest` - The class for POST/PUT/PATCH requests without a parse
-        handler that has a body of either `application/x-www-form-urlencoded` or
+        handler that have a body of either `application/x-www-form-urlencoded` or
         `multipart/form-data`.
       * `HTTPManagerUploadDataRequest` - The class for POST/PUT/PATCH requests without a parse
-        handler that has a body consisting of an arbitrary `NSData`.
+        handler that have a body consisting of an arbitrary `NSData`.
       * `HTTPManagerUploadJSONRequest` - The class for POST/PUT/PATCH requests without a parse
-        handler that has a body consisting of a JSON value.
+        handler that have a body consisting of a JSON value.
   * `HTTPManagerParseRequest<T>` - The class for any request that has a parse handler.
   * `HTTPManagerObjectParseRequest` - The class for requests made from Obj-C that have a parse
     handler. Similar to `HTTPManagerParseRequest<T>` but the parse result is always an `AnyObject?`.
@@ -237,9 +237,9 @@ should be set if the request represents some action the user is waiting on. Sett
 background queue processing to occur using `QOS_CLASS_USER_INITIATED`.
 
 `HTTPManagerUploadFormRequest` provides support for creating `multipart/form-data` requests, which
-can be used for e.g. uploading files/images. These requests are implemented in a streaming fashion,
-so e.g. memory-mapped `NSData` objects won't be copied into a contiguous buffer, thus allowing you
-to upload files without concerns about memory use.
+can be used for uploading files/images. These requests are implemented in a streaming fashion, so
+e.g. memory-mapped `NSData` objects won't be copied into a contiguous buffer, thus allowing you to
+upload files without concerns about memory use.
 
 `HTTPManagerRequest` conforms to `NSCopying` so copies can be made of any request if necessary.
 Furthermore, when attaching a parse handler to a request (and therefore converting it into an
@@ -282,10 +282,18 @@ request is retried, and will broadcast any relevant key-value observing messages
 
 #### Network Activity Indicator
 
-By default, on iOS, the global network activity indicator will be shown whenever tasks are accessing
-the network. This can be turned off on a per-request basis by setting
-`HTTPManagerRequest.affectsNetworkActivityIndicator` to `false`. At this time there is no way to
-disable it globally (see [issue #5](https://github.com/postmates/PMHTTP/issues/5)).
+PMHTTP provides a callback you can use to implement support for the global network activity
+indicator. Each request object has a property `affectsNetworkActivityIndicator` (which defaults to
+`true`) that controls whether any tasks created from the request affect the callback. The callback
+itself is configured by assigning a block to `HTTPManager.networkActivityHandler`. This block is run
+on the main thread whenever the number of active tasks has changed. In order to display the global
+network activity indicator you can configure this like so:
+
+```swift
+HTTPManager.networkActivityHandler = { active in
+    UIApplication.sharedApplication().networkActivityIndicatorVisible = active > 0
+}
+```
 
 #### Automatic Retrying of Failed Requests
 
@@ -347,15 +355,6 @@ test suite.
 ## Requirements
 
 Requires a minimum of iOS 8, OS X 10.9, watchOS 2.0, or tvOS 9.0.
-
-### watchOS and extensions
-
-The project declares support for watchOS, but it's using a semi-unsupported method of turning
-`APPLICATION_EXTENSION_API_ONLY` on for watchOS. As far as I can tell it works, but I haven't
-actually used PMHTTP in a real watchOS app so I don't know for certain. As for application
-extensions, when built for iOS `APPLICATION_EXTENSION_API_ONLY` must be off because of the network
-activity indicator support, so I don't believe PMHTTP is usable from application extensions. See
-[issue #6](https://github.com/postmates/PMHTTP/issues/6) for details.
 
 ## Installation
 
