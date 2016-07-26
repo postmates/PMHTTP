@@ -754,7 +754,7 @@ class MockingTests: PMHTTPTestCase {
                 // So we'll just make sure our two texts are in there and all the boundaries are there
                 XCTAssertNotNil(data.range(of: "Hello world".data(using: String.Encoding.utf8)!, in: 0..<data.count), "range of first message")
                 XCTAssertNotNil(data.range(of: "Goodbye world".data(using: String.Encoding.utf8)!, in: 0..<data.count), "range of second message")
-                outer: if let boundary = request.value(forHTTPHeaderField: "Content-Type").map(MediaType.init)?.params.find({ $0.0 == "boundary" })?.1 {
+                outer: if let boundary = request.value(forHTTPHeaderField: "Content-Type").map(MediaType.init)?.params.first(where: { $0.0 == "boundary" })?.1 {
                     // We should find 2 regular boundaries and one terminator boundary
                     // The spec allows boundaries to be followed by LWS, but we don't do that so just search for --boundary\r\n
                     let boundaryData = "--\(boundary)\r\n".data(using: String.Encoding.utf8)!

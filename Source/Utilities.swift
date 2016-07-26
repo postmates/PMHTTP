@@ -341,17 +341,6 @@ func ~=(pattern: MediaType, value: MediaType) -> Bool {
 }
 
 internal extension Sequence {
-    func find(_ predicate: @noescape (Iterator.Element) -> Bool) -> Iterator.Element? {
-        for elt in self {
-            if predicate(elt) {
-                return elt
-            }
-        }
-        return nil
-    }
-}
-
-internal extension Sequence {
     func chain<Seq: Sequence where Seq.Iterator.Element == Self.Iterator.Element>(_ seq: Seq) -> Chain<Self, Seq> {
         return Chain(self, seq)
     }

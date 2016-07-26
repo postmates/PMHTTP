@@ -613,6 +613,7 @@ public protocol HTTPManagerRequestPerformable {
     /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @discardableResult
     func performRequest(withCompletionQueue queue: OperationQueue?, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
     
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
@@ -636,6 +637,7 @@ extension HTTPManagerRequestPerformable {
     /// - Parameter handler: The handler to call when the request is done. The handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @discardableResult
     public func performRequest(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
         let task = createTask(withCompletionQueue: queue, completion: completion)
         task.resume()

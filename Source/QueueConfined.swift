@@ -32,25 +32,21 @@ internal class QueueConfined<Value: AnyObject> {
     }
     
     func sync<T>(_ f: @noescape (Value) -> T) -> T {
-        var result: T!
-        queue.sync {
-            result = f(self.value)
+        return queue.sync {
+            return f(self.value)
         }
-        return result
     }
     
     func syncBarrier(_ f: @noescape (Value) -> Void) {
         queue.sync(flags: .barrier, execute: {
             f(self.value)
-        }) 
+        })
     }
     
     func syncBarrier<T>(_ f: @noescape (Value) -> T) -> T {
-        var result: T!
-        queue.sync(flags: .barrier, execute: {
-            result = f(self.value)
-        }) 
-        return result
+        return queue.sync(flags: .barrier, execute: {
+            return f(self.value)
+        })
     }
     
     func async(_ f: (Value) -> Void) {

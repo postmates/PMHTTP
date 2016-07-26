@@ -509,7 +509,7 @@ final class HTTPServer {
             guard let contentType = request.headers["Content-Type"].map(MediaType.init),
                 contentType.type == "multipart"
                 else { throw Error.contentTypeNotMultipart }
-            guard let boundary = contentType.params.find({ $0.0 == "boundary" })?.1
+            guard let boundary = contentType.params.first(where: { $0.0 == "boundary" })?.1
                 else { throw Error.noBoundary }
             guard let body = request.body
                 else { throw Error.noBody }
