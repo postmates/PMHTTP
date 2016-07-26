@@ -25,7 +25,6 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
         }
         expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
-            // FIXME(Swift 3): Swift 3 will likely turn NSURL errors into a proper enum
             let error = error as NSError
             XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
             XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
@@ -62,7 +61,6 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo")!
             req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
             expectationForRequestFailure(req) { task, response, error in
-                // FIXME(Swift 3): Swift 3 will likely turn NSURL errors into a proper enum
                 let error = error as NSError
                 XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
                 XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
@@ -79,7 +77,6 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
         let req = HTTP.request(POST: "foo")!
         req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
         expectationForRequestFailure(req) { task, response, error in
-            // FIXME(Swift 3): Swift 3 will likely turn NSURL errors into a proper enum
             let error = error as NSError
             XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
             XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
@@ -208,7 +205,6 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo")!
             req.retryBehavior = .retryNetworkFailure(withStrategy: .retryTwiceWithDelay(0.1))
             expectationForRequestFailure(req) { task, response, error in
-                // FIXME(Swift 3): Swift 3 will likely turn NSURL errors into a proper enum
                 let error = error as NSError
                 XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
                 XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")

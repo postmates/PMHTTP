@@ -951,8 +951,6 @@ private extension ErrorProtocol {
         case let error as JSONParserError where error.code == .unexpectedEOF:
             return true
         case let error as NSError where error.domain == NSURLErrorDomain:
-            // FIXME(Swift 3): Swift 3 will likely have a proper ErrorType enum for URL errors.
-            
             switch error.code {
             case NSURLErrorUnknown:
                 // We don't know what this is, so we'll err on the side of accepting it.
@@ -983,7 +981,6 @@ private extension ErrorProtocol {
     func isTransientNoConnectionError() -> Bool {
         switch self {
         case let error as NSError where error.domain == NSURLErrorDomain:
-            // FIXME(Swift 3): Swift 3 will likely have a proper ErrorType enum for URL errors.
             switch error.code {
             case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed,
                  NSURLErrorNotConnectedToInternet, NSURLErrorDataNotAllowed,
