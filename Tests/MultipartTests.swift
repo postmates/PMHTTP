@@ -21,7 +21,7 @@ class MultipartTests: PMHTTPTestCase {
         HTTPServer.enableDebugLogging = true
         defer { HTTPServer.enableDebugLogging = false }
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartText("Hello world", withName: "message")
+        req.addMultipart(text: "Hello world", withName: "message")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
             let multipartBody: HTTPServer.MultipartBody
@@ -48,7 +48,7 @@ class MultipartTests: PMHTTPTestCase {
     func testOneDataPart() {
         do {
             let req = HTTP.request(POST: "foo")!
-            req.addMultipartData("Hello world".data(using: String.Encoding.utf8)!, withName: "greeting")
+            req.addMultipart(data: "Hello world".data(using: String.Encoding.utf8)!, withName: "greeting")
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 defer { completionHandler(HTTPServer.Response(status: .ok)) }
                 let multipartBody: HTTPServer.MultipartBody
@@ -74,7 +74,7 @@ class MultipartTests: PMHTTPTestCase {
         
         do {
             let req = HTTP.request(POST: "foo")!
-            req.addMultipartData("Hello world".data(using: String.Encoding.utf8)!, withName: "hi", mimeType: "text/x-foo")
+            req.addMultipart(data: "Hello world".data(using: String.Encoding.utf8)!, withName: "hi", mimeType: "text/x-foo")
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 defer { completionHandler(HTTPServer.Response(status: .ok)) }
                 let multipartBody: HTTPServer.MultipartBody
@@ -100,7 +100,7 @@ class MultipartTests: PMHTTPTestCase {
         
         do {
             let req = HTTP.request(POST: "foo")!
-            req.addMultipartData("Goodbye world".data(using: String.Encoding.utf8)!, withName: "file", filename: "message.txt")
+            req.addMultipart(data: "Goodbye world".data(using: String.Encoding.utf8)!, withName: "file", filename: "message.txt")
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 defer { completionHandler(HTTPServer.Response(status: .ok)) }
                 let multipartBody: HTTPServer.MultipartBody
@@ -126,7 +126,7 @@ class MultipartTests: PMHTTPTestCase {
         
         do {
             let req = HTTP.request(POST: "foo")!
-            req.addMultipartData("What's up, world?".data(using: String.Encoding.utf8)!, withName: "file", mimeType: "text/x-bar", filename: "message.txt")
+            req.addMultipart(data: "What's up, world?".data(using: String.Encoding.utf8)!, withName: "file", mimeType: "text/x-bar", filename: "message.txt")
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 defer { completionHandler(HTTPServer.Response(status: .ok)) }
                 let multipartBody: HTTPServer.MultipartBody
@@ -153,9 +153,9 @@ class MultipartTests: PMHTTPTestCase {
     
     func testMultipleBodyParts() {
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartText("The first part", withName: "preamble")
-        req.addMultipartData("The second part".data(using: String.Encoding.utf8)!, withName: "middle")
-        req.addMultipartText("The last part", withName: "postlude")
+        req.addMultipart(text: "The first part", withName: "preamble")
+        req.addMultipart(data: "The second part".data(using: String.Encoding.utf8)!, withName: "middle")
+        req.addMultipart(text: "The last part", withName: "postlude")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
             let multipartBody: HTTPServer.MultipartBody
@@ -190,7 +190,7 @@ class MultipartTests: PMHTTPTestCase {
     func testParametersAndBodyParts() {
         // NB: Use NSURLQueryItem for parameters so we know what the order is.
         let req = HTTP.request(POST: "foo", parameters: [URLQueryItem(name: "message", value: "Hello world"), URLQueryItem(name: "foo", value: "bar")])!
-        req.addMultipartText("Who put the bomp in the bomp, ba bomp, ba bomp?", withName: "question")
+        req.addMultipart(text: "Who put the bomp in the bomp, ba bomp, ba bomp?", withName: "question")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
             let multipartBody: HTTPServer.MultipartBody
@@ -224,7 +224,7 @@ class MultipartTests: PMHTTPTestCase {
     
     func testDeferredNoBodyParts() {
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartBodyWithBlock { upload in
+        req.addMultipartBody { upload in
             // add nothing
         }
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
@@ -248,10 +248,10 @@ class MultipartTests: PMHTTPTestCase {
     
     func testDeferredBodyParts() {
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartBodyWithBlock { upload in
-            upload.addMultipartText("Hello world", withName: "message")
-            upload.addMultipartData("One".data(using: String.Encoding.utf8)!, withName: "one")
-            upload.addMultipartData("Two".data(using: String.Encoding.utf8)!, withName: "two", mimeType: "text/plain", filename: "file.txt")
+        req.addMultipartBody { upload in
+            upload.addMultipart(text: "Hello world", withName: "message")
+            upload.addMultipart(data: "One".data(using: String.Encoding.utf8)!, withName: "one")
+            upload.addMultipart(data: "Two".data(using: String.Encoding.utf8)!, withName: "two", mimeType: "text/plain", filename: "file.txt")
         }
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
@@ -286,12 +286,12 @@ class MultipartTests: PMHTTPTestCase {
     
     func testMixedEagerAndDeferredBodyParts() {
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartText("Hello world", withName: "first")
-        req.addMultipartBodyWithBlock { upload in
-            upload.addMultipartText("Lazy data", withName: "second")
-            upload.addMultipartText("Pretend this is useful data", withName: "third")
+        req.addMultipart(text: "Hello world", withName: "first")
+        req.addMultipartBody { upload in
+            upload.addMultipart(text: "Lazy data", withName: "second")
+            upload.addMultipart(text: "Pretend this is useful data", withName: "third")
         }
-        req.addMultipartText("The end of all things", withName: "fourth")
+        req.addMultipart(text: "The end of all things", withName: "fourth")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
             let multipartBody: HTTPServer.MultipartBody
@@ -329,7 +329,7 @@ class MultipartTests: PMHTTPTestCase {
     
     func testEmptyBodyPart() {
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartText("", withName: "")
+        req.addMultipart(text: "", withName: "")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
             let multipartBody: HTTPServer.MultipartBody
@@ -364,8 +364,8 @@ class MultipartTests: PMHTTPTestCase {
             }
         }
         let req = HTTP.request(POST: "foo")!
-        req.addMultipartText("Hello world", withName: "message")
-        req.addMultipartData(data, withName: "binary")
+        req.addMultipart(text: "Hello world", withName: "message")
+        req.addMultipart(data: data, withName: "binary")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             defer { completionHandler(HTTPServer.Response(status: .ok)) }
             let multipartBody: HTTPServer.MultipartBody

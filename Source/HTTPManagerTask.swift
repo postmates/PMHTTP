@@ -139,7 +139,7 @@ public final class HTTPManagerTask: NSObject {
         objc_removeAssociatedObjects(self)
     }
     
-    internal func transitionStateTo(_ newState: State) -> (ok: Bool, oldState: State) {
+    internal func transitionState(to newState: State) -> (ok: Bool, oldState: State) {
         willChangeValue(forKey: "state")
         defer { didChangeValue(forKey: "state") }
         let result = _stateBox.transitionState(to: newState.boxState)
@@ -152,7 +152,7 @@ public final class HTTPManagerTask: NSObject {
     /// - Parameter networkTask: The new `NSURLSessionTask` to use for the `networkTask` property.
     /// - Returns: A tuple where `ok` is `true` if the task was reset, otherwise `false`, and `oldState`
     ///   describes the state the task was in when the transition was attempted.
-    internal func resetStateToRunningWithNetworkTask(_ networkTask: URLSessionTask) -> (ok: Bool, oldState: State) {
+    internal func resetStateToRunning(with networkTask: URLSessionTask) -> (ok: Bool, oldState: State) {
         willChangeValue(forKey: "state")
         willChangeValue(forKey: "networkTask")
         defer {
@@ -280,7 +280,7 @@ public enum HTTPManagerTaskResult<Value> {
     /// Returns the `URLResponse` from a successful task result. For errored results,
     /// if the error includes a response, the response is returned. Otherwise,
     /// returns `nil`.
-    public var URLResponse: URLResponse? {
+    public var urlResponse: URLResponse? {
         switch self {
         case .success(let response, _): return response
         case .error(let response, _): return response
@@ -330,7 +330,7 @@ public enum HTTPManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    public func map<T>(f: @noescape (URLResponse, Value) throws -> T) rethrows -> HTTPManagerTaskResult<T> {
+    public func map<T>(_ f: @noescape (URLResponse, Value) throws -> T) rethrows -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value): return .success(response, try f(response, value))
         case let .error(response, type): return .error(response, type)
@@ -356,7 +356,7 @@ public enum HTTPManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    public func andThen<T>(f: @noescape (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) rethrows -> HTTPManagerTaskResult<T> {
+    public func andThen<T>(_ f: @noescape (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) rethrows -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value): return try f(response, value)
         case let .error(response, type): return .error(response, type)

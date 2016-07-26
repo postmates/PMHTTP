@@ -256,7 +256,7 @@ public final class HTTPManager: NSObject {
                     setup = (UIApplication.valueForKey("sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
                 }
             #endif
-            setup?.configureHTTPManager(self)
+            setup?.configure(httpManager: self)
         }
         inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] in
             $0.setHeader("User-Agent", value: value, overwrite: false)
@@ -356,7 +356,7 @@ public final class HTTPManagerEnvironment: NSObject {
     /// host, and port, and the first URL's path must be a prefix of the second URL's path.
     /// Scheme and host are compared case-insensitively, and if the port is nil, an appropriate
     /// default value is assumed for the HTTP and HTTPS schemes.
-    public func isPrefixOf(_ url: URL) -> Bool {
+    public func isPrefix(of url: URL) -> Bool {
         guard let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return false }
         func getPort(_ components: URLComponents) -> Int? {
             if let port = components.port { return port as Int }
@@ -432,7 +432,7 @@ public final class HTTPManagerEnvironment: NSObject {
     ///
     /// - Important: You MUST NOT access the global `HTTP` property from within this method.
     ///   Any attempt to do so will deadlock as the property has not finished initializing.
-    func configureHTTPManager(_ httpManager: HTTPManager)
+    func configure(httpManager: HTTPManager)
 }
 
 extension HTTPManager {
@@ -619,7 +619,7 @@ extension HTTPManager {
         let request = f(url)
         if let credential = credential, let environment = environment {
             // make sure the requested entity is within the space defined by baseURL
-            if environment.isPrefixOf(url) {
+            if environment.isPrefix(of: url) {
                 request.credential = credential
             }
         }
@@ -653,7 +653,7 @@ public enum HTTPManagerError: ErrorProtocol, CustomStringConvertible, CustomDebu
     case unauthorized(credential: URLCredential?, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.
-    /// - Note: Custom parse requests (using `parseWithHandler()`) do not throw this automatically, but
+    /// - Note: Custom parse requests (using `parse(with:)`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
     /// - Parameter contentType: The Content-Type header of the HTTP response.
     /// - Parameter response: The `NSHTTPURLResponse` object.
@@ -661,7 +661,7 @@ public enum HTTPManagerError: ErrorProtocol, CustomStringConvertible, CustomDebu
     case unexpectedContentType(contentType: String, response: HTTPURLResponse, body: Data)
     /// An HTTP response returned a 204 No Content where an entity was expected.
     /// This is only thrown automatically from parse requests with a GET or HEAD method.
-    /// - Note: Custom parse requests (using `parseWithHandler(_:)`) do not throw this automatically, but
+    /// - Note: Custom parse requests (using `parse(with:)`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
     /// - Parameter response: The `NSHTTPURLResponse` object.
     case unexpectedNoContent(response: HTTPURLResponse)
@@ -1177,7 +1177,7 @@ extension HTTPManager {
             case nil:
                 networkTask = inner.session.dataTask(with: request)
             }
-            let result = taskInfo.task.resetStateToRunningWithNetworkTask(networkTask)
+            let result = taskInfo.task.resetStateToRunning(with: networkTask)
             if !result.ok {
                 assert(result.oldState == .canceled, "internal HTTPManager error: could not reset non-canceled task back to Running state")
                 networkTask.cancel()
@@ -1293,13 +1293,13 @@ extension SessionDelegate: URLSessionDataDelegate {
             // Either we canceled during the networking portion, or someone called
             // cancel() on the NSURLSessionTask directly. In the latter case, treat it
             // as a cancellation anyway.
-            let result = apiTask.transitionStateTo(.canceled)
+            let result = apiTask.transitionState(to: .canceled)
             assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")
             queue.async {
                 processor(apiTask, .canceled, attempt: taskInfo.attempt, retry: { _ in return false })
             }
         } else {
-            let result = apiTask.transitionStateTo(.processing)
+            let result = apiTask.transitionState(to: .processing)
             if result.ok {
                 assert(result.oldState == .running, "internal HTTPManager error: tried to process task that's already processing")
                 queue.async {

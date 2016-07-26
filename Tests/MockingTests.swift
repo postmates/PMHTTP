@@ -21,7 +21,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("bar", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "bar", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(response.mimeType, "text/plain", "server response MIME type")
@@ -37,7 +37,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockStatusCode() {
-        HTTP.mockManager.addMock("foo", statusCode: 404, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 404, text: "Mock response")
         expectationForRequestFailure(HTTP.request(GET: "foo")) { (task, response, error) in
             if case let HTTPManagerError.failedResponse(statusCode: statusCode, response: _, body: body, bodyJson: _) = error {
                 XCTAssertEqual(statusCode, 404, "status code")
@@ -53,7 +53,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("http://\(httpServer.address)/bar", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "http://\(httpServer.address)/bar", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -70,7 +70,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/api/v1/foo") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("bar", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "bar", statusCode: 200, text: "Mock response")
         expectationForHTTPRequest(httpServer, path: "/bar") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
@@ -92,7 +92,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/api/v1/bar") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("/bar", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "/bar", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "bar")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -109,7 +109,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/api/v1/foo/123") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("bar/:id", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "bar/:id", statusCode: 200, text: "Mock response")
         expectationForHTTPRequest(httpServer, path: "/bar/123") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
@@ -131,7 +131,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/api/v1/bar/123") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("/bar/:id", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "/bar/:id", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "bar/123")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -148,7 +148,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/api/bar/baz") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("baz", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "baz", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "/api/bar/baz")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -156,7 +156,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("baz/:id") { (request, parameters, completion) in
+        HTTP.mockManager.addMock(for: "baz/:id") { (request, parameters, completion) in
             // assert that parameters only has the key "id" and doesn't have "foo"
             XCTAssertEqual(parameters, ["id": "123"], "mock request parameters")
             let body = "Mock response".data(using: String.Encoding.utf8)!
@@ -173,7 +173,7 @@ class MockingTests: PMHTTPTestCase {
         // Path components consisting of just a colon aren't counted as :components, but may trip up relative URL handling.
         // NB: We use NSURL instead of NSURLComponents for parsing request paths, so we can't just use a relative path ":/foo"
         // as NSURL parses that as something other than a path beginning with ":". But we can use an absolute URL instead.
-        HTTP.mockManager.addMock(":/foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: ":/foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.address)/:/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "mock response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "mock response body text")
@@ -185,7 +185,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("https://\(httpServer.address)/foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "https://\(httpServer.address)/foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.address)/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -202,7 +202,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo%2fbar") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("foo/bar", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo/bar", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo%2fbar")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -217,7 +217,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo/bar") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("foo%2fbar", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo%2fbar", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo/bar")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -233,7 +233,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo%2fbar/123") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("foo/bar/:id", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo/bar/:id", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo%2fbar/123")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -248,7 +248,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForHTTPRequest(httpServer, path: "/foo%2fbar/123") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
-        HTTP.mockManager.addMock("foo/bar/:id", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo/bar/:id", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo%2fbar/123")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "server response status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Server response", "server response body text")
@@ -279,7 +279,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockJSON() {
-        HTTP.mockManager.addMock("foo", statusCode: 200, json: ["ok": true, "elts": [1,2,3,4,5]])
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, json: ["ok": true, "elts": [1,2,3,4,5]])
         expectationForRequestSuccess(HTTP.request(GET: "foo").parseAsJSON()) { (task, response, json) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(response.mimeType, "application/json", "MIME type")
@@ -300,7 +300,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockResponseHeaders() {
-        HTTP.mockManager.addMock("foo", statusCode: 200, headers: ["X-Foo": "Bar"], text: "Mock 404")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, headers: ["X-Foo": "Bar"], text: "Mock 404")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.allHeaderFields["X-Foo"] as? String, "Bar", "X-Foo header")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock 404", "body text")
@@ -312,7 +312,7 @@ class MockingTests: PMHTTPTestCase {
         // Ensure the response is always delayed by at least the given delay.
         // Give it up to 100ms longer than the delay for the actual response since we cannot rely on the precise timing
         // of asynchronous operations.
-        HTTP.mockManager.addMock("foo", statusCode: 200, delay: 0.05)
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, delay: 0.05)
         var start = CACurrentMediaTime()
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -321,7 +321,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("foo", statusCode: 200, delay: 0)
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, delay: 0)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -330,7 +330,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("foo", statusCode: 200, delay: 0.15)
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, delay: 0.15)
         start = CACurrentMediaTime()
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             let delay = CACurrentMediaTime() - start
@@ -370,8 +370,8 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMultipleMocks() {
-        HTTP.mockManager.addMock("foo", statusCode: 200, text: "first mock")
-        HTTP.mockManager.addMock("bar", statusCode: 200, text: "second mock")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "first mock")
+        HTTP.mockManager.addMock(for: "bar", statusCode: 200, text: "second mock")
         expectationForRequestSuccess(HTTP.request(GET: "bar")) { (task, response, value) in
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "second mock", "body text")
         }
@@ -382,8 +382,8 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testDuplicateMocks() {
-        HTTP.mockManager.addMock("foo", statusCode: 200, text: "first mock")
-        HTTP.mockManager.addMock("foo", statusCode: 200, text: "second mock")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "first mock")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "second mock")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "second mock", "body text")
         }
@@ -391,7 +391,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockRemoval() {
-        let token = HTTP.mockManager.addMock("foo", statusCode: 200, text: "Mock response")
+        let token = HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
         }
@@ -407,7 +407,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         // Removing the token a second time affects nothing
-        HTTP.mockManager.addMock("foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "Mock response")
         HTTP.mockManager.removeMock(token)
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -417,10 +417,10 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockSequence() {
         let seq = HTTPMockSequence()
-        seq.addMock(200, text: "Mock response")
-        seq.addMock(204)
-        seq.addMock(200, json: ["foo": "bar"])
-        HTTP.mockManager.addMock("foo", sequence: seq)
+        seq.addMock(statusCode: 200, text: "Mock response")
+        seq.addMock(statusCode: 204)
+        seq.addMock(statusCode: 200, json: ["foo": "bar"])
+        HTTP.mockManager.addMock(for: "foo", sequence: seq)
         
         let req = HTTP.request(GET: "foo")!
         expectationForRequestSuccess(req) { (task, response, value) in
@@ -452,10 +452,10 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockSequenceRepeatsLast() {
         let seq = HTTPMockSequence()
-        seq.addMock(200, text: "Mock response")
-        seq.addMock(204)
+        seq.addMock(statusCode: 200, text: "Mock response")
+        seq.addMock(statusCode: 204)
         seq.repeatsLastResponse = true
-        HTTP.mockManager.addMock("foo", sequence: seq)
+        HTTP.mockManager.addMock(for: "foo", sequence: seq)
         
         let req = HTTP.request(GET: "foo")!
         expectationForRequestSuccess(req) { (task, response, value) in
@@ -473,7 +473,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockHandler() {
-        HTTP.mockManager.addMock("foo", state: 0) { (state: inout Int, request, parameters, completion) in
+        HTTP.mockManager.addMock(for: "foo", state: 0) { (state: inout Int, request, parameters, completion) in
             state += 1
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
             let body = "request \(state)".data(using: String.Encoding.utf8)!
@@ -490,7 +490,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockParameters() {
-        HTTP.mockManager.addMock("users/:uid") { (request, parameters, completion) in
+        HTTP.mockManager.addMock(for: "users/:uid") { (request, parameters, completion) in
             if let uid = parameters["uid"] {
                 let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
                 let body = "user \(uid)".data(using: String.Encoding.utf8)!
@@ -514,7 +514,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("posts/:id/:name") { (request, parameters, completion) in
+        HTTP.mockManager.addMock(for: "posts/:id/:name") { (request, parameters, completion) in
             let id = parameters["id"].map(String.init(reflecting:)) ?? "nil"
             let name = parameters["name"].map(String.init(reflecting:)) ?? "nil"
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
@@ -533,7 +533,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock(":foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: ":foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "bar")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -541,7 +541,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("http://\(httpServer.address)/:foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "http://\(httpServer.address)/:foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "bar")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -551,7 +551,7 @@ class MockingTests: PMHTTPTestCase {
     
     func testInterceptURLs() {
         HTTP.mockManager.interceptUnhandledEnvironmentURLs = true
-        HTTP.mockManager.addMock("foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
         }
@@ -586,7 +586,7 @@ class MockingTests: PMHTTPTestCase {
         HTTP.mockManager.interceptUnhandledExternalURLs = true
         HTTP.mockManager.interceptUnhandledEnvironmentURLs = true
         // httpServer.address includes port
-        HTTP.mockManager.addMock("//\(httpServer.address)/foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "//\(httpServer.address)/foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.address)/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -595,7 +595,7 @@ class MockingTests: PMHTTPTestCase {
         
         // httpServer.host does not
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("//\(httpServer.host)/foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "//\(httpServer.host)/foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.host)/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -604,7 +604,7 @@ class MockingTests: PMHTTPTestCase {
         
         // Check paths with :components
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("//\(httpServer.host)/:foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "//\(httpServer.host)/:foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.host)/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -613,7 +613,7 @@ class MockingTests: PMHTTPTestCase {
     }
     
     func testMockPortMatching() {
-        HTTP.mockManager.addMock("http://\(httpServer.host):9/foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "http://\(httpServer.host):9/foo", statusCode: 200, text: "Mock response")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }
@@ -669,7 +669,7 @@ class MockingTests: PMHTTPTestCase {
         }
         
         do {
-            let req = HTTP.request(GET: "foo").parseWithHandler({ _ -> Int in
+            let req = HTTP.request(GET: "foo").parse(with: { _ -> Int in
                 XCTFail("Parse handler unexpectedly called")
                 return 42
             }).mock(value: 123)
@@ -724,7 +724,7 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockRequestBody() {
         // NSData upload
-        HTTP.mockManager.addMock("foo") { (request, parameters, completion) in
+        HTTP.mockManager.addMock(for: "foo") { (request, parameters, completion) in
             XCTAssertEqual(String(data: HTTP.mockManager.dataFromRequest(request), encoding: String.Encoding.utf8), "Hello world", "request body")
             completion(response: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body: Data())
         }
@@ -733,7 +733,7 @@ class MockingTests: PMHTTPTestCase {
         
         // JSON upload
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("foo") { (request, parameters, completion) in
+        HTTP.mockManager.addMock(for: "foo") { (request, parameters, completion) in
             do {
                 let json = try JSON.decode(HTTP.mockManager.dataFromRequest(request))
                 XCTAssertEqual(json, ["ok": true, "foo": "bar"], "request body json")
@@ -748,7 +748,7 @@ class MockingTests: PMHTTPTestCase {
         // Multipart upload
         do {
             HTTP.mockManager.removeAllMocks()
-            HTTP.mockManager.addMock("foo") { (request, parameters, completion) in
+            HTTP.mockManager.addMock(for: "foo") { (request, parameters, completion) in
                 let data = HTTP.mockManager.dataFromRequest(request)
                 // we can't parse a multipart body right now, and HTTPServer doesn't expose its parser in a way we can use.
                 // So we'll just make sure our two texts are in there and all the boundaries are there
@@ -771,8 +771,8 @@ class MockingTests: PMHTTPTestCase {
                 completion(response: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body: Data())
             }
             let req = HTTP.request(POST: "foo")!
-            req.addMultipartText("Hello world", withName: "message")
-            req.addMultipartData("Goodbye world".data(using: String.Encoding.utf8)!, withName: "data")
+            req.addMultipart(text: "Hello world", withName: "message")
+            req.addMultipart(data: "Goodbye world".data(using: String.Encoding.utf8)!, withName: "data")
             expectationForRequestSuccess(req)
             waitForExpectations(timeout: 5, handler: nil)
         }
@@ -780,7 +780,7 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockHTTPMethods() {
         // By default mocks match any HTTP method
-        HTTP.mockManager.addMock("foo", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
@@ -792,7 +792,7 @@ class MockingTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
         
         HTTP.mockManager.removeAllMocks()
-        HTTP.mockManager.addMock("foo", httpMethod: "POST", statusCode: 200, text: "Mock response")
+        HTTP.mockManager.addMock(for: "foo", httpMethod: "POST", statusCode: 200, text: "Mock response")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
         }

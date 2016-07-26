@@ -120,7 +120,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// session proposes to not cache the response at all, the response will not be cached.
     ///
     /// The default value is `.Allowed` for most requests, and `.NotAllowed` for parse requests
-    /// created from `parseAsJSON()` or `parseAsJSONWithHandler()`.
+    /// created from `parseAsJSON()` or `parseAsJSON(with:)`.
     public var defaultResponseCacheStoragePolicy: URLCache.StoragePolicy = .allowed
     
     /// `true` iff redirects should be followed when processing the response.
@@ -175,9 +175,9 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(GET: "foo")
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -500,7 +500,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     ///   particular thread. The handler returns the new value for the request.
     /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should use `performRequestWithCompletion(_:)` instead.
+    ///   thread, you should use `performRequest(withCompletionQueue:completion:)` instead.
     /// - Warning: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
@@ -508,7 +508,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseWithHandler<T>(_ handler: (response: URLResponse, data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parse<T>(with handler: (response: URLResponse, data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
     
@@ -519,11 +519,11 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// completion block fires.
     /// - Parameter queue: (Optional) The queue to call the handler on. The default value
     ///   of `nil` means the handler will be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<Data>) -> Void) -> HTTPManagerTask {
+    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<Data>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
             if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
@@ -533,18 +533,18 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
                         return
                     } else if let queue = queue {
                         queue.addOperation {
-                            HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                            HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
                         }
                     } else {
-                        HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                        HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
                     }
                 })
             } else if let queue = queue {
                 queue.addOperation {
-                    HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                    HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
                 }
             } else {
-                HTTPManagerNetworkRequest.taskCompletion(task, result, handler)
+                HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
             }
             })
     }
@@ -555,9 +555,9 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(GET: "foo")
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -586,7 +586,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     }
     
     private static func taskCompletion(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>, _ handler: (HTTPManagerTask, HTTPManagerTaskResult<Data>) -> Void) {
-        let transition = task.transitionStateTo(.completed)
+        let transition = task.transitionState(to: .completed)
         if transition.ok {
             assert(transition.oldState != .completed, "internal HTTPManager error: tried to complete task that's already completed")
             handler(task, result)
@@ -610,10 +610,10 @@ public protocol HTTPManagerRequestPerformable {
     /// Performs an asynchronous request and calls the specified handler when done.
     /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
     ///   be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    func performRequestWithCompletion(onQueue queue: OperationQueue?, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func performRequest(withCompletionQueue queue: OperationQueue?, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
     
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
     ///
@@ -622,11 +622,11 @@ public protocol HTTPManagerRequestPerformable {
     /// completion block fires.
     /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
     ///   be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    func createTaskWithCompletion(onQueue queue: OperationQueue?, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func createTask(withCompletionQueue queue: OperationQueue?, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
 }
 
 extension HTTPManagerRequestPerformable {
@@ -636,8 +636,8 @@ extension HTTPManagerRequestPerformable {
     /// - Parameter handler: The handler to call when the request is done. The handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    public func performRequestWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
-        let task = createTaskWithCompletion(onQueue: queue, handler)
+    public func performRequest(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
+        let task = createTask(withCompletionQueue: queue, completion: completion)
         task.resume()
         return task
     }
@@ -676,7 +676,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   particular thread. The handler returns the new value for the request.
     /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should use `performRequestWithCompletion(_:)` instead.
+    ///   thread, you should use `performRequest(withCompletionQueue:completion:)` instead.
     /// - Warning: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
@@ -684,7 +684,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSONWithHandler<T>(_ handler: (response: URLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(with handler: (response: URLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
@@ -699,9 +699,9 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(GET: "foo")
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -728,7 +728,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     }
     
     /// The expected MIME type of the response. Defaults to `["application/json"]` for
-    /// JSON parse requests, or `[]` for requests created with `parseWithHandler(_:)`.
+    /// JSON parse requests, or `[]` for requests created with `parse(with:)`.
     ///
     /// This property is used to generate the `Accept` header, if not otherwise specified by
     /// the request. If multiple values are provided, they're treated as a priority list
@@ -769,11 +769,11 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// completion block fires.
     /// - Parameter queue: (Optional) The queue to call the handler on. The default value
     ///   of `nil` means the handler will be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
+    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
         let parseHandler: (URLResponse, Data) throws -> T
         let expectedContentTypes: [String]
         if let dataMock = dataMock {
@@ -792,18 +792,18 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                         return
                     } else if let queue = queue {
                         queue.addOperation {
-                            HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                            HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
                         }
                     } else {
-                        HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                        HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
                     }
                 })
             } else if let queue = queue {
                 queue.addOperation {
-                    HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                    HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
                 }
             } else {
-                HTTPManagerParseRequest<T>.taskCompletion(task, result, handler)
+                HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
             }
             })
     }
@@ -814,9 +814,9 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(GET: "foo")
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -873,7 +873,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     }
     
     private static func taskCompletion(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>, _ handler: (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) {
-        let transition = task.transitionStateTo(.completed)
+        let transition = task.transitionState(to: .completed)
         if transition.ok {
             assert(transition.oldState != .completed, "internal HTTPManager error: tried to complete task that's already completed")
             handler(task, result)
@@ -963,7 +963,7 @@ private func acceptHeaderValueForContentTypes(_ contentTypes: [String]) -> Strin
 /// Similar to an `HTTPManagerDataRequest` except that it handles 204 No Content
 /// instead of throwing `HTTPManagerError.UnexpectedNoContent`.
 public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
-    /// The results of JSON parsing for use in `parseAsJSONWithHandler(_:)`.
+    /// The results of JSON parsing for use in `parseAsJSON(with:)`.
     public enum JSONResult {
         /// The server returned 204 No Content.
         case noContent(HTTPURLResponse)
@@ -1018,7 +1018,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   particular thread. The handler returns the new value for the request.
     /// - Returns: An `HTTPManagerParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should use `performRequestWithCompletion(_:)` instead.
+    ///   thread, you should use `performRequest(withCompletionQueue:completion:)` instead.
     /// - Warning: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
@@ -1026,7 +1026,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSONWithHandler<T>(_ handler: (result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(with handler: (result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 // No Content
@@ -1043,9 +1043,9 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(POST: "foo")
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -1101,7 +1101,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     ///   - name: The name of the multipart body. This is the name the server expects.
     ///   - mimeType: The MIME content type of the multipart body. Optional.
     ///   - filename: The filename of the attachment. Optional.
-    public func addMultipartData(_ data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
+    public func addMultipart(data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
         multipartBodies.append(.known(.init(.data(data), name: name, mimeType: mimeType, filename: filename)))
     }
     
@@ -1117,7 +1117,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     ///
     /// - Parameter text: The text of the multipart body.
     /// - Parameter name: The name of the multipart body. This is the name the server expects.
-    public func addMultipartText(_ text: String, withName name: String) {
+    public func addMultipart(text: String, withName name: String) {
         multipartBodies.append(.known(.init(.text(text), name: name)))
     }
     
@@ -1138,9 +1138,9 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     ///   parameter can be used to add multipart bodies to the request. This object is
     ///   only valid for the duration of the block's execution.
     ///
-    /// - SeeAlso: `addMultipartData(_:withName:mimeType:filename:)`,
-    ///   `addMultipartText(_:withName:)`.
-    public func addMultipartBodyWithBlock(_ block: (upload: HTTPManagerUploadMultipart) -> Void) {
+    /// - SeeAlso: `addMultipart(data:withName:mimeType:filename:)`,
+    ///   `addMultipart(text:withName:)`.
+    public func addMultipartBody(with block: (upload: HTTPManagerUploadMultipart) -> Void) {
         multipartBodies.append(.pending(.init(block)))
     }
     
@@ -1150,9 +1150,9 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(POST: "foo")
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -1192,7 +1192,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     }()
 }
 
-/// Helper class for `HTTPManagerUploadFormRequest.addMultipartBodyWithBlock(_:)`.
+/// Helper class for `HTTPManagerUploadFormRequest.addMultipartBody(with:)`.
 public final class HTTPManagerUploadMultipart: NSObject {
     /// Specifies a named multipart body for this request.
     ///
@@ -1206,7 +1206,7 @@ public final class HTTPManagerUploadMultipart: NSObject {
     ///   - name: The name of the multipart body. This is the name the server expects.
     ///   - mimeType: The MIME content type of the multipart body. Optional.
     ///   - filename: The filename of the attachment. Optional.
-    public func addMultipartData(_ data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
+    public func addMultipart(data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
         multipartData.append(.init(.data(data), name: name, mimeType: mimeType, filename: filename))
     }
     
@@ -1222,7 +1222,7 @@ public final class HTTPManagerUploadMultipart: NSObject {
     ///
     /// - Parameter text: The text of the multipart body.
     /// - Parameter name: The name of the multipart body. This is the name the server expects.
-    public func addMultipartText(_ text: String, withName name: String) {
+    public func addMultipart(text: String, withName name: String) {
         multipartData.append(.init(.text(text), name: name))
     }
     
@@ -1250,9 +1250,9 @@ public final class HTTPManagerUploadDataRequest: HTTPManagerActionRequest {
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(POST: "foo", data: someData)
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```
@@ -1303,9 +1303,9 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerActionRequest {
     /// This method exists to help with functional-style chaining, e.g.:
     /// ```
     /// HTTP.request(POST: "foo", json: jsonObject)
-    ///     .parseAsJSONWithHandler({ doParse($1) })
+    ///     .parseAsJSON(with: { doParse($1) })
     ///     .with({ $0.userInitiated = true })
-    ///     .performRequestWithCompletion { task, result in
+    ///     .performRequest { task, result in
     ///         // ...
     /// }
     /// ```

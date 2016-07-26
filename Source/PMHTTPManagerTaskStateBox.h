@@ -47,7 +47,7 @@ __attribute__((visibility("hidden")))
 - (nonnull instancetype)initWithState:(_PMHTTPManagerTaskStateBoxState)state networkTask:(nonnull NSURLSessionTask *)task NS_DESIGNATED_INITIALIZER;
 - (nonnull instancetype)init NS_UNAVAILABLE;
 /// Transitions the state to \c newState if possible.
-- (_PMHTTPManagerTaskStateBoxResult)transitionStateTo:(_PMHTTPManagerTaskStateBoxState)newState;
+- (_PMHTTPManagerTaskStateBoxResult)transitionStateTo:(_PMHTTPManagerTaskStateBoxState)newState NS_SWIFT_NAME(transitionState(to:));
 /// Sets the tracking network activity flag and returns the previous value.
 - (BOOL)setTrackingNetworkActivity;
 /// Clears the tracking network activity flag and returns the previous value.

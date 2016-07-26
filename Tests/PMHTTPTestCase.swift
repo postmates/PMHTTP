@@ -104,7 +104,7 @@ class PMHTTPTestCase: XCTestCase {
         ) -> HTTPManagerTask
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
             switch result {
             case let .success(response, value):
                 completion(task: task, response: response, value: value)
@@ -136,7 +136,7 @@ class PMHTTPTestCase: XCTestCase {
         ) -> HTTPManagerTask
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
             switch result {
             case .success(let response, _):
                 XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
@@ -168,7 +168,7 @@ class PMHTTPTestCase: XCTestCase {
         ) -> HTTPManagerTask
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
             switch result {
             case .success(let response, _):
                 XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
