@@ -26,7 +26,7 @@ class PMHTTPTestCase: XCTestCase {
             // Bypass the shared URL cache and use an in-memory cache only.
             // This avoids issues seen with the on-disk cache being locked when we try to remove cached responses.
             let config = HTTP.sessionConfiguration
-            config.URLCache = NSURLCache(memoryCapacity: 20*1024*1024, diskCapacity: 0, diskPath: nil)
+            config.urlCache = URLCache(memoryCapacity: 20*1024*1024, diskCapacity: 0, diskPath: nil)
             HTTP.sessionConfiguration = config
             cacheConfigured = true
         }
@@ -44,7 +44,7 @@ class PMHTTPTestCase: XCTestCase {
         super.setUp()
         httpServer.reset()
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)")!
-        HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
+        HTTP.sessionConfiguration.urlCache?.removeAllCachedResponses()
         HTTP.defaultCredential = nil
         HTTP.defaultRetryBehavior = nil
     }
@@ -63,20 +63,20 @@ class PMHTTPTestCase: XCTestCase {
     private let expectationTasks: Locked<[HTTPManagerTask]> = Locked([])
     
     @available(*, unavailable)
-    override func waitForExpectationsWithTimeout(timeout: NSTimeInterval, handler: XCWaitCompletionHandler?) {
-        waitForExpectationsWithTimeout(timeout, file: #file, line: #line, handler: handler)
+    override func waitForExpectations(timeout: TimeInterval, handler: XCWaitCompletionHandler?) {
+        waitForExpectations(timeout: timeout, file: #file, line: #line, handler: handler)
     }
     
-    func waitForExpectationsWithTimeout(timeout: NSTimeInterval, file: StaticString = #file, line: UInt = #line, handler: XCWaitCompletionHandler?) {
+    func waitForExpectations(timeout: TimeInterval, file: StaticString = #file, line: UInt = #line, handler: XCWaitCompletionHandler?) {
         var setUnhandledRequestCallback = false
         if httpServer.unhandledRequestCallback == nil {
             setUnhandledRequestCallback = true
             httpServer.unhandledRequestCallback = { request, response, completionHandler in
                 XCTFail("Unhandled request \(request)", file: file, line: line)
-                completionHandler(HTTPServer.Response(status: .NotFound, text: "Unhandled request"))
+                completionHandler(HTTPServer.Response(status: .notFound, text: "Unhandled request"))
             }
         }
-        super.waitForExpectationsWithTimeout(timeout) { error in
+        super.waitForExpectations(timeout: timeout) { error in
             if error != nil {
                 // timeout
                 var outstandingTasks: String = ""
@@ -97,24 +97,25 @@ class PMHTTPTestCase: XCTestCase {
         }
     }
     
+    @discardableResult
     func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void = { _ in () }
+        _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        completion: (task: HTTPManagerTask, response: URLResponse, value: Request.ResultValue) -> Void = { _ in () }
         ) -> HTTPManagerTask
     {
-        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
+        let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
         let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
             switch result {
-            case let .Success(response, value):
+            case let .success(response, value):
                 completion(task: task, response: response, value: value)
-            case .Error(_, let error):
+            case .error(_, let error):
                 XCTFail("network request error: \(error)", file: file, line: line)
-            case .Canceled:
+            case .canceled:
                 XCTFail("network request canceled", file: file, line: line)
             }
             expectationTasks.with { tasks in
-                if let idx = tasks.indexOf({ $0 === task }) {
-                    tasks.removeAtIndex(idx)
+                if let idx = tasks.index(where: { $0 === task }) {
+                    tasks.remove(at: idx)
                 }
             }
             expectation.fulfill()
@@ -128,24 +129,25 @@ class PMHTTPTestCase: XCTestCase {
         return task
     }
     
+    @discardableResult
     func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void = { _ in () }
+        _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        completion: (task: HTTPManagerTask, response: URLResponse?, error: ErrorProtocol) -> Void = { _ in () }
         ) -> HTTPManagerTask
     {
-        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
+        let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
         let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
             switch result {
-            case .Success(let response, _):
+            case .success(let response, _):
                 XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
-            case let .Error(response, error):
+            case let .error(response, error):
                 completion(task: task, response: response, error: error)
-            case .Canceled:
+            case .canceled:
                 XCTFail("network request canceled", file: file, line: line)
             }
             expectationTasks.with { tasks in
-                if let idx = tasks.indexOf({ $0 === task }) {
-                    tasks.removeAtIndex(idx)
+                if let idx = tasks.index(where: { $0 === task }) {
+                    tasks.remove(at: idx)
                 }
             }
             expectation.fulfill()
@@ -159,24 +161,25 @@ class PMHTTPTestCase: XCTestCase {
         return task
     }
     
+    @discardableResult
     func expectationForRequestCanceled<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
         completion: (task: HTTPManagerTask) -> Void = { _ in () }
         ) -> HTTPManagerTask
     {
-        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
+        let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
         let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
             switch result {
-            case .Success(let response, _):
+            case .success(let response, _):
                 XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
-            case .Error(_, let error):
+            case .error(_, let error):
                 XCTFail("network request error: \(error)", file: file, line: line)
-            case .Canceled:
+            case .canceled:
                 completion(task: task)
             }
             expectationTasks.with { tasks in
-                if let idx = tasks.indexOf({ $0 === task }) {
-                    tasks.removeAtIndex(idx)
+                if let idx = tasks.index(where: { $0 === task }) {
+                    tasks.remove(at: idx)
                 }
             }
             expectation.fulfill()
@@ -192,23 +195,17 @@ class PMHTTPTestCase: XCTestCase {
 }
 
 private final class Locked<T> {
-    let _lock: NSLock = NSLock()
+    let _lock: Lock = Lock()
     var _value: T
     
     init(_ value: T) {
         _value = value
     }
     
-    func with<R>(@noescape f: (inout T) -> R) -> R {
+    func with<R>(_ f: @noescape (inout T) -> R) -> R {
         _lock.lock()
         defer { _lock.unlock() }
         return f(&_value)
-    }
-    
-    func with(@noescape f: (inout T) -> Void) {
-        _lock.lock()
-        defer { _lock.unlock() }
-        f(&_value)
     }
 }
 

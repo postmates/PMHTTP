@@ -16,52 +16,52 @@ import Foundation
 import PMJSON
 
 internal enum UploadBody {
-    case Data(NSData)
-    case FormUrlEncoded([NSURLQueryItem])
-    case JSON(PMJSON.JSON)
+    case data(Data)
+    case formUrlEncoded([URLQueryItem])
+    case json(PMJSON.JSON)
     /// - Requires: The `boundary` must meet the rules for a valid multipart boundary
     ///   and must not contain any characters that require quoting.
-    case MultipartMixed(boundary: String, parameters: [NSURLQueryItem], bodyParts: [MultipartBodyPart])
+    case multipartMixed(boundary: String, parameters: [URLQueryItem], bodyParts: [MultipartBodyPart])
     
-    static func dataRepresentationForQueryItems(queryItems: [NSURLQueryItem]) -> NSData {
+    static func dataRepresentationForQueryItems(_ queryItems: [URLQueryItem]) -> Data {
         guard !queryItems.isEmpty else {
-            return NSData()
+            return Data()
         }
-        let cs = NSCharacterSet.URLQueryKeyValueAllowedCharacterSet
-        func encodeQueryItem(item: NSURLQueryItem) -> String {
-            let encodedName = item.name.stringByAddingPercentEncodingWithAllowedCharacters(cs) ?? ""
+        let cs = CharacterSet.URLQueryKeyValueAllowedCharacterSet
+        func encodeQueryItem(_ item: URLQueryItem) -> String {
+            let encodedName = item.name.addingPercentEncoding(withAllowedCharacters: cs) ?? ""
             if let value = item.value {
-                let encodedValue = value.stringByAddingPercentEncodingWithAllowedCharacters(cs) ?? ""
+                let encodedValue = value.addingPercentEncoding(withAllowedCharacters: cs) ?? ""
                 return "\(encodedName)=\(encodedValue)"
             } else {
                 return encodedName
             }
         }
         let encodedQueryItems = queryItems.map(encodeQueryItem)
-        let encodedString = encodedQueryItems.joinWithSeparator("&")
-        return encodedString.dataUsingEncoding(NSUTF8StringEncoding)!
+        let encodedString = encodedQueryItems.joined(separator: "&")
+        return encodedString.data(using: String.Encoding.utf8)!
     }
     
     /// Calls `evaluate()` on every pending multipart body.
     internal func evaluatePending() {
-        guard case .MultipartMixed(_, _, let bodies) = self else { return }
-        for case .Pending(let deferred) in bodies {
+        guard case .multipartMixed(_, _, let bodies) = self else { return }
+        for case .pending(let deferred) in bodies {
             deferred.evaluate()
         }
     }
 }
 
-extension NSCharacterSet {
-    private static let URLQueryKeyValueAllowedCharacterSet: NSCharacterSet = {
-        let cs: NSMutableCharacterSet = unsafeDowncast(NSCharacterSet.URLQueryAllowedCharacterSet().mutableCopy())
-        cs.removeCharactersInString("&=")
-        return unsafeDowncast(cs.copy())
+extension CharacterSet {
+    private static let URLQueryKeyValueAllowedCharacterSet: CharacterSet = {
+        var cs = CharacterSet.urlQueryAllowed
+        cs.remove(charactersIn: "&=")
+        return cs
     }()
 }
 
 internal enum MultipartBodyPart {
-    case Known(Data)
-    case Pending(Deferred)
+    case known(Data)
+    case pending(Deferred)
     
     struct Data {
         let mimeType: String?
@@ -77,20 +77,20 @@ internal enum MultipartBodyPart {
         }
         
         enum Content {
-            case Data(NSData)
-            case Text(String)
+            case data(Foundation.Data)
+            case text(String)
         }
     }
     
     final class Deferred {
-        init(_ block: HTTPManagerUploadMultipart -> Void) {
+        init(_ block: (HTTPManagerUploadMultipart) -> Void) {
             self.block = block
         }
         
         /// Asynchronously triggers evaluation of the block, if not already evaluated.
         /// This MUST be invoked before calling `wait()`.
         func evaluate() {
-            dispatch_barrier_async(queue) {
+            queue.async(flags: .barrier) {
                 guard self.value == nil else { return }
                 let helper = HTTPManagerUploadMultipart()
                 self.block(helper)
@@ -101,9 +101,9 @@ internal enum MultipartBodyPart {
         /// Waits for the block to finish evaluation and returns the `Data` values created as a result.
         /// `evaluate()` MUST be invoked at some point before calling `wait()`. Calling `wait()` without
         /// calling `evaluate()` first is a programmer error and will result in an assertion failure.
-        func wait() -> [Data] {
+        @discardableResult func wait() -> [Data] {
             var value: [Data]?
-            dispatch_sync(queue) {
+            queue.sync {
                 value = self.value
             }
             guard let value_ = value else {
@@ -115,23 +115,23 @@ internal enum MultipartBodyPart {
         /// Asynchronously executes a given block on an private concurrent queue with the evaluated `Data` values.
         /// `evaluate()` MUST be invoked at some point before calling `async()`. Calling `async()` without
         /// calling `evaluate()` first is a programmer error and will result in an assertion failure.
-        func async(qosClass: dispatch_qos_class_t?, handler: [Data] -> Void) {
-            let block: dispatch_block_t = {
+        func async(_ qosClass: DispatchQoS?, handler: ([Data]) -> Void) {
+            let block: () -> () = {
                 guard let value = self.value else {
                     fatalError("HTTPManager internal error: invoked async() on Deferred without invoking evaluate()")
                 }
                 handler(value)
             }
             if let qosClass = qosClass {
-                dispatch_async(queue, dispatch_block_create_with_qos_class(DISPATCH_BLOCK_ENFORCE_QOS_CLASS, qosClass, 0, block))
+                queue.async(group: nil, qos: qosClass, flags: .enforceQoS, execute: block)
             } else {
-                dispatch_async(queue, block)
+                queue.async(execute: block)
             }
         }
         
-        private let queue = dispatch_queue_create("HTTPManager MultipartBodyPart Deferred queue", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_CONCURRENT, QOS_CLASS_UTILITY, 0))
+        private let queue = DispatchQueue(label: "HTTPManager MultipartBodyPart Deferred queue", attributes: [.concurrent, .qosUtility])
         private var value: [Data]?
-        private let block: HTTPManagerUploadMultipart -> Void
+        private let block: (HTTPManagerUploadMultipart) -> Void
     }
 }
 

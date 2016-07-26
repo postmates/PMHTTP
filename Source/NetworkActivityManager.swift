@@ -19,7 +19,7 @@ internal final class NetworkActivityManager: NSObject {
     
     var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)? {
         get {
-            if NSThread.isMainThread() {
+            if Thread.isMainThread {
                 return data.networkActivityHandler
             } else {
                 return inner.sync({ $0.networkActivityHandler })
@@ -41,7 +41,7 @@ internal final class NetworkActivityManager: NSObject {
                 }
                 if data.counter > 0 && newValue != nil && !data.pendingHandlerInvocation {
                     data.pendingHandlerInvocation = true
-                    dispatch_async(dispatch_get_main_queue()) { [data] in
+                    DispatchQueue.main.async { [data] in
                         data.pendingHandlerInvocation = false
                         if data.counter > 0, let handler = data.networkActivityHandler {
                             handler(numberOfActiveTasks: data.counter)
@@ -49,25 +49,25 @@ internal final class NetworkActivityManager: NSObject {
                     }
                 }
             }
-            if NSThread.isMainThread() {
+            if Thread.isMainThread {
                 handler()
             } else {
                 inner.asyncBarrier {
                     $0.networkActivityHandler = newValue
                 }
-                dispatch_async(dispatch_get_main_queue(), handler)
+                DispatchQueue.main.async(execute: handler)
             }
         }
     }
     
     /// Increments the global network activity counter.
     func incrementCounter() {
-        dispatch_source_merge_data(source, 1)
+        source.mergeData(value: 1)
     }
     
     /// Decrements the global network activity counter.
     func decrementCounter() {
-        dispatch_source_merge_data(source, UInt(bitPattern: -1))
+        source.mergeData(value: UInt(bitPattern: -1))
     }
     
     private var inner = QueueConfined(label: "NetworkActivityManager internal queue", value: Inner())
@@ -90,25 +90,25 @@ internal final class NetworkActivityManager: NSObject {
         var pendingHandlerInvocation = false
     }
     
-    private let source: dispatch_source_t
+    private let source: DispatchSourceUserDataAdd
     private let data = Data()
     
     private override init() {
-        source = dispatch_source_create(DISPATCH_SOURCE_TYPE_DATA_ADD, 0, 0, dispatch_get_main_queue())
+        source = DispatchSource.userDataAdd(queue: DispatchQueue.main)
         super.init()
-        dispatch_source_set_cancel_handler(source) { [data] in
+        source.setCancelHandler { [data] in
             data.counter = 0
             data.networkActivityHandler?(numberOfActiveTasks: 0)
         }
-        dispatch_source_set_event_handler(source) { [data, source] in
-            let delta = Int(bitPattern: dispatch_source_get_data(source))
+        source.setEventHandler { [data, source] in
+            let delta = Int(bitPattern: source.data)
             data.counter = data.counter + delta
             data.networkActivityHandler?(numberOfActiveTasks: max(data.counter, 0))
         }
-        dispatch_resume(source)
+        source.resume()
     }
     
     deinit {
-        dispatch_source_cancel(source)
+        source.cancel()
     }
 }
