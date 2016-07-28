@@ -104,7 +104,7 @@ A `multipart/form-data` upload might look like:
 
 ```swift
 // https://api.example.com/v1/submit_cat with photo
-let req = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])
+let req = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])!
 // We could add the image synchronously, but it's better to be asynchronous.
 req.addMultipartBody { upload in
     // This block executes on a background queue.
