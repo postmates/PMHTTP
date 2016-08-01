@@ -46,10 +46,10 @@ public extension HTTPManager {
             ?? asctimeDateFormatter.date(from: dateString)
     }
     
-    private static let posixLocale = Locale(localeIdentifier: "en_US_POSIX")
+    private static let posixLocale = Locale(identifier: "en_US_POSIX")
     private static let gregorianCalendar: Calendar = {
-        let calendar = Calendar(calendarIdentifier: Calendar.Identifier.gregorian)!
-        calendar.timeZone = TimeZone(forSecondsFromGMT: 0)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         return calendar
     }()
     private static let rfc1123DateFormatter: DateFormatter = {
@@ -72,7 +72,7 @@ public extension HTTPManager {
         // > HTTP/1.1 clients and caches SHOULD assume that an RFC-850 date
         // > which appears to be more than 50 years in the future is in fact
         // > in the past (this helps solve the "year 2000" problem).
-        formatter.twoDigitStartDate = gregorianCalendar.date(byAdding: .year, value: -49, to: Date(), options: [])
+        formatter.twoDigitStartDate = gregorianCalendar.date(byAdding: DateComponents(year: -49), to: Date())
         return formatter
     }()
     private static let asctimeDateFormatter: DateFormatter = {

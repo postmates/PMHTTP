@@ -66,7 +66,7 @@ internal final class HTTPBody {
                 if count == buffer.count {
                     return idx
                 }
-                ptr.initialize(with: utf8[idx])
+                ptr.initialize(to: utf8[idx])
                 ptr += 1
                 count += 1
             }

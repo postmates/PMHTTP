@@ -77,10 +77,10 @@ public final class HTTPMockManager: NSObject {
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.count)
         }
-        return addMock(for: url, httpMethod: httpMethod, queue: DispatchQueue.global(attributes: .qosUtility), handler: { (request, parameters, completion) in
+        return addMock(for: url, httpMethod: httpMethod, queue: DispatchQueue.global(qos: .utility), handler: { (request, parameters, completion) in
             let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
-                DispatchQueue.global(attributes: .qosUtility).after(when: DispatchTime.now() + delay) {
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + delay) {
                     completion(response: response, body: data)
                 }
             } else {
@@ -193,7 +193,7 @@ public final class HTTPMockManager: NSObject {
             }
             let response = HTTPURLResponse(url: request.url!, statusCode: mock.statusCode, httpVersion: "HTTP/1.1", headerFields: headers)!
             if mock.delay > 0 {
-                DispatchQueue.global(attributes: .qosUtility).after(when: DispatchTime.now() + mock.delay) {
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + mock.delay) {
                     completion(response: response, body: body)
                 }
             } else {
@@ -220,7 +220,7 @@ public final class HTTPMockManager: NSObject {
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
     public func addMock(for url: String, httpMethod: String? = nil, queue: DispatchQueue? = nil, handler: (request: URLRequest, parameters: [String: String], completion: (response: HTTPURLResponse, body: Data) -> Void) -> Void) -> HTTPMockToken {
-        let mock = HTTPMock(url: url, httpMethod: httpMethod, queue: queue ?? DispatchQueue(label: "HTTPMock queue", attributes: DispatchQueueAttributes.serial), handler: handler)
+        let mock = HTTPMock(url: url, httpMethod: httpMethod, queue: queue ?? DispatchQueue(label: "HTTPMock queue"), handler: handler)
         inner.asyncBarrier { inner in
             inner.mocks.append(mock)
         }
@@ -249,7 +249,7 @@ public final class HTTPMockManager: NSObject {
     ///   all or to invoke it twice.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock<T>(for url: String, httpMethod: String? = nil, state: T, handler: (inout state: T, request: URLRequest, parameters: [String: String], completion: (response: HTTPURLResponse, body: Data) -> Void) -> Void) -> HTTPMockToken {
+    public func addMock<T>(for url: String, httpMethod: String? = nil, state: T, handler: (state: inout T, request: URLRequest, parameters: [String: String], completion: (response: HTTPURLResponse, body: Data) -> Void) -> Void) -> HTTPMockToken {
         var state = state
         return addMock(for: url, httpMethod: httpMethod, handler: { (request, parameters, completion) in
             handler(state: &state, request: request, parameters: parameters, completion: completion)
@@ -355,8 +355,8 @@ public extension HTTPMockManager {
             defer { stream.close() }
             var data = Data()
             let bufferSize = 64 * 1024 // 64kB
-            let buffer = UnsafeMutablePointer<UInt8>(allocatingCapacity: bufferSize)
-            defer { buffer.deallocateCapacity(bufferSize) }
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+            defer { buffer.deallocate(capacity: bufferSize) }
             loop: repeat {
                 switch stream.read(buffer, maxLength: bufferSize) {
                 case 0: // EOF
@@ -451,10 +451,10 @@ public extension HTTPManagerNetworkRequest {
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.count)
         }
-        newRequest.mock = HTTPMockInstance(queue: DispatchQueue.global(attributes: .qosUtility), parameters: [:], handler: { (request, parameters, completion) in
+        newRequest.mock = HTTPMockInstance(queue: DispatchQueue.global(qos: .utility), parameters: [:], handler: { (request, parameters, completion) in
             let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
-                DispatchQueue.global(attributes: .qosUtility).after(when: DispatchTime.now() + delay) {
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + delay) {
                     completion(response: response, body: data)
                 }
             } else {
@@ -527,10 +527,10 @@ public extension HTTPManagerParseRequest {
             headers["Content-Type"] = "application/json"
         }
         // Add a network mock that returns a 200 response with no data.
-        newRequest.mock = HTTPMockInstance(queue: DispatchQueue.global(attributes: .qosUtility), parameters: [:], handler: { (request, parameters, completion) in
+        newRequest.mock = HTTPMockInstance(queue: DispatchQueue.global(qos: .utility), parameters: [:], handler: { (request, parameters, completion) in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
-                DispatchQueue.global(attributes: .qosUtility).after(when: DispatchTime.now() + delay) {
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + delay) {
                     completion(response: response, body: Data())
                 }
             } else {
@@ -692,7 +692,7 @@ internal class HTTPMockInstance {
         self.handler = handler
     }
     
-    static let unhandledURLMock = HTTPMockInstance(queue: DispatchQueue.global(attributes: .qosUtility), parameters: [:]) { (request, parameters, completion) in
+    static let unhandledURLMock = HTTPMockInstance(queue: DispatchQueue.global(qos: .utility), parameters: [:]) { (request, parameters, completion) in
         let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "text/plain; charset=utf-8"])!
         let data = "No mock found for URL.".data(using: String.Encoding.utf8)!
         completion(response: response, body: data)
@@ -753,7 +753,8 @@ private extension URLComponents {
     /// - Returns: An array containing the path components, or `nil` if the path contains an illegal
     ///   percent-encoding sequence. If `self` has no path, `[]` will be returned.
     var pathComponents: [String]? {
-        guard let path = percentEncodedPath else { return [] }
+        let path = percentEncodedPath
+        guard !path.isEmpty else { return [] }
         let comps = path.unicodeScalars.split(separator: "/")
         let hasLeadingSlash = path.hasPrefix("/")
         var result: [String] = []
@@ -786,10 +787,10 @@ private extension URLComponents {
         guard !result.hasAuthority else { return result }
         (result.percentEncodedUser, result.percentEncodedPassword) = (components.percentEncodedUser, components.percentEncodedPassword)
         (result.percentEncodedHost, result.port) = (components.percentEncodedHost, components.port)
-        if let path = result.percentEncodedPath, !path.isEmpty {
+        if case let path = result.percentEncodedPath, !path.isEmpty {
             if !path.hasPrefix("/") {
                 // relative path
-                if let basePath = components.percentEncodedPath, !basePath.isEmpty {
+                if case let basePath = components.percentEncodedPath, !basePath.isEmpty {
                     result.percentEncodedPath = basePath.hasSuffix("/") ? "\(basePath)\(path)" : "\(basePath)/\(path)"
                 } else if !result.startsWithPath {
                     // We need a / prefix
@@ -812,7 +813,7 @@ private extension URLComponents {
             guard let range = rangeOfPath, !range.isEmpty else { return false }
             return range.lowerBound == string?.startIndex
         } else {
-            return scheme == nil && !hasAuthority && !(percentEncodedPath?.isEmpty ?? true)
+            return scheme == nil && !hasAuthority && !percentEncodedPath.isEmpty
         }
     }
     
@@ -829,7 +830,7 @@ internal class HTTPMockURLProtocol: URLProtocol {
     static let requestProperty = "com.postmates.PMHTTP.mock"
     
     private let mock: HTTPMockInstance
-    private let queue = DispatchQueue(label: "HTTPMockURLProtocol queue", attributes: DispatchQueueAttributes.serial)
+    private let queue = DispatchQueue(label: "HTTPMockURLProtocol queue")
     private var loading: Bool = false
     
     override class func canInit(with request: URLRequest) -> Bool {
@@ -852,7 +853,7 @@ internal class HTTPMockURLProtocol: URLProtocol {
     override func startLoading() {
         guard request.url != nil else {
             // I don't know how an NSURLRequest URL can be nil but we can't evaluate our mock if it is.
-            struct InvalidURLError: ErrorProtocol {}
+            struct InvalidURLError: Error {}
             client?.urlProtocol(self, didFailWithError: InvalidURLError() as NSError)
             return
         }

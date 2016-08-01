@@ -376,9 +376,9 @@ public final class HTTPManagerEnvironment: NSObject {
             && getPort(baseURLComponents) == getPort(urlComponents)
             else { return false }
         switch (baseURLComponents.percentEncodedPath, urlComponents.percentEncodedPath) {
-        case (""?, _), (nil, _): return true
-        case (_?, nil): return false
-        case let (a?, b?): return b.hasPrefix(a)
+        case ("", _): return true
+        case (_, ""): return false
+        case let (a, b): return b.hasPrefix(a)
         }
     }
     
@@ -389,8 +389,8 @@ public final class HTTPManagerEnvironment: NSObject {
         }
         var components = components
         // ensure the URL is terminated with a slash
-        if let path = components.path, !path.isEmpty && !path.hasSuffix("/") {
-            components.path = "\(path)/"
+        if !components.path.isEmpty && !components.path.hasSuffix("/") {
+            components.path += "/"
         }
         components.query = nil
         components.fragment = nil
@@ -615,7 +615,8 @@ extension HTTPManager {
         let (environment, credential, defaultRetryBehavior, assumeErrorsAreJSON) = inner.sync({ inner -> (Environment?, URLCredential?, HTTPManagerRetryBehavior?, Bool) in
             return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
         })
-        guard let url = environment.map({ URL(string: path, relativeTo: $0.baseURL) }) ?? URL(string: path) else { return nil }  // FIXME: Fix in next beta
+        // FIXME: Get rid of NSURL in next beta (https://github.com/apple/swift/pull/3910)
+        guard let url = NSURL(string: path, relativeTo: environment?.baseURL) as URL? else { return nil }
         let request = f(url)
         if let credential = credential, let environment = environment {
             // make sure the requested entity is within the space defined by baseURL
@@ -632,7 +633,7 @@ extension HTTPManager {
 // MARK: HTTPManagerError
 
 /// Errors returned by HTTPManager
-public enum HTTPManagerError: ErrorProtocol, CustomStringConvertible, CustomDebugStringConvertible {
+public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringConvertible {
     /// An HTTP response was returned that indicates failure.
     /// - Parameter statusCode: The HTTP status code. Any code outside of 2xx or 3xx indicates failure.
     /// - Parameter response: The `NSHTTPURLResponse` object.
@@ -793,7 +794,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   `.Processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
-    public init(_ handler: (task: HTTPManagerTask, error: ErrorProtocol, attempt: Int, callback: (Bool) -> Void) -> Void) {
+    public init(_ handler: (task: HTTPManagerTask, error: Error, attempt: Int, callback: (Bool) -> Void) -> Void) {
         self.handler = { task, error, attempt, callback in
             if task.isIdempotent {
                 handler(task: task, error: error, attempt: attempt, callback: callback)
@@ -829,7 +830,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   `.Processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
-    public init(ignoringIdempotence handler: (task: HTTPManagerTask, error: ErrorProtocol, attempt: Int, callback: (Bool) -> Void) -> Void) {
+    public init(ignoringIdempotence handler: (task: HTTPManagerTask, error: Error, attempt: Int, callback: (Bool) -> Void) -> Void) {
         self.handler = handler
         super.init()
     }
@@ -853,7 +854,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
         // case retryWithReachability(timeout: NSTimeInterval)
         
         /// Evaluates the retry strategy for the given parameters.
-        private func evaluate(_ task: HTTPManagerTask, error: ErrorProtocol, attempt: Int, callback: (Bool) -> Void) {
+        private func evaluate(_ task: HTTPManagerTask, error: Error, attempt: Int, callback: (Bool) -> Void) {
             switch self {
             case .retryOnce:
                 callback(attempt == 0)
@@ -862,7 +863,8 @@ public final class HTTPManagerRetryBehavior: NSObject {
                 case 0:
                     callback(true)
                 case 1:
-                    DispatchQueue.global(attributes: task.userInitiated ? .qosUserInitiated : .qosUtility).after(when: DispatchTime.now() + delay, execute: { callback(true) })
+                    let queue = DispatchQueue.global(qos: task.userInitiated ? .userInitiated : .utility)
+                    queue.asyncAfter(deadline: DispatchTime.now() + delay, execute: { callback(true) })
                 default:
                     callback(false)
                 }
@@ -932,7 +934,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
         })
     }
     
-    internal let handler: (task: HTTPManagerTask, error: ErrorProtocol, attempt: Int, callback: (Bool) -> Void) -> Void
+    internal let handler: (task: HTTPManagerTask, error: Error, attempt: Int, callback: (Bool) -> Void) -> Void
 }
 
 public func ==(lhs: HTTPManagerRetryBehavior.Strategy, rhs: HTTPManagerRetryBehavior.Strategy) -> Bool {
@@ -943,7 +945,7 @@ public func ==(lhs: HTTPManagerRetryBehavior.Strategy, rhs: HTTPManagerRetryBeha
     }
 }
 
-private extension ErrorProtocol {
+private extension Error {
     /// Returns `true` if `self` is a transient networking error, or is a `PMJSON.JSONParserError`
     /// with a code of `.UnexpectedEOF`.
     func isTransientNetworkingError() -> Bool {
@@ -1022,11 +1024,11 @@ extension HTTPManager {
         let bundle = Bundle.main
         
         func appName() -> String {
-            if let name = bundle.objectForInfoDictionaryKey("User Agent App Name") as? String {
+            if let name = bundle.object(forInfoDictionaryKey: "User Agent App Name") as? String {
                 return name
-            } else if let name = bundle.objectForInfoDictionaryKey("CFBundleDisplayName") as? String {
+            } else if let name = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String {
                 return name
-            } else if let name = bundle.objectForInfoDictionaryKey(kCFBundleNameKey as String) as? String {
+            } else if let name = bundle.object(forInfoDictionaryKey: kCFBundleNameKey as String) as? String {
                 return name
             } else {
                 return "(null)"
@@ -1034,8 +1036,8 @@ extension HTTPManager {
         }
         
         func appVersion() -> String {
-            let marketingVersionNumber = bundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String
-            let buildVersionNumber = bundle.objectForInfoDictionaryKey(kCFBundleVersionKey as String) as? String
+            let marketingVersionNumber = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            let buildVersionNumber = bundle.object(forInfoDictionaryKey: kCFBundleVersionKey as String) as? String
             if let marketingVersionNumber = marketingVersionNumber, let buildVersionNumber = buildVersionNumber, marketingVersionNumber != buildVersionNumber {
                 return "\(marketingVersionNumber) rv:\(buildVersionNumber)"
             } else {
@@ -1064,7 +1066,7 @@ extension HTTPManager {
             return s
         }
         
-        let localeIdentifier = Locale.current.localeIdentifier
+        let localeIdentifier = Locale.current.identifier
         
         let (deviceModel, systemName) = deviceInfo()
         // Format is "My Application 1.0 (device_model:iPhone; system_os:iPhone OS system_version:9.2; en_US)"
@@ -1215,7 +1217,7 @@ extension SessionDelegate: URLSessionDataDelegate {
     @inline(__always) func log(_: @autoclosure () -> String) {}
     #endif
     
-    @objc func urlSession(_ session: URLSession, didBecomeInvalidWithError error: NSError?) {
+    @objc func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
         log("didBecomeInvalidWithError: \(error)")
         apiManager?.inner.asyncBarrier { inner in
             if let idx = inner.oldSessions.index(where: { $0 === self }) {
@@ -1267,7 +1269,7 @@ extension SessionDelegate: URLSessionDataDelegate {
         taskData.append(data)
     }
     
-    @objc func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: NSError?) {
+    @objc func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         // NB: If we canceled during the networking portion, we delay reporting the
         // cancellation until the networking portion is done. This should show up here
         // as either an NSURLErrorCancelled error, or simply the inability to transition
@@ -1285,8 +1287,8 @@ extension SessionDelegate: URLSessionDataDelegate {
         
         apiTask.clearTrackingNetworkActivity()
         
-        let queue = DispatchQueue.global(attributes: apiTask.userInitiated ? .qosUserInitiated : .qosUtility)
-        if let error = error, error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
+        let queue = DispatchQueue.global(qos: apiTask.userInitiated ? .userInitiated : .utility)
+        if let error = error as? URLError, error.code == .cancelled {
             // Either we canceled during the networking portion, or someone called
             // cancel() on the NSURLSessionTask directly. In the latter case, treat it
             // as a cancellation anyway.
@@ -1393,33 +1395,33 @@ extension SessionDelegate: URLSessionDataDelegate {
             log("providing stream for Data")
             completionHandler(InputStream(data: data))
         case .formUrlEncoded(let queryItems)?:
-            DispatchQueue.global(attributes: taskInfo.task.userInitiated ? .qosUserInitiated : .qosUtility).async {
+            DispatchQueue.global(qos: taskInfo.task.userInitiated ? .userInitiated : .utility).async {
                 #if enableDebugLogging
                     self.log("providing stream for FormUrlEncoded")
                 #endif
                 completionHandler(InputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
             }
         case .json(let json)?:
-            DispatchQueue.global(attributes: taskInfo.task.userInitiated ? .qosUserInitiated : .qosUtility).async {
+            DispatchQueue.global(qos: taskInfo.task.userInitiated ? .userInitiated : .utility).async {
                 #if enableDebugLogging
                     self.log("providing stream for JSON")
                 #endif
                 completionHandler(InputStream(data: JSON.encodeAsData(json, pretty: false)))
             }
         case let .multipartMixed(boundary, parameters, bodyParts)?:
-            if bodyParts.contains({ if case .pending = $0 { return true } else { return false } }) {
+            if bodyParts.contains(where: { if case .pending = $0 { return true } else { return false } }) {
                 // We have at least one Pending value, we need to wait for them to evaluate (otherwise we can't
                 // accurately implement the `canRead` stream callback) so we'll do it asynchronously.
                 let group = DispatchGroup()
-                let qosClass = taskInfo.task.userInitiated ? DispatchQoS.userInitiated : .utility
+                let qos: DispatchQoS = taskInfo.task.userInitiated ? .userInitiated : .utility
                 for case .pending(let deferred) in bodyParts {
                     group.enter()
-                    deferred.async(qosClass) { _ in
+                    deferred.async(qos) { _ in
                         group.leave()
                     }
                 }
                 log("delaying until body parts have been evaluated")
-                group.notify(queue: DispatchQueue.global(attributes: taskInfo.task.userInitiated ? .qosUserInitiated : .qosUtility)) {
+                group.notify(queue: DispatchQueue.global(qos: qos.qosClass)) {
                     // All our Pending values have been evaluated.
                     #if enableDebugLogging
                         self.log("providing stream for MultipartMixed")

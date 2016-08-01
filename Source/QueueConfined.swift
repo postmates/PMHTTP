@@ -21,7 +21,7 @@ internal class QueueConfined<Value: AnyObject> {
     private var value: Value
     
     init(label: String, value: Value) {
-        queue = DispatchQueue(label: label, attributes: DispatchQueueAttributes.concurrent)
+        queue = DispatchQueue(label: label, attributes: .concurrent)
         self.value = value
     }
     
@@ -58,7 +58,7 @@ internal class QueueConfined<Value: AnyObject> {
     func asyncBarrier(_ f: (Value) -> Void) {
         queue.async(flags: .barrier, execute: {
             f(self.value)
-        }) 
+        })
     }
     
     /// Provides direct access to the value without going through the queue.

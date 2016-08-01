@@ -368,7 +368,7 @@ private class KVOLog<T: AnyObject>: NSObject {
     let _keyPath: String
     let _context = NSObject()
     var _log: [T?] = []
-    var _queue: DispatchQueue = DispatchQueue(label: "KVOLog", attributes: DispatchQueueAttributes.serial)
+    var _queue: DispatchQueue = DispatchQueue(label: "KVOLog")
     
     var log: [T?] {
         var log: [T?] = []

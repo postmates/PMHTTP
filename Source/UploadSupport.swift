@@ -129,7 +129,7 @@ internal enum MultipartBodyPart {
             }
         }
         
-        private let queue = DispatchQueue(label: "HTTPManager MultipartBodyPart Deferred queue", attributes: [.concurrent, .qosUtility])
+        private let queue = DispatchQueue(label: "HTTPManager MultipartBodyPart Deferred queue", qos: .utility, attributes: .concurrent)
         private var value: [Data]?
         private let block: (HTTPManagerUploadMultipart) -> Void
     }

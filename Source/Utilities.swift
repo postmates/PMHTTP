@@ -39,7 +39,7 @@ internal func trimLWS(_ str: String) -> String {
 /// will compare as equal.
 /// - Note: The `hashValue` of `CaseInsensitiveASCIIString` will not match the `hashValue` of `String`
 ///   even when the wrapped string is already lowercase.
-internal struct CaseInsensitiveASCIIString: Hashable, StringLiteralConvertible, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     /// The wrapped string.
     let string: String
     
@@ -311,7 +311,7 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
 /// - Note: The order of parameters is considered significant.
 func ==(lhs: MediaType, rhs: MediaType) -> Bool {
     return lhs.typeSubtype.caseInsensitiveCompare(rhs.typeSubtype) == .orderedSame
-        && lhs.params.elementsEqual(rhs.params, isEquivalent: { $0.0.caseInsensitiveCompare($1.0) == .orderedSame && $0.1 == $1.1 })
+        && lhs.params.elementsEqual(rhs.params, by: { $0.0.caseInsensitiveCompare($1.0) == .orderedSame && $0.1 == $1.1 })
 }
 
 /// Returns `true` iff `pattern` is equal to `value`, where a `type` or `subtype` of `*`

@@ -94,11 +94,11 @@ final class PMHTTPTests: PMHTTPTestCase {
             let resultSema = DispatchSemaphore(value: 0)
             expectationForHTTPRequest(httpServer, path: "/foo", handler: { (request, completionHandler) in
                 requestSema.signal()
-                XCTAssert(resultSema.wait(timeout: DispatchTime.now() + 2) == .Success, "timeout on dispatch semaphore")
+                XCTAssert(resultSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
                 completionHandler(HTTPServer.Response(status: .ok))
             })
             let task = expectationForRequestCanceled(HTTP.request(GET: "foo"))
-            XCTAssert(requestSema.wait(timeout: DispatchTime.now() + 2) == .Success, "timeout on dispatch semaphore")
+            XCTAssert(requestSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
             task.cancel()
             resultSema.signal()
             waitForExpectations(timeout: 5, handler: nil)
@@ -114,11 +114,11 @@ final class PMHTTPTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo")!
                 .parse(with: { (response, data) -> Int in
                     requestSema.signal()
-                    XCTAssert(resultSema.wait(timeout: DispatchTime.now() + 2) == .Success, "timeout on dispatch semaphore")
+                    XCTAssert(resultSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
                     return 42
                 })
             let task = expectationForRequestCanceled(req)
-            XCTAssert(requestSema.wait(timeout: DispatchTime.now() + 2) == .Success, "timeout on dispatch semaphore")
+            XCTAssert(requestSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
             task.cancel()
             resultSema.signal()
             waitForExpectations(timeout: 5, handler: nil)
@@ -198,7 +198,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             parameters[item.name] = item.value
         }
         func sortedQueryItems(_ queryItems: [URLQueryItem]) -> [URLQueryItem] {
-            return queryItems.sorted(isOrderedBefore: { $0.name < $1.name })
+            return queryItems.sorted(by: { $0.name < $1.name })
         }
         
         for method in [HTTPManagerRequest.Method.GET, .DELETE] {
@@ -373,7 +373,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(response.mimeType, "application/json", "response MIME type")
                 let ok = json["ok"]?.bool
                 XCTAssertEqual(ok, true, "response json 'ok' value")
-                return try Int(json.getArray("array") { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) })
+                return try Int(json.getArray("array") { try $0.reduce(0, { try $0 + $1.getInt64() }) })
             })
             expectationForRequestSuccess(req) { task, response, value in
                 if let response = response as? HTTPURLResponse {
@@ -394,7 +394,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.method, HTTPServer.Method.GET, "request method")
                 completionHandler(HTTPServer.Response(status: .ok, text: "foobar"))
             }
-            struct InvalidUTF8Error: ErrorProtocol {}
+            struct InvalidUTF8Error: Error {}
             let req = HTTP.request(GET: "foo").parse(with: { response, data -> String in
                 XCTAssertEqual((response as? HTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "response Content-Type header")
                 XCTAssertEqual(response.mimeType, "text/plain", "response MIME type")
@@ -712,7 +712,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "[1, 2"))
             }
-            struct CantBeThrownError: ErrorProtocol {}
+            struct CantBeThrownError: Error {}
             let req = HTTP.request(GET: "foo").parseAsJSON(with: { (response, json) -> Int in
                 throw CantBeThrownError()
             })
@@ -1084,7 +1084,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
                 }
                 let req = request.parseAsJSON(with: { result -> Int in
-                    return Int(try result.getJSON().getArray("ary", { try $0.reduce(0, combine: { try $0 + $1.getInt64() }) }))
+                    return Int(try result.getJSON().getArray("ary", { try $0.reduce(0, { try $0 + $1.getInt64() }) }))
                 })
                 expectationForRequestSuccess(req) { task, response, value in
                     XCTAssertEqual(task.networkTask.currentRequest?.httpMethod, String(method), "current request method (\(method))")
@@ -1099,7 +1099,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
                     completionHandler(HTTPServer.Response(status: .ok, text: "foobar"))
                 }
-                struct DecodeError: ErrorProtocol {}
+                struct DecodeError: Error {}
                 let req = request.parse(with: { response, data -> String in
                     guard let str = String(data: data, encoding: String.Encoding.utf8) else {
                         throw DecodeError()
@@ -1435,7 +1435,8 @@ final class PMHTTPTests: PMHTTPTestCase {
             } else {
                 baseURL = nil
             }
-            guard let url = baseURL.map({ URL(string: urlString, relativeTo: $0) }) ?? URL(string: urlString) else { // FIXME: Fix in next beta
+            // FIXME: Get rid of NSURL in next beta (https://github.com/apple/swift/pull/3910)
+            guard let url = NSURL(string: urlString, relativeTo: baseURL) as URL? else {
                 return XCTFail("Could not parse URL string", file: file, line: line)
             }
             let result = env.isPrefix(of: url) == expected

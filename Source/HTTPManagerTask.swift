@@ -265,7 +265,7 @@ public enum HTTPManagerTaskResult<Value> {
     /// The `ErrorType` may be `NSError` for errors returned by `URLSession`,
     /// `HTTPManagerError` for errors returned by this class, or any error type
     /// thrown by a parse handler (including JSON errors returned by `PMJSON`).
-    case error(URLResponse?, ErrorProtocol)
+    case error(URLResponse?, Error)
     /// The task was canceled before it completed.
     case canceled
     
@@ -297,7 +297,7 @@ public enum HTTPManagerTaskResult<Value> {
     }
     
     /// Returns the `ErrorType` from an errored task result, otherwise returns `nil`.
-    public var error: ErrorProtocol? {
+    public var error: Error? {
         switch self {
         case .error(_, let error): return error
         default: return nil

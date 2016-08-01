@@ -265,8 +265,8 @@ final class HTTPServer {
     
     private static let httpDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        let locale = Locale(localeIdentifier: "en_US_POSIX")
-        let calendar = Calendar(identifier: Calendar.Identifier.gregorian)!
+        let locale = Locale(identifier: "en_US_POSIX")
+        var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale
         formatter.calendar = calendar
         formatter.locale = locale
@@ -485,7 +485,7 @@ final class HTTPServer {
             }
         }
         
-        enum Error: ErrorProtocol {
+        enum Error: Swift.Error {
             case contentTypeNotMultipart
             case noBody
             case noBoundary
@@ -514,7 +514,7 @@ final class HTTPServer {
             guard let body = request.body
                 else { throw Error.noBody }
             self.contentType = contentType.typeSubtype
-            guard !boundary.unicodeScalars.contains({ $0 == "\r" || $0 == "\n" }),
+            guard !boundary.unicodeScalars.contains(where: { $0 == "\r" || $0 == "\n" }),
                 let boundaryData = "--\(boundary)".data(using: String.Encoding.utf8)
                 else { throw Error.invalidBoundary }
             func findBoundary(_ sourceRange: Range<Int>) -> (range: Range<Int>, isTerminator: Bool)? {
@@ -615,7 +615,7 @@ final class HTTPServer {
     private class Listener : NSObject, GCDAsyncSocketDelegate {
         let shared: QueueConfined<Shared>
         let socket = GCDAsyncSocket()
-        let queue = DispatchQueue(label: "HTTPServer listen queue", attributes: DispatchQueueAttributes.serial)
+        let queue = DispatchQueue(label: "HTTPServer listen queue")
         var connections: [Connection] = []
         
         init(shared: QueueConfined<Shared>) {
@@ -672,7 +672,7 @@ final class HTTPServer {
             log("Disconnected with error: \(err)")
             shared.async { shared in
                 if let callback = replace(&shared.listenErrorCallback, with: nil) {
-                    DispatchQueue.global(attributes: .qosUtility).async {
+                    DispatchQueue.global(qos: .utility).async {
                         callback(err)
                     }
                 }
@@ -684,7 +684,7 @@ final class HTTPServer {
         let shared: QueueConfined<Shared>
         weak var listener: Listener?
         let socket: GCDAsyncSocket
-        let queue = DispatchQueue(label: "HTTPServer connection queue", attributes: DispatchQueueAttributes.serial)
+        let queue = DispatchQueue(label: "HTTPServer connection queue")
         var request: HTTPServer.Request?
         var chunkedBody: NSMutableData?
         var chunkedTrailer: Data?
@@ -737,7 +737,7 @@ final class HTTPServer {
             shared.async { shared in
                 let callbacks = shared.requestCallbacks
                 let unhandledRequestCallback = shared.unhandledRequestCallback
-                let queue = DispatchQueue(label: "HTTPServer request callback queue", attributes: .serial)
+                let queue = DispatchQueue(label: "HTTPServer request callback queue")
                 var iter = callbacks.makeIterator()
                 func invokeNextCallback() {
                     guard let (_, cb) = iter.next() else {
@@ -901,7 +901,7 @@ final class HTTPServer {
                     return writeResponseAndClose(Response(status: .badRequest, text: "Non-ASCII request line not supported"))
                 }
                 log("Parsing request line: \(String(reflecting: line))")
-                let comps = line.unicodeScalars.split(isSeparator: { $0 == " " }).map(String.init)
+                let comps = line.unicodeScalars.split(whereSeparator: { $0 == " " }).map(String.init)
                 guard comps.count == 3 else {
                     return writeResponseAndClose(Response(status: .badRequest, text: "Invalid request line syntax"))
                 }
@@ -1154,7 +1154,7 @@ func ==(lhs: HTTPServer.HTTPVersion, rhs: HTTPServer.HTTPVersion) -> Bool {
 /// - Note: The order of parameters is considered significant.
 func ==(lhs: HTTPServer.ContentDisposition, rhs: HTTPServer.ContentDisposition) -> Bool {
     return lhs.value == rhs.value
-        && lhs.params.elementsEqual(rhs.params, isEquivalent: { $0.0.caseInsensitiveCompare($1.0) == .orderedSame && $0.1 == $1.1 })
+        && lhs.params.elementsEqual(rhs.params, by: { $0.0.caseInsensitiveCompare($1.0) == .orderedSame && $0.1 == $1.1 })
 }
 
 

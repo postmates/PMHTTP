@@ -132,7 +132,7 @@ class PMHTTPTestCase: XCTestCase {
     @discardableResult
     func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
         _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: URLResponse?, error: ErrorProtocol) -> Void = { _ in () }
+        completion: (task: HTTPManagerTask, response: URLResponse?, error: Error) -> Void = { _ in () }
         ) -> HTTPManagerTask
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
@@ -195,7 +195,7 @@ class PMHTTPTestCase: XCTestCase {
 }
 
 private final class Locked<T> {
-    let _lock: Lock = Lock()
+    let _lock: NSLock = NSLock()
     var _value: T
     
     init(_ value: T) {

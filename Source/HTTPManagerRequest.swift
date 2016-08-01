@@ -269,7 +269,7 @@ extension HTTPManagerRequest {
     /// A collection of HTTP header fields.
     ///
     /// Exposes a `Dictionary`-like interface but guarantees that all header names are normalized.
-    public struct HTTPHeaders : Collection, CustomStringConvertible, CustomDebugStringConvertible, DictionaryLiteralConvertible {
+    public struct HTTPHeaders : Collection, CustomStringConvertible, CustomDebugStringConvertible, ExpressibleByDictionaryLiteral {
         public typealias Index = Dictionary<String,String>.Index
         public typealias Iterator = Dictionary<String,String>.Iterator
         
@@ -428,7 +428,7 @@ extension HTTPManagerRequest {
                         default: return false
                         }
                     }
-                    if comp.unicodeScalars.contains({ !cs.contains(UnicodeScalar($0.value)) }) {
+                    if comp.unicodeScalars.contains(where: { !cs.contains(UnicodeScalar($0.value)) }) {
                         var scalars = String.UnicodeScalarView()
                         swap(&comp.unicodeScalars, &scalars)
                         defer { swap(&comp.unicodeScalars, &scalars) }
@@ -859,7 +859,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     if mimeType?.rawValue == contentType.rawValue {
                         mimeType = nil
                     }
-                    let valid = expectedContentTypes.contains({
+                    let valid = expectedContentTypes.contains(where: {
                         // ignore the parameters from expectedContentTypes
                         let pattern = MediaType(MediaType($0).typeSubtype)
                         if let mimeType = mimeType, pattern ~= mimeType { return true }
@@ -946,7 +946,7 @@ private func acceptHeaderValueForContentTypes(_ contentTypes: [String]) -> Strin
     var priority = 9
     for contentType in contentTypes.dropFirst() {
         let mediaType = MediaType(contentType)
-        if mediaType.params.contains({ $0.0.caseInsensitiveCompare("q") == .orderedSame && $0.1 != nil }) {
+        if mediaType.params.contains(where: { $0.0.caseInsensitiveCompare("q") == .orderedSame && $0.1 != nil }) {
             value += ", \(contentType)"
         } else {
             value += ", \(contentType);q=0.\(priority)"

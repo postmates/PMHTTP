@@ -355,7 +355,7 @@ class MultipartTests: PMHTTPTestCase {
     
     func testHugeBodyPart() {
         // Let's shove 4MB of data across the wire (note: HTTPServer only allows 5MB total).
-        var data = Data(count: 4 * 1024 * 1024)!
+        var data = Data(count: 4 * 1024 * 1024)
         // Fill it with something other than all zeroes.
         data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
             for i in 0..<data.count {

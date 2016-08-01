@@ -23,7 +23,7 @@ extension XCTestCase {
     @discardableResult
     func expectationForHTTPRequest(_ server: HTTPServer, path: String, handler: (request: HTTPServer.Request, completionHandler: (HTTPServer.Response) -> Void) -> Void) -> XCTestExpectation {
         let expectation = self.expectation(description: "server request with path \(String(reflecting: path))")
-        let lock = Lock()
+        let lock = NSLock()
         lock.lock()
         var token: HTTPServer.CallbackToken?
         token = server.registerRequestCallback(for: path) { [weak self, weak server] request, completionHandler in

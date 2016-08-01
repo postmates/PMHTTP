@@ -62,12 +62,12 @@ internal final class NetworkActivityManager: NSObject {
     
     /// Increments the global network activity counter.
     func incrementCounter() {
-        source.mergeData(value: 1)
+        source.add(data: 1)
     }
     
     /// Decrements the global network activity counter.
     func decrementCounter() {
-        source.mergeData(value: UInt(bitPattern: -1))
+        source.add(data: UInt(bitPattern: -1))
     }
     
     private var inner = QueueConfined(label: "NetworkActivityManager internal queue", value: Inner())
@@ -94,7 +94,7 @@ internal final class NetworkActivityManager: NSObject {
     private let data = Data()
     
     private override init() {
-        source = DispatchSource.userDataAdd(queue: DispatchQueue.main)
+        source = DispatchSource.makeUserDataAddSource(queue: DispatchQueue.main)
         super.init()
         source.setCancelHandler { [data] in
             data.counter = 0
