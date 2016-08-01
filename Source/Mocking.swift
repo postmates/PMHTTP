@@ -854,7 +854,7 @@ internal class HTTPMockURLProtocol: URLProtocol {
         guard request.url != nil else {
             // I don't know how an NSURLRequest URL can be nil but we can't evaluate our mock if it is.
             struct InvalidURLError: Error {}
-            client?.urlProtocol(self, didFailWithError: InvalidURLError() as NSError)
+            client?.urlProtocol(self, didFailWithError: InvalidURLError())
             return
         }
         queue.async { 

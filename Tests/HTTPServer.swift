@@ -204,7 +204,7 @@ final class HTTPServer {
     
     /// A callback that's triggered if the listen socket shuts down with an error.
     /// The callback is fired on an arbitrary background queue.
-    var listenErrorCallback: ((NSError) -> Void)? {
+    var listenErrorCallback: ((Error) -> Void)? {
         get {
             return shared.sync({ $0.listenErrorCallback })
         }
@@ -607,7 +607,7 @@ final class HTTPServer {
     private let listener: Listener
     
     private class Shared {
-        var listenErrorCallback: ((NSError) -> Void)?
+        var listenErrorCallback: ((Error) -> Void)?
         var requestCallbacks: [(token: CallbackToken, callback: (request: Request, completionHandler: (Response?) -> Void) -> Void)] = []
         var unhandledRequestCallback: ((request: Request, response: Response, completionHandler: (Response) -> Void) -> Void)?
     }
@@ -663,7 +663,7 @@ final class HTTPServer {
             connection.readRequestLine()
         }
         
-        @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: NSError?) {
+        @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
             // we should only get this if an error occurs, because we nil out the delegate before closing ourselves
             guard let err = err else {
                 log("Disconnected")
@@ -1062,7 +1062,7 @@ final class HTTPServer {
             }
         }
         
-        @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: NSError?) {
+        @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
             log("Disconnected")
             if request != nil {
                 NSLog("HTTPServer: received disconnection while processing request; error: %@", err ?? "nil")

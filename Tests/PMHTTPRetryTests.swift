@@ -25,9 +25,11 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
         }
         expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
-            let error = error as NSError
-            XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
-            XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
+            if let error = error as? URLError {
+                XCTAssertEqual(error.code, URLError.networkConnectionLost, "error code")
+            } else {
+                XCTFail("expected URLError, got \(error)")
+            }
         }
         waitForExpectations(timeout: 5, handler: nil)
     }
@@ -61,9 +63,11 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo")!
             req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
             expectationForRequestFailure(req) { task, response, error in
-                let error = error as NSError
-                XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
-                XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
+                if let error = error as? URLError {
+                    XCTAssertEqual(error.code, URLError.networkConnectionLost, "error code")
+                } else {
+                    XCTFail("expected URLError, got \(error)")
+                }
             }
             waitForExpectations(timeout: 5, handler: nil)
         }
@@ -77,9 +81,11 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
         let req = HTTP.request(POST: "foo")!
         req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
         expectationForRequestFailure(req) { task, response, error in
-            let error = error as NSError
-            XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
-            XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
+            if let error = error as? URLError {
+                XCTAssertEqual(error.code, URLError.networkConnectionLost, "error code")
+            } else {
+                XCTFail("expected URLError, got \(error)")
+            }
         }
         waitForExpectations(timeout: 5, handler: nil)
     }
@@ -205,9 +211,11 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo")!
             req.retryBehavior = .retryNetworkFailure(withStrategy: .retryTwiceWithDelay(0.1))
             expectationForRequestFailure(req) { task, response, error in
-                let error = error as NSError
-                XCTAssertEqual(error.domain, NSURLErrorDomain, "error domain")
-                XCTAssertEqual(error.code, NSURLErrorNetworkConnectionLost, "error code")
+                if let error = error as? URLError {
+                    XCTAssertEqual(error.code, URLError.networkConnectionLost, "error code")
+                } else {
+                    XCTFail("expected URLError, got \(error)")
+                }
                 let retryDelay_ms = Int((secondRetryTime - firstRetryTime) * 1000)
                 // the delay should be >= 100ms but not too much larger. Let's pick 150ms as the upper bound.
                 XCTAssert((100...150).contains(retryDelay_ms), "retry delay was \(retryDelay_ms), expected 100...150ms")

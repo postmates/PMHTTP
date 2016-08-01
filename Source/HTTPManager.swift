@@ -952,20 +952,21 @@ private extension Error {
         switch self {
         case let error as JSONParserError where error.code == .unexpectedEOF:
             return true
-        case let error as NSError where error.domain == NSURLErrorDomain:
+        case let error as URLError:
             switch error.code {
-            case NSURLErrorUnknown:
+            case .unknown:
                 // We don't know what this is, so we'll err on the side of accepting it.
                 return true
-            case NSURLErrorTimedOut, NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost,
-                 NSURLErrorNetworkConnectionLost, NSURLErrorDNSLookupFailed,
-                 NSURLErrorNotConnectedToInternet, NSURLErrorBadServerResponse,
-                 NSURLErrorZeroByteResource, NSURLErrorCannotDecodeRawData, NSURLErrorCannotDecodeContentData,
-                 NSURLErrorCannotParseResponse,
-                 NSURLErrorClientCertificateRequired...NSURLErrorSecureConnectionFailed, // all SSL errors
-                 NSURLErrorDataNotAllowed:
+            case .timedOut, .cannotFindHost, .cannotConnectToHost, .networkConnectionLost,
+                 .dnsLookupFailed, .notConnectedToInternet, .badServerResponse,
+                 .zeroByteResource, .cannotDecodeRawData, .cannotDecodeContentData,
+                 .cannotParseResponse, .dataNotAllowed,
+                 // All SSL errors
+                 .clientCertificateRequired, .clientCertificateRejected, .serverCertificateNotYetValid,
+                 .serverCertificateHasUnknownRoot, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+                 .secureConnectionFailed:
                 return true
-            case NSURLErrorCallIsActive:
+            case .callIsActive:
                 // If we retry immediately this is unlikely to change, but if we retry after a delay
                 // then retrying makes sense, so we'll accept it.
                 return true
@@ -982,13 +983,15 @@ private extension Error {
     /// was established but the SSL handshake failed.
     func isTransientNoConnectionError() -> Bool {
         switch self {
-        case let error as NSError where error.domain == NSURLErrorDomain:
+        case let error as URLError:
             switch error.code {
-            case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed,
-                 NSURLErrorNotConnectedToInternet, NSURLErrorDataNotAllowed,
-            NSURLErrorClientCertificateRequired...NSURLErrorSecureConnectionFailed: // all SSL errors
+            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .notConnectedToInternet, .dataNotAllowed,
+                 // All SSL errors
+                 .clientCertificateRequired, .clientCertificateRejected, .serverCertificateNotYetValid,
+                 .serverCertificateHasUnknownRoot, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+                 .secureConnectionFailed:
                 return true
-            case NSURLErrorCallIsActive:
+            case .callIsActive:
                 // If we retry immediately this is unlikely to change, but if we retry after a delay
                 // then retrying makes sense, so we'll accept it.
                 return true

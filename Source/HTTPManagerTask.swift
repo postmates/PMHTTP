@@ -262,7 +262,7 @@ public enum HTTPManagerTaskResult<Value> {
     /// An error occurred, either during networking or while processing the
     /// data.
     ///
-    /// The `ErrorType` may be `NSError` for errors returned by `URLSession`,
+    /// The `Error` may be any error type returned by `URLSession`,
     /// `HTTPManagerError` for errors returned by this class, or any error type
     /// thrown by a parse handler (including JSON errors returned by `PMJSON`).
     case error(URLResponse?, Error)
