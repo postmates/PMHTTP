@@ -354,7 +354,7 @@ test suite.
 
 ## Requirements
 
-Requires a minimum of iOS 8, OS X 10.9, watchOS 2.0, or tvOS 9.0.
+Requires a minimum of iOS 8, macOS 10.10, watchOS 2.0, or tvOS 9.0.
 
 ## Installation
 
