@@ -1,6 +1,6 @@
 # PMHTTP
 
-[![Version](https://img.shields.io/badge/version-v0.5-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.9-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-ios%20%7C%20osx%20%7C%20tvos-lightgrey.svg)
 ![Languages](https://img.shields.io/badge/languages-swift%20%7C%20objc-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
@@ -363,7 +363,7 @@ Requires a minimum of iOS 8, macOS 10.10, watchOS 2.0, or tvOS 9.0.
 To install using [Carthage][], add the following to your Cartfile:
 
 ```
-github "postmates/PMHTTP" ~> 0.5
+github "postmates/PMHTTP" ~> 0.9
 ```
 
 Once installed, you can use this by adding `import PMHTTP` to your code.
@@ -382,6 +382,6 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
-#### v0.5 (2016-04-19)
+#### v0.9 (2016-08-05)
 
 Initial release.
