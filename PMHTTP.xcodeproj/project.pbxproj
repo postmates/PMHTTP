@@ -179,7 +179,7 @@
 				9E55BD701C5FE252001CC5D6 /* Frameworks */,
 			);
 			name = PMHTTP;
-			path = Source;
+			path = Sources;
 			sourceTree = "<group>";
 		};
 		9E7DDF2F1C18F2B600EA43AD /* PMHTTPTests */ = {
@@ -499,10 +499,10 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = Source/Info.plist;
+				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Source/module.modulemap;
+				MODULEMAP_FILE = Sources/module.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMHTTP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -521,10 +521,10 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = Source/Info.plist;
+				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Source/module.modulemap;
+				MODULEMAP_FILE = Sources/module.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMHTTP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
