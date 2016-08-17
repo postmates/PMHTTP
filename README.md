@@ -366,6 +366,13 @@ To install using [Carthage][], add the following to your Cartfile:
 github "postmates/PMHTTP" ~> 0.9
 ```
 
+### CocoaPods
+To install using [CocoaPods](https://cocoapods.org), add the following to your Podfile:
+
+```
+pod "PMHTTP", "~> 0.9"
+```
+
 Once installed, you can use this by adding `import PMHTTP` to your code.
 
 ## License
