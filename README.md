@@ -1,10 +1,11 @@
 # PMHTTP
 
-[![Version](https://img.shields.io/badge/version-v0.9-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.9.1-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-ios%20%7C%20osx%20%7C%20tvos-lightgrey.svg)
 ![Languages](https://img.shields.io/badge/languages-swift%20%7C%20objc-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)][Carthage]
+[![CocoaPods](https://img.shields.io/cocoapods/v/PMHTTP.svg)](http://cocoadocs.org/docsets/PMHTTP)
 
 [Carthage]: https://github.com/carthage/carthage
 
@@ -363,14 +364,14 @@ Requires a minimum of iOS 8, macOS 10.10, watchOS 2.0, or tvOS 9.0.
 To install using [Carthage][], add the following to your Cartfile:
 
 ```
-github "postmates/PMHTTP" ~> 0.9
+github "postmates/PMHTTP" ~> 0.9.1
 ```
 
 ### CocoaPods
 To install using [CocoaPods](https://cocoapods.org), add the following to your Podfile:
 
 ```
-pod "PMHTTP", "~> 0.9"
+pod "PMHTTP", "~> 0.9.1"
 ```
 
 Once installed, you can use this by adding `import PMHTTP` to your code.
@@ -388,6 +389,11 @@ Licensed under either of
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you shall be dual licensed as above, without any additional terms or conditions.
 
 ## Version History
+
+#### v0.9.1 (2016-08-17)
+
+* Rename Source folder to Sources.
+* CocoaPods support.
 
 #### v0.9 (2016-08-05)
 
