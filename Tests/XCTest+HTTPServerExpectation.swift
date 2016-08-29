@@ -26,7 +26,7 @@ extension XCTestCase {
         let lock = NSLock()
         lock.lock()
         var token: HTTPServer.CallbackToken?
-        token = server.registerRequestCallback(for: path) { [weak self, weak server] request, completionHandler in
+        token = server.registerRequestCallback(for: path) { [weak self, weak server, weak expectation] request, completionHandler in
             lock.lock()
             let token_ = replace(&token, with: nil)
             lock.unlock()
@@ -39,8 +39,10 @@ extension XCTestCase {
             
             handler(request, {
                 completionHandler($0)
-                self?.removeOutstandingHTTPRequestHandler(token: token)
-                expectation.fulfill()
+                DispatchQueue.main.async {
+                    self?.removeOutstandingHTTPRequestHandler(token: token)
+                    expectation?.fulfill()
+                }
             })
         }
         addOutstandingHTTPRequestHandler(path: path, server: server, token: token!, expectation: expectation)
@@ -61,14 +63,16 @@ extension XCTestCase {
             let paths = box.value.map({ $0.path })
             for entry in box.value {
                 entry.server.unregisterRequestCallback(entry.token)
-                entry.expectation.fulfill()
+                DispatchQueue.main.async { [expectation=entry.expectation] in
+                    expectation.value?.fulfill()
+                }
             }
             box.value.removeAll()
             return paths
         }
     }
     
-    private typealias OutstandingHandlersBox = Box<[(path: String, server: HTTPServer, token: HTTPServer.CallbackToken, expectation: XCTestExpectation)]>
+    private typealias OutstandingHandlersBox = Box<[(path: String, server: HTTPServer, token: HTTPServer.CallbackToken, expectation: Weak<XCTestExpectation>)]>
     
     private var outstandingHTTPRequestHandlerConfined: QueueConfined<OutstandingHandlersBox>? {
         return objc_getAssociatedObject(self, &kAssocContext) as? QueueConfined<OutstandingHandlersBox>
@@ -77,10 +81,10 @@ extension XCTestCase {
     private func addOutstandingHTTPRequestHandler(path: String, server: HTTPServer, token: HTTPServer.CallbackToken, expectation: XCTestExpectation) {
         if let confined = objc_getAssociatedObject(self, &kAssocContext) as? QueueConfined<OutstandingHandlersBox> {
             confined.asyncBarrier { box in
-                box.value.append((path: path, server: server, token: token, expectation: expectation))
+                box.value.append((path: path, server: server, token: token, expectation: Weak(expectation)))
             }
         } else {
-            let confined = QueueConfined(label: "PMHTTPTests outstanding request handlers queue", value: Box([(path: path, server: server, token: token, expectation: expectation)]))
+            let confined = QueueConfined(label: "PMHTTPTests outstanding request handlers queue", value: Box([(path: path, server: server, token: token, expectation: Weak(expectation))]))
             objc_setAssociatedObject(self, &kAssocContext, confined, .OBJC_ASSOCIATION_RETAIN)
         }
     }
@@ -99,6 +103,14 @@ extension XCTestCase {
 
 private class Box<T> {
     var value: T
+    
+    init(_ value: T) {
+        self.value = value
+    }
+}
+
+private struct Weak<T: AnyObject> {
+    weak var value: T?
     
     init(_ value: T) {
         self.value = value

@@ -23,9 +23,11 @@ class KVOTests: PMHTTPTestCase {
             let networkTask = task.networkTask
             waitForExpectations(timeout: 5, handler: nil)
             let expectation = self.expectation(description: "objc association")
-            objc_setAssociatedObject(task, &assocKey, DeinitAction({ [unowned(unsafe) task] in
+            objc_setAssociatedObject(task, &assocKey, DeinitAction({ [unowned(unsafe) task, weak expectation] in
                 XCTAssert(networkTask === task.networkTask)
-                expectation.fulfill()
+                DispatchQueue.main.async {
+                    expectation?.fulfill()
+                }
             }), objc_AssociationPolicy.OBJC_ASSOCIATION_RETAIN)
         }
         waitForExpectations(timeout: 5, handler: nil)

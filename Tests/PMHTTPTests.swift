@@ -64,11 +64,13 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(request.headers["Host"], address)
             completionHandler(HTTPServer.Response(status: .ok, text: "new server"))
         }
-        httpServer.registerRequestCallback { request, completionHandler in
+        httpServer.registerRequestCallback { [weak serverExpectation] request, completionHandler in
             XCTFail("Unexpected request to registered environment: \(request)")
             completionHandler(HTTPServer.Response(status: .notFound))
             // fulfill the server expectation since it won't be hit
-            serverExpectation.fulfill()
+            DispatchQueue.main.async {
+                serverExpectation?.fulfill()
+            }
         }
         expectationForRequestSuccess(req) { task, response, value in
             XCTAssertEqual(task.networkTask.originalRequest?.url?.absoluteString, "http://\(newServer.address)/foo")

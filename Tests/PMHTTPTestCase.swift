@@ -105,21 +105,25 @@ class PMHTTPTestCase: XCTestCase {
         where Request: HTTPManagerRequestPerformable
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
-        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
-            switch result {
-            case let .success(response, value):
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks, weak expectation] task, result in
+            if case let .success(response, value) = result {
                 completion(task, response, value)
-            case .error(_, let error):
-                XCTFail("network request error: \(error)", file: file, line: line)
-            case .canceled:
-                XCTFail("network request canceled", file: file, line: line)
             }
-            expectationTasks.with { tasks in
-                if let idx = tasks.index(where: { $0 === task }) {
-                    tasks.remove(at: idx)
+            DispatchQueue.main.async {
+                switch result {
+                case .success: break
+                case .error(_, let error):
+                    XCTFail("network request error: \(error)", file: file, line: line)
+                case .canceled:
+                    XCTFail("network request canceled", file: file, line: line)
                 }
+                expectationTasks.with { tasks in
+                    if let idx = tasks.index(where: { $0 === task }) {
+                        tasks.remove(at: idx)
+                    }
+                }
+                expectation?.fulfill()
             }
-            expectation.fulfill()
         }
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
@@ -138,21 +142,25 @@ class PMHTTPTestCase: XCTestCase {
         where Request: HTTPManagerRequestPerformable
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
-        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
-            switch result {
-            case .success(let response, _):
-                XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
-            case let .error(response, error):
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks, weak expectation] task, result in
+            if case let .error(response, error) = result {
                 completion(task, response, error)
-            case .canceled:
-                XCTFail("network request canceled", file: file, line: line)
             }
-            expectationTasks.with { tasks in
-                if let idx = tasks.index(where: { $0 === task }) {
-                    tasks.remove(at: idx)
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response, _):
+                    XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
+                case .error: break
+                case .canceled:
+                    XCTFail("network request canceled", file: file, line: line)
                 }
+                expectationTasks.with { tasks in
+                    if let idx = tasks.index(where: { $0 === task }) {
+                        tasks.remove(at: idx)
+                    }
+                }
+                expectation?.fulfill()
             }
-            expectation.fulfill()
         }
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
@@ -171,21 +179,25 @@ class PMHTTPTestCase: XCTestCase {
         where Request: HTTPManagerRequestPerformable
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
-        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
-            switch result {
-            case .success(let response, _):
-                XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
-            case .error(_, let error):
-                XCTFail("network request error: \(error)", file: file, line: line)
-            case .canceled:
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks, weak expectation] task, result in
+            if case .canceled = result {
                 completion(task)
             }
-            expectationTasks.with { tasks in
-                if let idx = tasks.index(where: { $0 === task }) {
-                    tasks.remove(at: idx)
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response, _):
+                    XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
+                case .error(_, let error):
+                    XCTFail("network request error: \(error)", file: file, line: line)
+                case .canceled: break
                 }
+                expectationTasks.with { tasks in
+                    if let idx = tasks.index(where: { $0 === task }) {
+                        tasks.remove(at: idx)
+                    }
+                }
+                expectation?.fulfill()
             }
-            expectation.fulfill()
         }
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
