@@ -239,22 +239,24 @@ public final class HTTPManager: NSObject {
             let setup: HTTPManagerConfigurable?
             #if os(OSX)
                 setup = NSApplication.shared().delegate as? HTTPManagerConfigurable
-            #elseif os(tvOS)
-                setup = UIApplication.shared().delegate as? HTTPManagerConfigurable
             #elseif os(watchOS)
                 setup = WKExtension.shared().delegate as? HTTPManagerConfigurable
             #elseif os(iOS)
                 // We have to detect if we're in an app extension, because we can't access UIApplication.sharedApplication().
                 // In that event, we can't configure ourselves and the extension must do it for us.
                 // We'll check for the presence of the NSExtension key in the Info.plist.
-                if NSBundle.mainBundle().infoDictionary?["NSExtension"] != nil {
+                if Bundle.main.infoDictionary?["NSExtension"] != nil {
                     // This appears to be an application extension. No configuration allowed.
                     setup = nil
                 } else {
                     // This is an application. We still can't invoke UIApplication.sharedApplication directly,
                     // but we can use `valueForKey(_:)` to get it, and application extensions can still reference the type.
-                    setup = (UIApplication.valueForKey("sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
+                    setup = (UIApplication.value(forKey: "sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
                 }
+            #elseif os(tvOS)
+                // tvOS seems to respect APPLICATION_EXTENSION_API_ONLY even  though (AFAIK) there
+                // are no extensions on tvOS. Use the same iOS hack here.
+                setup = (UIApplication.value(forKey: "sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
             #endif
             setup?.configure(httpManager: self)
         }
@@ -1054,10 +1056,10 @@ extension HTTPManager {
             #if os(OSX)
                 return ("Macintosh", "Mac OS X")
             #elseif os(iOS) || os(tvOS)
-                let device = UIDevice.currentDevice()
+                let device = UIDevice.current
                 return (device.model, device.systemName)
             #elseif os(watchOS)
-                let device = WKInterfaceDevice.currentDevice()
+                let device = WKInterfaceDevice.current()
                 return (device.model, device.systemName)
             #endif
         }
