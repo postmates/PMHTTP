@@ -21,10 +21,18 @@ import Foundation
 /// This class can be safely read from concurrent threads, but any modifications require exclusive access.
 public class HTTPManagerRequest: NSObject, NSCopying {
     /// An HTTP method verb.
-    public enum Method: String {
+    public enum Method: String, LosslessStringConvertible {
         case GET, POST, PUT, PATCH, DELETE
         
-        private var isIdempotent: Bool {
+        public var description: String {
+            return rawValue
+        }
+        
+        public init?(_ description: String) {
+            self.init(rawValue: description)
+        }
+        
+        fileprivate var isIdempotent: Bool {
             switch self {
             case .GET, .PUT, .DELETE: return true
             case .POST, .PATCH: return false
@@ -85,7 +93,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// The request parameters, or `[]` if there are no parameters.
     /// The parameters are passed by default in the URL query string.
     /// Subclasses may override this behavior.
-    public private(set) var parameters: [URLQueryItem]
+    public fileprivate(set) var parameters: [URLQueryItem]
     
     /// The credential to use for the request. Default is the value of
     /// `HTTPManager.defaultCredential`.
@@ -108,7 +116,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// The cache policy to use for the request. If `nil`, the default cache policy
     /// is used. Default is `nil` for GET/HEAD requests and `.ReloadIgnoringLocalCacheData`
     /// for POST/PUT/PATCH/DELETE requests.
-    public private(set) var cachePolicy: NSURLRequest.CachePolicy?
+    public fileprivate(set) var cachePolicy: NSURLRequest.CachePolicy?
     
     /// The default cache storage policy to use for the response if the response does not
     /// include appropriate caching headers. If the response does include appropriate headers
@@ -181,13 +189,13 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public func with(_ f: @noescape (HTTPManagerRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public func with(_ f: (HTTPManagerRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
     
-    public func copy(with _: NSZone?) -> AnyObject {
-        return self.dynamicType.init(__copyOfRequest: self)
+    public func copy(with _: NSZone? = nil) -> Any {
+        return type(of: self).init(__copyOfRequest: self)
     }
     
     // MARK: Internal
@@ -294,7 +302,7 @@ extension HTTPManagerRequest {
         }
         
         public var description: String {
-            return String(dictionary)
+            return String(describing: dictionary)
         }
         
         public var debugDescription: String {
@@ -419,7 +427,7 @@ extension HTTPManagerRequest {
                 } else {
                     var comp = comp
                     // replace invalid characters
-                    let cs = HTTPHeaderValidCharacterSet
+                    let cs = CharacterSet.httpHeaderValidCharacters
                     func isValid(_ us: UnicodeScalar) -> Bool {
                         switch us {
                         case "!", "#", "$", "%", "&", "'", "*", "+", "-", ".", "^", "_", "`", "|", "~": return true
@@ -428,11 +436,11 @@ extension HTTPManagerRequest {
                         default: return false
                         }
                     }
-                    if comp.unicodeScalars.contains(where: { !cs.contains(UnicodeScalar($0.value)) }) {
+                    if comp.unicodeScalars.contains(where: { !cs.contains($0) }) {
                         var scalars = String.UnicodeScalarView()
                         swap(&comp.unicodeScalars, &scalars)
                         defer { swap(&comp.unicodeScalars, &scalars) }
-                        while let idx = scalars.index(where: { !cs.contains(UnicodeScalar($0.value)) }) {
+                        while let idx = scalars.index(where: { !cs.contains($0) }) {
                             scalars.replaceSubrange(idx..<scalars.index(after: idx), with: CollectionOfOne("_"))
                         }
                     }
@@ -445,14 +453,16 @@ extension HTTPManagerRequest {
     }
 }
 
-private let HTTPHeaderValidCharacterSet: CharacterSet = {
-    var cs = CharacterSet()
-    cs.insert(charactersIn: "!#$%&'*+-.^_`|~")
-    cs.insert(charactersIn: UnicodeScalar("0")...UnicodeScalar("9"))
-    cs.insert(charactersIn: UnicodeScalar("a")...UnicodeScalar("z"))
-    cs.insert(charactersIn: UnicodeScalar("A")...UnicodeScalar("Z"))
-    return cs
-}()
+private extension CharacterSet {
+    static let httpHeaderValidCharacters: CharacterSet = {
+        var cs = CharacterSet()
+        cs.insert(charactersIn: "!#$%&'*+-.^_`|~")
+        cs.insert(charactersIn: UnicodeScalar("0")...UnicodeScalar("9"))
+        cs.insert(charactersIn: UnicodeScalar("a")...UnicodeScalar("z"))
+        cs.insert(charactersIn: UnicodeScalar("A")...UnicodeScalar("Z"))
+        return cs
+    }()
+}
 
 // MARK: - Network Request
 
@@ -508,7 +518,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parse<T>(with handler: (response: URLResponse, data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parse<T>(with handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
     
@@ -523,11 +533,11 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<Data>) -> Void) -> HTTPManagerTask {
+    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>) -> Void) -> HTTPManagerTask {
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
             if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
-                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
+                retryBehavior.handler(task, error, attempt, { shouldRetry in
                     if shouldRetry, let apiManager = apiManager, retry(apiManager) {
                         // The task is now retrying
                         return
@@ -561,7 +571,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerNetworkRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerNetworkRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
@@ -585,7 +595,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
         })
     }
     
-    private static func taskCompletion(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>, _ handler: (HTTPManagerTask, HTTPManagerTaskResult<Data>) -> Void) {
+    private static func taskCompletion(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>, _ handler: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>) -> Void) {
         let transition = task.transitionState(to: .completed)
         if transition.ok {
             assert(transition.oldState != .completed, "internal HTTPManager error: tried to complete task that's already completed")
@@ -614,7 +624,7 @@ public protocol HTTPManagerRequestPerformable {
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     @discardableResult
-    func performRequest(withCompletionQueue queue: OperationQueue?, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func performRequest(withCompletionQueue queue: OperationQueue?, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
     
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
     ///
@@ -627,7 +637,7 @@ public protocol HTTPManagerRequestPerformable {
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    func createTask(withCompletionQueue queue: OperationQueue?, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
+    func createTask(withCompletionQueue queue: OperationQueue?, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask
 }
 
 extension HTTPManagerRequestPerformable {
@@ -638,7 +648,7 @@ extension HTTPManagerRequestPerformable {
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     @discardableResult
-    public func performRequest(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
+    public func performRequest(withCompletionQueue queue: OperationQueue? = nil, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<ResultValue>) -> Void) -> HTTPManagerTask {
         let task = createTask(withCompletionQueue: queue, completion: completion)
         task.resume()
         return task
@@ -686,12 +696,12 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(with handler: (response: URLResponse, json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
             }
-            return try handler(response: response, json: JSON.decode(data))
+            return try handler(response, JSON.decode(data))
         })
     }
     
@@ -707,7 +717,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerDataRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerDataRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
@@ -775,7 +785,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: (task: HTTPManagerTask, result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
+    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
         let parseHandler: (URLResponse, Data) throws -> T
         let expectedContentTypes: [String]
         if let dataMock = dataMock {
@@ -788,7 +798,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
             if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
-                retryBehavior.handler(task: task, error: error, attempt: attempt, callback: { shouldRetry in
+                retryBehavior.handler(task, error, attempt, { shouldRetry in
                     if shouldRetry, let apiManager = apiManager, retry(apiManager) {
                         // The task is now retrying
                         return
@@ -822,12 +832,12 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerParseRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerParseRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
     
-    private static func taskProcessor(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>, _ expectedContentTypes: [String], _ parseHandler: (URLResponse, Data) throws -> T) -> HTTPManagerTaskResult<T> {
+    private static func taskProcessor(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>, _ expectedContentTypes: [String], _ parseHandler: @escaping (URLResponse, Data) throws -> T) -> HTTPManagerTaskResult<T> {
         // check for cancellation before processing
         if task.state == .canceled {
             return .canceled
@@ -874,7 +884,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         })
     }
     
-    private static func taskCompletion(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>, _ handler: (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) {
+    private static func taskCompletion(_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>, _ handler: @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) {
         let transition = task.transitionState(to: .completed)
         if transition.ok {
             assert(transition.oldState != .completed, "internal HTTPManager error: tried to complete task that's already completed")
@@ -894,7 +904,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     // This is a closure instead of just `T?` to avoid bloating the request object if `T` is large.
     internal var dataMock: (() -> T)?
     
-    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, defaultResponseCacheStoragePolicy: URLCache.StoragePolicy? = nil, parseHandler: (URLResponse, Data) throws -> T) {
+    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, defaultResponseCacheStoragePolicy: URLCache.StoragePolicy? = nil, parseHandler: @escaping (URLResponse, Data) throws -> T) {
         self.parseHandler = parseHandler
         prepareRequestHandler = request.prepareURLRequest()
         _contentType = request.contentType
@@ -1028,13 +1038,13 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(with handler: (result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 // No Content
-                return try handler(result: .noContent(response))
+                return try handler(.noContent(response))
             } else {
-                return try handler(result: .success(response, JSON.decode(data)))
+                return try handler(.success(response, JSON.decode(data)))
             }
         })
     }
@@ -1051,7 +1061,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerActionRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerActionRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
@@ -1142,7 +1152,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     ///
     /// - SeeAlso: `addMultipart(data:withName:mimeType:filename:)`,
     ///   `addMultipart(text:withName:)`.
-    public func addMultipartBody(with block: (upload: HTTPManagerUploadMultipart) -> Void) {
+    public func addMultipartBody(with block: @escaping (HTTPManagerUploadMultipart) -> Void) {
         multipartBodies.append(.pending(.init(block)))
     }
     
@@ -1158,7 +1168,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerUploadFormRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerUploadFormRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
@@ -1258,7 +1268,7 @@ public final class HTTPManagerUploadDataRequest: HTTPManagerActionRequest {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerUploadDataRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerUploadDataRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }
@@ -1311,7 +1321,7 @@ public final class HTTPManagerUploadJSONRequest: HTTPManagerActionRequest {
     ///         // ...
     /// }
     /// ```
-    @nonobjc public override func with(_ f: @noescape (HTTPManagerUploadJSONRequest) throws -> Void) rethrows -> Self {
+    @nonobjc public override func with(_ f: (HTTPManagerUploadJSONRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
     }

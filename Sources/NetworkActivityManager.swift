@@ -17,7 +17,7 @@ import Foundation
 internal final class NetworkActivityManager: NSObject {
     static let shared = NetworkActivityManager()
     
-    var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)? {
+    var networkActivityHandler: ((_ numberOfActiveTasks: Int) -> Void)? {
         get {
             if Thread.isMainThread {
                 return data.networkActivityHandler
@@ -44,7 +44,7 @@ internal final class NetworkActivityManager: NSObject {
                     DispatchQueue.main.async { [data] in
                         data.pendingHandlerInvocation = false
                         if data.counter > 0, let handler = data.networkActivityHandler {
-                            handler(numberOfActiveTasks: data.counter)
+                            handler(data.counter)
                         }
                     }
                 }
@@ -74,7 +74,7 @@ internal final class NetworkActivityManager: NSObject {
     
     private class Inner {
         /// A reference to the network activity handler that can only be accessed via a queue.
-        var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)?
+        var networkActivityHandler: ((_ numberOfActiveTasks: Int) -> Void)?
     }
     
     /// Data for the network activity indicator.
@@ -84,7 +84,7 @@ internal final class NetworkActivityManager: NSObject {
         /// A reference to the network activity handler that is only safe to access from the main thread.
         /// This exists so we don't have to go through a queue on every state change, since all our interactions
         /// with the handler are expected to occur on the main thread.
-        var networkActivityHandler: ((numberOfActiveTasks: Int) -> Void)?
+        var networkActivityHandler: ((_ numberOfActiveTasks: Int) -> Void)?
         /// Set to `true` when modifying the `networkActivityHandler` property to indicate that an asynchronous
         /// invocation of the property has been scheduled.
         var pendingHandlerInvocation = false
@@ -98,12 +98,12 @@ internal final class NetworkActivityManager: NSObject {
         super.init()
         source.setCancelHandler { [data] in
             data.counter = 0
-            data.networkActivityHandler?(numberOfActiveTasks: 0)
+            data.networkActivityHandler?(0)
         }
         source.setEventHandler { [data, source] in
             let delta = Int(bitPattern: source.data)
             data.counter = data.counter + delta
-            data.networkActivityHandler?(numberOfActiveTasks: max(data.counter, 0))
+            data.networkActivityHandler?(max(data.counter, 0))
         }
         source.resume()
     }

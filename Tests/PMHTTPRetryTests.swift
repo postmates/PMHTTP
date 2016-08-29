@@ -390,7 +390,8 @@ private class KVOLog<T: AnyObject>: NSObject {
         _object = object
         _keyPath = keyPath
         super.init()
-        object.addObserver(self, forKeyPath: keyPath, options: [.initial, .new], context: UnsafeMutablePointer(unsafeAddress(of: _context)))
+        // FIXME: Use ObjectIdentifier.address or whatever it's called once it's available
+        object.addObserver(self, forKeyPath: keyPath, options: [.initial, .new], context: Unmanaged.passUnretained(_context).toOpaque())
     }
     
     deinit {
@@ -399,16 +400,18 @@ private class KVOLog<T: AnyObject>: NSObject {
     
     func unregister() {
         guard _observing else { return }
-        _object.removeObserver(self, forKeyPath: _keyPath, context: UnsafeMutablePointer(unsafeAddress(of: _context)))
+        // FIXME: Use ObjectIdentifier.address or whatever it's called once it's available
+        _object.removeObserver(self, forKeyPath: _keyPath, context: Unmanaged.passUnretained(_context).toOpaque())
         _observing = false
     }
     
-    private override func observeValue(forKeyPath keyPath: String?, of object: AnyObject?, change: [NSKeyValueChangeKey : AnyObject]?, context: UnsafeMutablePointer<Void>?) {
-        guard context == UnsafeMutablePointer(unsafeAddress(of: _context)) else {
+    private override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        // FIXME: Use ObjectIdentifier.address or whatever it's called once it's available
+        guard context == Unmanaged.passUnretained(_context).toOpaque() else {
             return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
         }
         let newValue: T?
-        switch change?[NSKeyValueChangeKey.newKey] {
+        switch change?[.newKey] {
         case is NSNull, nil: newValue = nil
         case let value?: newValue = (value as! T)
         }

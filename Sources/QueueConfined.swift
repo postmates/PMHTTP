@@ -25,37 +25,37 @@ internal class QueueConfined<Value: AnyObject> {
         self.value = value
     }
     
-    func sync(_ f: @noescape (Value) -> Void) {
+    func sync(_ f: (Value) -> Void) {
         queue.sync {
             f(self.value)
         }
     }
     
-    func sync<T>(_ f: @noescape (Value) -> T) -> T {
+    func sync<T>(_ f: (Value) -> T) -> T {
         return queue.sync {
             return f(self.value)
         }
     }
     
-    func syncBarrier(_ f: @noescape (Value) -> Void) {
+    func syncBarrier(_ f: (Value) -> Void) {
         queue.sync(flags: .barrier, execute: {
             f(self.value)
         })
     }
     
-    func syncBarrier<T>(_ f: @noescape (Value) -> T) -> T {
+    func syncBarrier<T>(_ f: (Value) -> T) -> T {
         return queue.sync(flags: .barrier, execute: {
             return f(self.value)
         })
     }
     
-    func async(_ f: (Value) -> Void) {
+    func async(_ f: @escaping (Value) -> Void) {
         queue.async {
             f(self.value)
         }
     }
     
-    func asyncBarrier(_ f: (Value) -> Void) {
+    func asyncBarrier(_ f: @escaping (Value) -> Void) {
         queue.async(flags: .barrier, execute: {
             f(self.value)
         })
@@ -63,7 +63,7 @@ internal class QueueConfined<Value: AnyObject> {
     
     /// Provides direct access to the value without going through the queue.
     /// Use this only when you're guaranteed that there's no concurrency.
-    func unsafeDirectAccess<T>(_ f: @noescape (Value) -> T) -> T {
+    func unsafeDirectAccess<T>(_ f: (Value) -> T) -> T {
         return f(value)
     }
 }

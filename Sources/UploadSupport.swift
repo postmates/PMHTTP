@@ -27,7 +27,7 @@ internal enum UploadBody {
         guard !queryItems.isEmpty else {
             return Data()
         }
-        let cs = CharacterSet.URLQueryKeyValueAllowedCharacterSet
+        let cs = CharacterSet.urlQueryKeyValueAllowedCharacters
         func encodeQueryItem(_ item: URLQueryItem) -> String {
             let encodedName = item.name.addingPercentEncoding(withAllowedCharacters: cs) ?? ""
             if let value = item.value {
@@ -51,8 +51,8 @@ internal enum UploadBody {
     }
 }
 
-extension CharacterSet {
-    private static let URLQueryKeyValueAllowedCharacterSet: CharacterSet = {
+private extension CharacterSet {
+    static let urlQueryKeyValueAllowedCharacters: CharacterSet = {
         var cs = CharacterSet.urlQueryAllowed
         cs.remove(charactersIn: "&=")
         return cs
@@ -83,7 +83,7 @@ internal enum MultipartBodyPart {
     }
     
     final class Deferred {
-        init(_ block: (HTTPManagerUploadMultipart) -> Void) {
+        init(_ block: @escaping (HTTPManagerUploadMultipart) -> Void) {
             self.block = block
         }
         
@@ -115,7 +115,7 @@ internal enum MultipartBodyPart {
         /// Asynchronously executes a given block on an private concurrent queue with the evaluated `Data` values.
         /// `evaluate()` MUST be invoked at some point before calling `async()`. Calling `async()` without
         /// calling `evaluate()` first is a programmer error and will result in an assertion failure.
-        func async(_ qosClass: DispatchQoS?, handler: ([Data]) -> Void) {
+        func async(_ qosClass: DispatchQoS?, handler: @escaping ([Data]) -> Void) {
             let block: () -> () = {
                 guard let value = self.value else {
                     fatalError("HTTPManager internal error: invoked async() on Deferred without invoking evaluate()")

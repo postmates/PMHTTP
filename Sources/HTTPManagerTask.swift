@@ -197,7 +197,9 @@ extension HTTPManagerTask {
     }
     
     private func getDescription(_ debug: Bool) -> String {
-        var s = "<HTTPManagerTask: 0x\(String(unsafeBitCast(unsafeAddress(of: self), to: UInt.self), radix: 16)) (\(state))"
+        // FIXME: Use ObjectIdentifier.address or whatever it's called when it's available
+        let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
+        var s = "<HTTPManagerTask: 0x\(String(ptr, radix: 16)) (\(state))"
         if let user = credential?.user {
             s += " user=\(String(reflecting: user))"
         }
@@ -244,11 +246,11 @@ extension HTTPManagerTask {
         }
     }
     
-    private init(_ boxState: _PMHTTPManagerTaskStateBoxState) {
+    fileprivate init(_ boxState: _PMHTTPManagerTaskStateBoxState) {
         self = unsafeBitCast(boxState, to: HTTPManagerTaskState.self)
     }
     
-    private var boxState: _PMHTTPManagerTaskStateBoxState {
+    fileprivate var boxState: _PMHTTPManagerTaskStateBoxState {
         return unsafeBitCast(self, to: _PMHTTPManagerTaskStateBoxState.self)
     }
 }
@@ -330,7 +332,7 @@ public enum HTTPManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    public func map<T>(_ f: @noescape (URLResponse, Value) throws -> T) rethrows -> HTTPManagerTaskResult<T> {
+    public func map<T>(_ f: (URLResponse, Value) throws -> T) rethrows -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value): return .success(response, try f(response, value))
         case let .error(response, type): return .error(response, type)
@@ -341,7 +343,7 @@ public enum HTTPManagerTaskResult<Value> {
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
     /// Errors thrown by the block are caught and turned into `.Error` results.
-    public func map<T>(try f: @noescape (URLResponse, Value) throws -> T) -> HTTPManagerTaskResult<T> {
+    public func map<T>(try f: (URLResponse, Value) throws -> T) -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value):
             do {
@@ -356,7 +358,7 @@ public enum HTTPManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    public func andThen<T>(_ f: @noescape (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) rethrows -> HTTPManagerTaskResult<T> {
+    public func andThen<T>(_ f: (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) rethrows -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value): return try f(response, value)
         case let .error(response, type): return .error(response, type)
@@ -367,7 +369,7 @@ public enum HTTPManagerTaskResult<Value> {
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
     /// Errors thrown by the block are caught and turned into `.Error` results.
-    public func andThen<T>(try f: @noescape (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) -> HTTPManagerTaskResult<T> {
+    public func andThen<T>(try f: (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value):
             do {

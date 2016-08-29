@@ -110,7 +110,7 @@ final class HTTPServer {
     ///
     /// - SeeAlso: `unregisterRequestCallback(_:)`, `clearRequestCallbacks()`.
     @discardableResult
-    func registerRequestCallback(_ callback: (request: Request, completionHandler: (Response?) -> Void) -> Void) -> CallbackToken {
+    func registerRequestCallback(_ callback: @escaping (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void) -> CallbackToken {
         let token = CallbackToken()
         shared.asyncBarrier { shared in
             shared.requestCallbacks.append((token, callback))
@@ -136,7 +136,7 @@ final class HTTPServer {
     ///
     /// - SeeAlso: `registerRequestCallback(_:)`.
     @discardableResult
-    func registerRequestCallback(for path: String, ignoresTrailingSlash: Bool = false, callback: (request: Request, completionHandler: (Response?) -> Void) -> Void) -> CallbackToken {
+    func registerRequestCallback(for path: String, ignoresTrailingSlash: Bool = false, callback: @escaping (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void) -> CallbackToken {
         var path = path
         if !path.hasPrefix("/") {
             path = "/\(path)"
@@ -164,9 +164,9 @@ final class HTTPServer {
         let pathComps = pathComponents(path, includesTrailingSlash: !ignoresTrailingSlash)
         return registerRequestCallback { request, completionHandler in
             if let pathComps = pathComps,
-                let requestPathComps = pathComponents(request.urlComponents.percentEncodedPath ?? "", includesTrailingSlash: !ignoresTrailingSlash),
+                let requestPathComps = pathComponents(request.urlComponents.percentEncodedPath, includesTrailingSlash: !ignoresTrailingSlash),
                 pathComps == requestPathComps {
-                callback(request: request, completionHandler: completionHandler)
+                callback(request, completionHandler)
             } else {
                 completionHandler(nil)
             }
@@ -218,7 +218,7 @@ final class HTTPServer {
     /// The callback must invoke `completionHandler` (on any thread) once and only once.
     /// the `response` parameter is a suggested response, but the callback may substitute
     /// any other response as desired.
-    var unhandledRequestCallback: ((request: Request, response: Response, completionHandler: (Response) -> Void) -> Void)? {
+    var unhandledRequestCallback: ((_ request: Request, _ response: Response, _ completionHandler: @escaping (Response) -> Void) -> Void)? {
         get {
             return shared.sync({ $0.unhandledRequestCallback })
         }
@@ -353,7 +353,8 @@ final class HTTPServer {
         var body: Data?
         
         var description: String {
-            return  "Request(\(method) \(urlComponents.path ?? "nil"), httpVersion: \(httpVersion), "
+            let path = urlComponents.path
+            return  "Request(\(method) \(path.isEmpty ? "(no path)" : path), httpVersion: \(httpVersion), "
                 + "headers: \(headers.dictionary), trailerHeaders: \(trailerHeaders.dictionary), "
                 + "body: \(body?.count ?? 0) bytes)"
         }
@@ -363,7 +364,7 @@ final class HTTPServer {
                 + "headers: \(headers), trailerHeaders: \(trailerHeaders), body: \(body))"
         }
         
-        private init?(method: Method, requestTarget: String, httpVersion: HTTPVersion, headers: HTTPHeaders = [:], body: Data? = nil) {
+        fileprivate init?(method: Method, requestTarget: String, httpVersion: HTTPVersion, headers: HTTPHeaders = [:], body: Data? = nil) {
             self.method = method
             guard let comps = URLComponents(string: requestTarget) else { return nil }
             urlComponents = comps
@@ -505,7 +506,7 @@ final class HTTPServer {
         /// Parses a multipart request.
         /// - Throws: `MultipartBody.Error` if the `Content-Type` is not
         ///   multipart or the `body` is not formatted properly.
-        private init(request: Request) throws {
+        fileprivate init(request: Request) throws {
             guard let contentType = request.headers["Content-Type"].map(MediaType.init),
                 contentType.type == "multipart"
                 else { throw Error.contentTypeNotMultipart }
@@ -608,8 +609,8 @@ final class HTTPServer {
     
     private class Shared {
         var listenErrorCallback: ((Error) -> Void)?
-        var requestCallbacks: [(token: CallbackToken, callback: (request: Request, completionHandler: (Response?) -> Void) -> Void)] = []
-        var unhandledRequestCallback: ((request: Request, response: Response, completionHandler: (Response) -> Void) -> Void)?
+        var requestCallbacks: [(token: CallbackToken, callback: @escaping (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void)] = []
+        var unhandledRequestCallback: ((_ request: Request, _ response: Response, _ completionHandler: @escaping (Response) -> Void) -> Void)?
     }
     
     private class Listener : NSObject, GCDAsyncSocketDelegate {
@@ -650,9 +651,9 @@ final class HTTPServer {
             return workItem
         }
         
-        private func log(_ msg: @autoclosure () -> String) {
+        func log(_ msg: @autoclosure () -> String) {
             if HTTPServer.enableDebugLogging {
-                NSLog("<HTTP Server %@:%hu> %@", socket.localHost ?? "nil", socket.localPort ?? 0, msg())
+                NSLog("<HTTP Server %@:%hu> %@", socket.localHost ?? "nil", socket.localPort, msg())
             }
         }
         
@@ -744,7 +745,7 @@ final class HTTPServer {
                         let response = Response(status: .notFound)
                         if let unhandledRequestCallback = unhandledRequestCallback {
                             self.log("Invoking unhandled request callback")
-                            unhandledRequestCallback(request: request, response: response) { response in
+                            unhandledRequestCallback(request, response) { response in
                                 self.writeResponse(response)
                             }
                         } else {
@@ -754,7 +755,7 @@ final class HTTPServer {
                         return
                     }
                     var invoked = false
-                    cb(request: request) { response in
+                    cb(request) { response in
                         // sanity check to make sure we haven't been called already
                         // we'll check again on `queue` because that's the definitive spot, but we're doing an early check here
                         // to provide a better stack trace if the precondition fails.
@@ -836,7 +837,7 @@ final class HTTPServer {
         /// The given closure is invoked for each header, with the old value (if one exists).
         /// The `field` parameter to the closure always contains the normalized name of the header.
         /// If the closure returns a `Response`, that response is sent to the server and the socket closed.
-        private func parseHeadersFromData(_ data: Data, _ f: @noescape (field: String, value: String, oldValue: String?) -> Response? = { _ in nil }) -> HTTPHeaders? {
+        private func parseHeadersFromData(_ data: Data, _ f: (_ field: String, _ value: String, _ oldValue: String?) -> Response? = { _ in nil }) -> HTTPHeaders? {
             guard let line = String(data: data, encoding: String.Encoding.ascii)?.chomped() else {
                 writeResponseAndClose(Response(status: .badRequest, text: "Non-ASCII headers are not supported"))
                 return nil
@@ -866,7 +867,7 @@ final class HTTPServer {
                 let value = String(scalars)
                 let normalizedField = HTTPHeaders.normalizedHTTPHeaderField(field)
                 let oldValue = headers.unsafeUpdateValue(value, forPreNormalizedKey: normalizedField)
-                if let response = f(field: normalizedField, value: value, oldValue: oldValue) {
+                if let response = f(normalizedField, value, oldValue) {
                     writeResponseAndClose(response)
                     return nil
                 }
@@ -1065,7 +1066,7 @@ final class HTTPServer {
         @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
             log("Disconnected")
             if request != nil {
-                NSLog("HTTPServer: received disconnection while processing request; error: %@", err ?? "nil")
+                NSLog("HTTPServer: received disconnection while processing request; error: %@", (err as NSError?) ?? "nil")
             }
             socket.delegate = nil
             if let listener = listener {
@@ -1079,10 +1080,10 @@ final class HTTPServer {
     }
 }
 
-extension String {
+private extension String {
     /// Returns the string with a trailing CRLF, CR, or LF chopped off, if present.
     /// Only chops off one line ending.
-    private func chomped() -> String {
+    func chomped() -> String {
         if hasSuffix("\r\n") {
             return String(unicodeScalars.dropLast(2))
         } else if hasSuffix("\r") || hasSuffix("\n") {
@@ -1193,4 +1194,15 @@ private func comparable(_ string: String, options: NSString.CompareOptions) -> S
 
 private func ~=(comparable: StringComparable, value: String) -> Bool {
     return comparable.string.compare(value, options: comparable.options) == .orderedSame
+}
+
+// Swift 3 removed comparisons on Optionals
+private extension Optional where Wrapped: Comparable {
+    static func <(lhs: Wrapped?, rhs: Wrapped?) -> Bool {
+        switch (lhs, rhs) {
+        case let (a?, b?): return a < b
+        case (nil, _?): return true
+        default: return false
+        }
+    }
 }

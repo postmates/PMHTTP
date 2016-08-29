@@ -43,7 +43,7 @@ class KVOTests: PMHTTPTestCase {
         let task = expectationForRequestSuccess(req, startAutomatically: false)
         let networkTask = task.networkTask
         _ = keyValueObservingExpectation(for: task, keyPath: "networkTask") { (object, change) -> Bool in
-            return object !== networkTask
+            return (object as AnyObject) !== networkTask
         }
         task.resume()
         waitForExpectations(timeout: 5, handler: nil)
@@ -54,7 +54,7 @@ private var kvoContext: () = ()
 private var assocKey: () = ()
 
 private class DeinitAction: NSObject {
-    init(_ handler: () -> Void) {
+    init(_ handler: @escaping () -> Void) {
         _handler = handler
     }
     

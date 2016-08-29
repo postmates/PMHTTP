@@ -160,7 +160,7 @@ class MockingTests: PMHTTPTestCase {
             // assert that parameters only has the key "id" and doesn't have "foo"
             XCTAssertEqual(parameters, ["id": "123"], "mock request parameters")
             let body = "Mock response".data(using: String.Encoding.utf8)!
-            completion(response: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body: body)
+            completion(HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body)
         }
         expectationForRequestSuccess(HTTP.request(GET: "baz/123")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "mock response status code")
@@ -477,7 +477,7 @@ class MockingTests: PMHTTPTestCase {
             state += 1
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
             let body = "request \(state)".data(using: String.Encoding.utf8)!
-            completion(response: response, body: body)
+            completion(response, body)
         }
         
         let req = HTTP.request(GET: "foo")!
@@ -494,10 +494,10 @@ class MockingTests: PMHTTPTestCase {
             if let uid = parameters["uid"] {
                 let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
                 let body = "user \(uid)".data(using: String.Encoding.utf8)!
-                completion(response: response, body: body)
+                completion(response, body)
             } else {
                 let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: "HTTP/1.1", headerFields: nil)!
-                completion(response: response, body: Data())
+                completion(response, Data())
             }
         }
         expectationForHTTPRequest(httpServer, path: "/users") { (request, completionHandler) in
@@ -519,7 +519,7 @@ class MockingTests: PMHTTPTestCase {
             let name = parameters["name"].map(String.init(reflecting:)) ?? "nil"
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
             let body = "id \(id), name \(name)".data(using: String.Encoding.utf8)!
-            completion(response: response, body: body)
+            completion(response, body)
         }
         expectationForHTTPRequest(httpServer, path: "/posts/123/foo/bar") { (request, completionHandler) in
             completionHandler(HTTPServer.Response(status: .ok, text: "Server response"))
@@ -726,7 +726,7 @@ class MockingTests: PMHTTPTestCase {
         // NSData upload
         HTTP.mockManager.addMock(for: "foo") { (request, parameters, completion) in
             XCTAssertEqual(String(data: HTTP.mockManager.dataFromRequest(request), encoding: String.Encoding.utf8), "Hello world", "request body")
-            completion(response: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body: Data())
+            completion(HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, Data())
         }
         expectationForRequestSuccess(HTTP.request(POST: "foo", contentType: "text/plain", data: "Hello world".data(using: String.Encoding.utf8)!))
         waitForExpectations(timeout: 5, handler: nil)
@@ -740,7 +740,7 @@ class MockingTests: PMHTTPTestCase {
             } catch {
                 XCTFail("error decoding JSON: \(error)")
             }
-            completion(response: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body: Data())
+            completion(HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, Data())
         }
         expectationForRequestSuccess(HTTP.request(POST: "foo", json: ["ok": true, "foo": "bar"]))
         waitForExpectations(timeout: 5, handler: nil)
@@ -768,7 +768,7 @@ class MockingTests: PMHTTPTestCase {
                     }
                     XCTAssertNotNil(data.range(of: terminatorData, in: range), "range of terminator boundary")
                 }
-                completion(response: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, body: Data())
+                completion(HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!, Data())
             }
             let req = HTTP.request(POST: "foo")!
             req.addMultipart(text: "Hello world", withName: "message")

@@ -20,7 +20,7 @@
 ///
 /// - Important: Although the SipHash algorithm is considered to be cryptographically strong,
 ///   this implementation has not been reviewed for such purposes and is almost certainly insecure.
-internal struct SipHasher: OutputStream {
+internal struct SipHasher: TextOutputStream {
     /// Creates a new `SipHasher`.
     /// - Parameter key: A pair of 64-bit integers to use as the key. Defaults to `(0,0)`.
     ///   This pair of integers is equivalent to a 128-bit key where the first element is
@@ -51,7 +51,7 @@ internal struct SipHasher: OutputStream {
     /// Number of bytes in `tail` that are valid. Guaranteed to be less than 8.
     var tailLen: UInt = 0
     
-    mutating func write<C: Collection where C.Iterator.Element == UInt8>(_ bytes: C) {
+    mutating func write<C: Collection>(_ bytes: C) where C.Iterator.Element == UInt8 {
         var count: UInt = numericCast(bytes.count)
         b += count
         var startIndex = bytes.startIndex
@@ -141,24 +141,33 @@ internal struct SipHasher: OutputStream {
     /// Writes the little-endian representation of an `Int16` to the `SipHasher`.
     mutating func write(_ n: Int16) {
         var n = n.littleEndian
-        withUnsafePointer(&n) { ptr in
-            write(UnsafeBufferPointer(start: UnsafePointer(ptr), count: sizeofValue(n)))
+        withUnsafePointer(to: &n) { ptr in
+            let count = MemoryLayout<Int16>.size
+            ptr.withMemoryRebound(to: UInt8.self, capacity: count, { ptr in
+                write(UnsafeBufferPointer(start: ptr, count: count))
+            })
         }
     }
     
     /// Writes the little-endian representation of an `Int32` to the `SipHasher`.
     mutating func write(_ n: Int32) {
         var n = n.littleEndian
-        withUnsafePointer(&n) { ptr in
-            write(UnsafeBufferPointer(start: UnsafePointer(ptr), count: sizeofValue(n)))
+        withUnsafePointer(to: &n) { ptr in
+            let count = MemoryLayout<Int32>.size
+            ptr.withMemoryRebound(to: UInt8.self, capacity: count, { ptr in
+                write(UnsafeBufferPointer(start: ptr, count: count))
+            })
         }
     }
     
     /// Writes the little-endian representation of an `Int64` to the `SipHasher`.
     mutating func write(_ n: Int64) {
         var n = n.littleEndian
-        withUnsafePointer(&n) { ptr in
-            write(UnsafeBufferPointer(start: UnsafePointer(ptr), count: sizeofValue(n)))
+        withUnsafePointer(to: &n) { ptr in
+            let count = MemoryLayout<Int64>.size
+            ptr.withMemoryRebound(to: UInt8.self, capacity: count, { ptr in
+                write(UnsafeBufferPointer(start: ptr, count: count))
+            })
         }
     }
     
@@ -170,24 +179,33 @@ internal struct SipHasher: OutputStream {
     /// Writes the little-endian representation of a `UInt16` to the `SipHasher`.
     mutating func write(_ n: UInt16) {
         var n = n.littleEndian
-        withUnsafePointer(&n) { ptr in
-            write(UnsafeBufferPointer(start: UnsafePointer(ptr), count: sizeofValue(n)))
+        withUnsafePointer(to: &n) { ptr in
+            let count = MemoryLayout<UInt16>.size
+            ptr.withMemoryRebound(to: UInt8.self, capacity: count, { ptr in
+                write(UnsafeBufferPointer(start: ptr, count: count))
+            })
         }
     }
     
     /// Writes the little-endian representation of a `UInt32` to the `SipHasher`.
     mutating func write(_ n: UInt32) {
         var n = n.littleEndian
-        withUnsafePointer(&n) { ptr in
-            write(UnsafeBufferPointer(start: UnsafePointer(ptr), count: sizeofValue(n)))
+        withUnsafePointer(to: &n) { ptr in
+            let count = MemoryLayout<UInt32>.size
+            ptr.withMemoryRebound(to: UInt8.self, capacity: count, { ptr in
+                write(UnsafeBufferPointer(start: ptr, count: count))
+            })
         }
     }
     
     /// Writes the little-endian representation of a `UInt64` to the `SipHasher`.
     mutating func write(_ n: UInt64) {
         var n = n.littleEndian
-        withUnsafePointer(&n) { ptr in
-            write(UnsafeBufferPointer(start: UnsafePointer(ptr), count: sizeofValue(n)))
+        withUnsafePointer(to: &n) { ptr in
+            let count = MemoryLayout<UInt64>.size
+            ptr.withMemoryRebound(to: UInt8.self, capacity: count, { ptr in
+                write(UnsafeBufferPointer(start: ptr, count: count))
+            })
         }
     }
     

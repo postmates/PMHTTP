@@ -81,7 +81,7 @@ class PMHTTPTestCase: XCTestCase {
                 // timeout
                 var outstandingTasks: String = ""
                 self.expectationTasks.with { tasks in
-                    outstandingTasks = String(tasks)
+                    outstandingTasks = String(describing: tasks)
                     for task in tasks {
                         task.cancel()
                     }
@@ -98,16 +98,17 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     @discardableResult
-    func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
+    func expectationForRequestSuccess<Request: HTTPManagerRequest>(
         _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: URLResponse, value: Request.ResultValue) -> Void = { _ in () }
+        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse, _ value: Request.ResultValue) -> Void = { _ in () }
         ) -> HTTPManagerTask
+        where Request: HTTPManagerRequestPerformable
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
         let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
             switch result {
             case let .success(response, value):
-                completion(task: task, response: response, value: value)
+                completion(task, response, value)
             case .error(_, let error):
                 XCTFail("network request error: \(error)", file: file, line: line)
             case .canceled:
@@ -130,10 +131,11 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     @discardableResult
-    func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
+    func expectationForRequestFailure<Request: HTTPManagerRequest>(
         _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: URLResponse?, error: Error) -> Void = { _ in () }
+        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse?, _ error: Error) -> Void = { _ in () }
         ) -> HTTPManagerTask
+        where Request: HTTPManagerRequestPerformable
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
         let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
@@ -141,7 +143,7 @@ class PMHTTPTestCase: XCTestCase {
             case .success(let response, _):
                 XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
             case let .error(response, error):
-                completion(task: task, response: response, error: error)
+                completion(task, response, error)
             case .canceled:
                 XCTFail("network request canceled", file: file, line: line)
             }
@@ -162,10 +164,11 @@ class PMHTTPTestCase: XCTestCase {
     }
     
     @discardableResult
-    func expectationForRequestCanceled<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
+    func expectationForRequestCanceled<Request: HTTPManagerRequest>(
         _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask) -> Void = { _ in () }
+        completion: @escaping (_ task: HTTPManagerTask) -> Void = { _ in () }
         ) -> HTTPManagerTask
+        where Request: HTTPManagerRequestPerformable
     {
         let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
         let task = request.createTask(withCompletionQueue: queue) { [expectationTasks] task, result in
@@ -175,7 +178,7 @@ class PMHTTPTestCase: XCTestCase {
             case .error(_, let error):
                 XCTFail("network request error: \(error)", file: file, line: line)
             case .canceled:
-                completion(task: task)
+                completion(task)
             }
             expectationTasks.with { tasks in
                 if let idx = tasks.index(where: { $0 === task }) {
@@ -202,7 +205,7 @@ private final class Locked<T> {
         _value = value
     }
     
-    func with<R>(_ f: @noescape (inout T) -> R) -> R {
+    func with<R>(_ f: (inout T) -> R) -> R {
         _lock.lock()
         defer { _lock.unlock() }
         return f(&_value)

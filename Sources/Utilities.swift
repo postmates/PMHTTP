@@ -61,7 +61,7 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
     }
     
     /// A 128-element array of the lowercase codepoint for all ASCII values 0-127.
-    private static let lowercaseTable: ContiguousArray<UInt8> = ContiguousArray(((0 as UInt8)...127).lazy.map({ x in
+    fileprivate static let lowercaseTable: ContiguousArray<UInt8> = ContiguousArray(((0 as UInt8)...127).lazy.map({ x in
         if x >= 0x41 && x <= 0x5a { // A-Z
             return x + 0x20
         } else {
@@ -166,6 +166,11 @@ struct DelimitedParameters : Sequence, CustomStringConvertible {
     struct Iterator : IteratorProtocol {
         private var scalars: String.UnicodeScalarView
         private let delimiter: UnicodeScalar
+        
+        init(scalars: String.UnicodeScalarView, delimiter: UnicodeScalar) {
+            self.scalars = scalars
+            self.delimiter = delimiter
+        }
         
         mutating func next() -> (String,String?)? {
             func indexSequence(scalars: String.UnicodeScalarView, start: String.UnicodeScalarIndex, end: String.UnicodeScalarIndex) -> UnfoldSequence<String.UnicodeScalarIndex, (String.UnicodeScalarIndex, Bool)> {
@@ -341,12 +346,12 @@ func ~=(pattern: MediaType, value: MediaType) -> Bool {
 }
 
 internal extension Sequence {
-    func chain<Seq: Sequence where Seq.Iterator.Element == Self.Iterator.Element>(_ seq: Seq) -> Chain<Self, Seq> {
+    func chain<Seq: Sequence>(_ seq: Seq) -> Chain<Self, Seq> where Seq.Iterator.Element == Self.Iterator.Element {
         return Chain(self, seq)
     }
 }
 
-internal struct Chain<First: Sequence, Second: Sequence where First.Iterator.Element == Second.Iterator.Element>: Sequence {
+internal struct Chain<First: Sequence, Second: Sequence>: Sequence where First.Iterator.Element == Second.Iterator.Element {
     init(_ first: First, _ second: Second) {
         self.first = first
         self.second = second
@@ -364,7 +369,7 @@ internal struct Chain<First: Sequence, Second: Sequence where First.Iterator.Ele
     private let second: Second
 }
 
-internal struct ChainGenerator<First: IteratorProtocol, Second: IteratorProtocol where First.Element == Second.Element>: IteratorProtocol {
+internal struct ChainGenerator<First: IteratorProtocol, Second: IteratorProtocol>: IteratorProtocol where First.Element == Second.Element {
     init(_ first: First, _ second: Second) {
         self.first = first
         self.second = second

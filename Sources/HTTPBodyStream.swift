@@ -221,7 +221,7 @@ private func quotedString(_ str: String) -> String {
             case "\r": result.append("%0D")
             case "\n": result.append("%0A")
             case "\"": result.append("%22")
-            default: result.append(c)
+            default: result.unicodeScalars.append(c)
             }
         }
         return result

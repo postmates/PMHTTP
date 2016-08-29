@@ -878,9 +878,9 @@ final class PMHTTPTests: PMHTTPTestCase {
                     let nserror = error.toNSError()
                     XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
                     XCTAssertEqual(nserror.code, PMHTTPError.failedResponse.rawValue, "NSError code")
-                    XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] === response_, "NSError response")
+                    XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] as AnyObject? === response_, "NSError response")
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
-                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data as NSData, "NSError body data")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
                     // And back again
                     let bridged = HTTPManagerError(nserror)
@@ -923,9 +923,9 @@ final class PMHTTPTests: PMHTTPTestCase {
                     let nserror = error.toNSError()
                     XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
                     XCTAssertEqual(nserror.code, PMHTTPError.failedResponse.rawValue, "NSError code")
-                    XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] === response_, "NSError response")
+                    XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] as AnyObject? === response_, "NSError response")
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
-                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data, "NSError body data")
+                    XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data as NSData?, "NSError body data")
                     XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
                     // And back again
                     let bridged = HTTPManagerError(nserror)

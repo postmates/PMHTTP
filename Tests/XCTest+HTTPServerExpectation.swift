@@ -21,7 +21,7 @@ extension XCTestCase {
     /// The callback is automatically unregistered when the request is hit.
     /// The callback is executed on an arbitrary background queue.
     @discardableResult
-    func expectationForHTTPRequest(_ server: HTTPServer, path: String, handler: (request: HTTPServer.Request, completionHandler: (HTTPServer.Response) -> Void) -> Void) -> XCTestExpectation {
+    func expectationForHTTPRequest(_ server: HTTPServer, path: String, handler: @escaping (_ request: HTTPServer.Request, _ completionHandler: @escaping (HTTPServer.Response) -> Void) -> Void) -> XCTestExpectation {
         let expectation = self.expectation(description: "server request with path \(String(reflecting: path))")
         let lock = NSLock()
         lock.lock()
@@ -37,7 +37,7 @@ extension XCTestCase {
             }
             server?.unregisterRequestCallback(token)
             
-            handler(request: request, completionHandler: {
+            handler(request, {
                 completionHandler($0)
                 self?.removeOutstandingHTTPRequestHandler(token: token)
                 expectation.fulfill()
