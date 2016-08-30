@@ -1440,7 +1440,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             } else {
                 baseURL = nil
             }
-            // FIXME: Get rid of NSURL in next beta (https://github.com/apple/swift/pull/3910)
+            // FIXME: Get rid of NSURL when https://github.com/apple/swift/pull/3910 is fixed.
             guard let url = NSURL(string: urlString, relativeTo: baseURL) as URL? else {
                 return XCTFail("Could not parse URL string", file: file, line: line)
             }
