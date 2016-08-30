@@ -19,8 +19,26 @@ class PMHTTPTestCase: XCTestCase {
     static var httpServer: HTTPServer!
     static var cacheConfigured = false
     
+    #if os(OSX)
+    static var _workaroundXCTestTimeoutTimer: dispatch_source_t?
+    #endif
+    
     class override func setUp() {
         super.setUp()
+        #if os(OSX)
+            // Xcode 8 on OS X 10.11 has a weird bug where it frequently waits for the full timeout for expectations
+            // even though all expectations have been fulfilled. It turns out that merely dispatching a block to the
+            // main queue while it's waiting is enough to cause it to wake up and realize that it's done.
+            // So we'll set up a timer that runs on the main queue every 50ms, to keep the tests nice and speedy.
+            // Filed as rdar://problem/28064036.
+            if _workaroundXCTestTimeoutTimer == nil {
+                let timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue())
+                _workaroundXCTestTimeoutTimer = timer
+                dispatch_source_set_event_handler(timer, {})
+                dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, Int64(50 * NSEC_PER_MSEC)), 50 * NSEC_PER_MSEC, 10 * NSEC_PER_MSEC)
+                dispatch_resume(timer)
+            }
+        #endif
         httpServer = try! HTTPServer()
         if !cacheConfigured {
             // Bypass the shared URL cache and use an in-memory cache only.
