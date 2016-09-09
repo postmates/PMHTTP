@@ -1,6 +1,6 @@
 # PMHTTP
 
-[![Version](https://img.shields.io/badge/version-v0.9.1-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.9.2-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-ios%20%7C%20osx%20%7C%20watchos%20%7C%20tvos-lightgrey.svg)
 ![Languages](https://img.shields.io/badge/languages-swift%20%7C%20objc-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
@@ -359,22 +359,24 @@ Requires a minimum of iOS 8, macOS 10.10, watchOS 2.0, or tvOS 9.0.
 
 ## Installation
 
+After installation with any mechanism, you can use this by adding `import PMHTTP` to your code.
+
 ### Carthage
 
 To install using [Carthage][], add the following to your Cartfile:
 
 ```
-github "postmates/PMHTTP" ~> 0.9.1
+github "postmates/PMHTTP" ~> 0.9.2
 ```
+
+This release supports Swift 2.3.
 
 ### CocoaPods
 To install using [CocoaPods](https://cocoapods.org), add the following to your Podfile:
 
 ```
-pod "PMHTTP", "~> 0.9.1"
+pod "PMHTTP", "~> 0.9.2"
 ```
-
-Once installed, you can use this by adding `import PMHTTP` to your code.
 
 ## License
 
@@ -389,6 +391,10 @@ Licensed under either of
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you shall be dual licensed as above, without any additional terms or conditions.
 
 ## Version History
+
+#### v0.9.2 (2016-09-09)
+
+* Support Swift 2.3.
 
 #### v0.9.1 (2016-08-17)
 
