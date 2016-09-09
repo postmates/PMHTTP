@@ -29,7 +29,7 @@ extension HTTPManager {
     /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
     ///   be parsed by `NSURL` or `json` is not a JSON-compatible object.
     @objc(requestForPOST:json:)
-    public func __objc_requestForPOST(path: String, json object: AnyObject) -> HTTPManagerUploadJSONRequest! {
+    public func __objc_requestForPOST(_ path: String, json object: Any) -> HTTPManagerUploadJSONRequest! {
         guard let json = try? JSON(ns: object) else { return nil }
         return request(POST: path, json: json)
     }
@@ -41,7 +41,7 @@ extension HTTPManagerError {
     /// This method handles `HTTPManagerError`s specially by creating an `NSError` using the
     /// `PMHTTPError` constants for Objective-C. All other errors are converted to `NSError`
     /// using the built-in casting.
-    public static func toNSError(error: ErrorType) -> NSError {
+    public static func toNSError(_ error: Error) -> NSError {
         if let error = error as? HTTPManagerError {
             return error.toNSError()
         } else {
@@ -59,47 +59,47 @@ extension HTTPManagerError {
     /// - SeeAlso: `init?(_ error:)`.
     public func toNSError() -> NSError {
         switch self {
-        case let .FailedResponse(statusCode, response, body, json):
-            let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            var userInfo: [NSObject: AnyObject] = [
+        case let .failedResponse(statusCode, response, body, json):
+            let statusString = HTTPURLResponse.localizedString(forStatusCode: statusCode)
+            var userInfo: [AnyHashable: Any] = [
                 NSLocalizedDescriptionKey: "HTTP response indicated failure (\(statusCode) \(statusString))",
                 PMHTTPURLResponseErrorKey: response,
                 PMHTTPStatusCodeErrorKey: statusCode,
                 PMHTTPBodyDataErrorKey: body
             ]
             userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
-            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.FailedResponse.rawValue, userInfo: userInfo)
-        case let .Unauthorized(credential, response, body, json):
-            var userInfo: [NSObject: AnyObject] = [
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.failedResponse.rawValue, userInfo: userInfo)
+        case let .unauthorized(credential, response, body, json):
+            var userInfo: [AnyHashable: Any] = [
                 NSLocalizedDescriptionKey: "401 Unauthorized HTTP response",
                 PMHTTPURLResponseErrorKey: response,
                 PMHTTPBodyDataErrorKey: body
             ]
             userInfo[PMHTTPCredentialErrorKey] = credential
             userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
-            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.Unauthorized.rawValue, userInfo: userInfo)
-        case let .UnexpectedContentType(contentType, response, body):
-            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedContentType.rawValue, userInfo: [
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.unauthorized.rawValue, userInfo: userInfo)
+        case let .unexpectedContentType(contentType, response, body):
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.unexpectedContentType.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response had unexpected content type \(String(reflecting: contentType))",
                 PMHTTPURLResponseErrorKey: response,
                 PMHTTPContentTypeErrorKey: contentType,
                 PMHTTPBodyDataErrorKey: body
                 ])
-        case let .UnexpectedNoContent(response):
-            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedNoContent.rawValue, userInfo: [
+        case let .unexpectedNoContent(response):
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.unexpectedNoContent.rawValue, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP response returned 204 No Content when an entity was expected",
                 PMHTTPURLResponseErrorKey: response
                 ])
-        case let .UnexpectedRedirect(statusCode, location, response, body):
-            let statusString = NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
-            var userInfo = [
+        case let .unexpectedRedirect(statusCode, location, response, body):
+            let statusString = HTTPURLResponse.localizedString(forStatusCode: statusCode)
+            var userInfo: [AnyHashable: Any] = [
                 NSLocalizedDescriptionKey: "HTTP response returned a redirection (\(statusCode) \(statusString)) when an entity was expected",
                 PMHTTPURLResponseErrorKey: response,
                 PMHTTPStatusCodeErrorKey: statusCode,
                 PMHTTPBodyDataErrorKey: body
             ]
             userInfo[PMHTTPLocationErrorKey] = location
-            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.UnexpectedRedirect.rawValue, userInfo: userInfo)
+            return NSError(domain: PMHTTPErrorDomain, code: PMHTTPError.unexpectedRedirect.rawValue, userInfo: userInfo)
         }
     }
     
@@ -116,37 +116,37 @@ extension HTTPManagerError {
         guard error.domain == PMHTTPErrorDomain, let code = PMHTTPError(rawValue: error.code) else { return nil }
         let userInfo = error.userInfo
         switch code {
-        case .FailedResponse:
-            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
-                statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
-                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+        case .failedResponse:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? HTTPURLResponse,
+                let statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
+                let body = userInfo[PMHTTPBodyDataErrorKey] as? Data
                 else { return nil }
             let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(ns: $0)})
-            self = HTTPManagerError.FailedResponse(statusCode: statusCode, response: response, body: body, bodyJson: json)
-        case .Unauthorized:
-            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
-                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+            self = HTTPManagerError.failedResponse(statusCode: statusCode, response: response, body: body, bodyJson: json)
+        case .unauthorized:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? HTTPURLResponse,
+                let body = userInfo[PMHTTPBodyDataErrorKey] as? Data
                 else { return nil }
-            let credential = userInfo[PMHTTPCredentialErrorKey] as? NSURLCredential
+            let credential = userInfo[PMHTTPCredentialErrorKey] as? URLCredential
             let json = userInfo[PMHTTPBodyJSONErrorKey].flatMap({try? JSON(ns: $0)})
-            self = HTTPManagerError.Unauthorized(credential: credential, response: response, body: body, bodyJson: json)
-        case .UnexpectedContentType:
-            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
-                contentType = userInfo[PMHTTPContentTypeErrorKey] as? String,
-                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+            self = HTTPManagerError.unauthorized(credential: credential, response: response, body: body, bodyJson: json)
+        case .unexpectedContentType:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? HTTPURLResponse,
+                let contentType = userInfo[PMHTTPContentTypeErrorKey] as? String,
+                let body = userInfo[PMHTTPBodyDataErrorKey] as? Data
                 else { return nil }
-            self = HTTPManagerError.UnexpectedContentType(contentType: contentType, response: response, body: body)
-        case .UnexpectedNoContent:
-            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse
+            self = HTTPManagerError.unexpectedContentType(contentType: contentType, response: response, body: body)
+        case .unexpectedNoContent:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? HTTPURLResponse
                 else { return nil }
-            self = HTTPManagerError.UnexpectedNoContent(response: response)
-        case .UnexpectedRedirect:
-            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? NSHTTPURLResponse,
-                statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
-                body = userInfo[PMHTTPBodyDataErrorKey] as? NSData
+            self = HTTPManagerError.unexpectedNoContent(response: response)
+        case .unexpectedRedirect:
+            guard let response = userInfo[PMHTTPURLResponseErrorKey] as? HTTPURLResponse,
+                let statusCode = userInfo[PMHTTPStatusCodeErrorKey] as? Int,
+                let body = userInfo[PMHTTPBodyDataErrorKey] as? Data
                 else { return nil }
-            let location = userInfo[PMHTTPLocationErrorKey] as? NSURL
-            self = HTTPManagerError.UnexpectedRedirect(statusCode: statusCode, location: location, response: response, body: body)
+            let location = userInfo[PMHTTPLocationErrorKey] as? URL
+            self = HTTPManagerError.unexpectedRedirect(statusCode: statusCode, location: location, response: response, body: body)
         }
     }
 }
@@ -177,13 +177,13 @@ extension HTTPManagerRetryBehavior {
     ///
     ///   **Requires:** This block must not be executed more than once.
     @objc(retryBehaviorWithHandler:)
-    public convenience init(__handler handler: (task: HTTPManagerTask, error: NSError, attempt: Int, callback: Bool -> Void) -> Void) {
+    public convenience init(__handler handler: @escaping (_ task: HTTPManagerTask, _ error: NSError, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
         self.init({ task, error, attempt, callback in
             switch error {
             case let error as HTTPManagerError:
-                handler(task: task, error: error.toNSError(), attempt: attempt, callback: callback)
+                handler(task, error.toNSError(), attempt, callback)
             default:
-                handler(task: task, error: error as NSError, attempt: attempt, callback: callback)
+                handler(task, error as NSError, attempt, callback)
             }
         })
     }
@@ -214,13 +214,13 @@ extension HTTPManagerRetryBehavior {
     ///
     ///   **Requires:** This block must not be executed more than once.
     @objc(retryBehaviorIgnoringIdempotenceWithHandler:)
-    public convenience init(__ignoringIdempotence handler: (task: HTTPManagerTask, error: NSError, attempt: Int, callback: Bool -> Void) -> Void) {
+    public convenience init(__ignoringIdempotence handler: @escaping (_ task: HTTPManagerTask, _ error: NSError, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
         self.init(ignoringIdempotence: { task, error, attempt, callback in
             switch error {
             case let error as HTTPManagerError:
-                handler(task: task, error: error.toNSError(), attempt: attempt, callback: callback)
+                handler(task, error.toNSError(), attempt, callback)
             default:
-                handler(task: task, error: error as NSError, attempt: attempt, callback: callback)
+                handler(task, error as NSError, attempt, callback)
             }
         })
     }
@@ -240,7 +240,7 @@ extension HTTPManagerRetryBehavior {
     ///   as the server did not handle the original request. If `NO`, only networking failures
     ///   are retried.
     @objc(retryNetworkFailureOnceIncluding503ServiceUnavailable:)
-    public class func __retryNetworkFailureOnce(including503ServiceUnavailable: Bool) -> HTTPManagerRetryBehavior {
+    public class func __retryNetworkFailureOnce(_ including503ServiceUnavailable: Bool) -> HTTPManagerRetryBehavior {
         if including503ServiceUnavailable {
             return HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
         } else {
@@ -267,7 +267,7 @@ extension HTTPManagerRetryBehavior {
     ///   as the server did not handle the original request. If `NO`, only networking failures
     ///   are retried.
     @objc(retryNetworkFailureTwiceWithDelay:including503ServiceUnavailable:)
-    public class func __retryNetworkFailureTwice(withDelay delay: NSTimeInterval, including503ServiceUnavailable: Bool) -> HTTPManagerRetryBehavior {
+    public class func __retryNetworkFailureTwice(withDelay delay: TimeInterval, including503ServiceUnavailable: Bool) -> HTTPManagerRetryBehavior {
         if including503ServiceUnavailable {
             return HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryTwiceWithDelay(delay))
         } else {
@@ -284,11 +284,11 @@ public extension HTTPManagerTaskResult {
     /// Canceled results are converted into `NSURLErrorCancelled` errors.
     var objcError: NSError? {
         switch self {
-        case .Success:
+        case .success:
             return nil
-        case .Error(_, let error):
+        case .error(_, let error):
             return HTTPManagerError.toNSError(error)
-        case .Canceled:
+        case .canceled:
             return NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil)
         }
     }
@@ -314,13 +314,13 @@ public class PMHTTPResult: NSObject, NSCopying {
     /// - Note: A successful result may still have a `nil` value if the parse handler
     ///   returns `nil` or if it's a POST/PUT/PATCH/DELETE request and the response
     ///   is 204 No Content.
-    public let value: AnyObject?
+    public let value: Any?
     
     /// If the task finished successfully, or if it failed with an error
     /// during processing after receiving the response, returns the `NSURLResponse`.
     /// Otherwise, if the task failed with a networking error or was canceled,
     /// returns `nil`.
-    public let response: NSURLResponse?
+    public let response: URLResponse?
     
     /// If the task failed with an error, returns the `NSError`.
     /// Otherwise, returns `nil`.
@@ -329,7 +329,7 @@ public class PMHTTPResult: NSObject, NSCopying {
     public let error: NSError?
     
     /// Creates and returns a new `PMHTTPResult` representing a successful result.
-    public init(value: AnyObject?, response: NSURLResponse) {
+    public init(value: Any?, response: URLResponse) {
         isSuccess = true
         self.value = value
         self.response = response
@@ -338,7 +338,7 @@ public class PMHTTPResult: NSObject, NSCopying {
     }
     
     /// Creates and returns a new `PMHTTPResult` representing a failed task.
-    public init(error: NSError, response: NSURLResponse?) {
+    public init(error: NSError, response: URLResponse?) {
         isSuccess = false
         self.error = error
         self.response = response
@@ -351,11 +351,11 @@ public class PMHTTPResult: NSObject, NSCopying {
         return PMHTTPResult(canceled: ())
     }
     
-    public func copyWithZone(zone: NSZone) -> AnyObject {
+    public func copy(with zone: NSZone? = nil) -> Any {
         return self
     }
     
-    private init(canceled: ()) {
+    fileprivate init(canceled: ()) {
         isSuccess = false
         value = nil
         response = nil
@@ -363,28 +363,28 @@ public class PMHTTPResult: NSObject, NSCopying {
         super.init()
     }
     
-    private convenience init<T: AnyObject>(_ result: HTTPManagerTaskResult<T>) {
+    fileprivate convenience init<T>(_ result: HTTPManagerTaskResult<T>) {
         switch result {
-        case let .Success(response, value):
+        case let .success(response, value):
             self.init(value: value, response: response)
-        case let .Error(response, error as HTTPManagerError):
+        case let .error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
-        case let .Error(response, error):
+        case let .error(response, error):
             self.init(error: error as NSError, response: response)
-        case .Canceled:
+        case .canceled:
             self.init(canceled: ())
         }
     }
     
-    private convenience init<T: AnyObject>(_ result: HTTPManagerTaskResult<T?>) {
+    fileprivate convenience init<T>(_ result: HTTPManagerTaskResult<T?>) {
         switch result {
-        case let .Success(response, value):
+        case let .success(response, value):
             self.init(value: value, response: response)
-        case let .Error(response, error as HTTPManagerError):
+        case let .error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
-        case let .Error(response, error):
+        case let .error(response, error):
             self.init(error: error as NSError, response: response)
-        case .Canceled:
+        case .canceled:
             self.init(canceled: ())
         }
     }
@@ -392,23 +392,23 @@ public class PMHTTPResult: NSObject, NSCopying {
 
 /// The results of an HTTP request that returns an `NSData`.
 public final class PMHTTPDataResult: PMHTTPResult {
-    /// If the task finished successfully, returns the resulting `NSData`, if any.
+    /// If the task finished successfully, returns the resulting `Data`, if any.
     /// Otherwise, returns `nil`.
     /// - Note: A successful result may still have a `nil` value if it's a
     ///   POST/PUT/PATCH/DELETE request and the response is 204 No Content.
     ///   Successful GET/HEAD requests will never have a `nil` value.
     /// - Note: This property returns the same value that `value` does.
-    public var data: NSData? {
-        return value as! NSData?
+    public var data: Data? {
+        return value as! Data?
     }
     
     /// Creates and returns a new `PMHTTPDataResult` representing a successful result.
-    public init(data: NSData?, response: NSURLResponse) {
+    public init(data: Data?, response: URLResponse) {
         super.init(value: data, response: response)
     }
     
     /// Creates and returns a new `PMHTTPDataResult` representing a failed task.
-    public override init(error: NSError, response: NSURLResponse?) {
+    public override init(error: NSError, response: URLResponse?) {
         super.init(error: error, response: response)
     }
     
@@ -417,32 +417,32 @@ public final class PMHTTPDataResult: PMHTTPResult {
         return PMHTTPDataResult(canceled: ())
     }
     
-    private override init(canceled: ()) {
+    fileprivate override init(canceled: ()) {
         super.init(canceled: ())
     }
     
-    private convenience init(_ result: HTTPManagerTaskResult<NSData>) {
+    fileprivate convenience init(_ result: HTTPManagerTaskResult<Data>) {
         switch result {
-        case let .Success(response, data):
+        case let .success(response, data):
             self.init(data: data, response: response)
-        case let .Error(response, error as HTTPManagerError):
+        case let .error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
-        case let .Error(response, error):
+        case let .error(response, error):
             self.init(error: error as NSError, response: response)
-        case .Canceled:
+        case .canceled:
             self.init(canceled: ())
         }
     }
     
-    private convenience init(_ result: HTTPManagerTaskResult<NSData?>) {
+    fileprivate convenience init(_ result: HTTPManagerTaskResult<Data?>) {
         switch result {
-        case let .Success(response, data):
+        case let .success(response, data):
             self.init(data: data, response: response)
-        case let .Error(response, error as HTTPManagerError):
+        case let .error(response, error as HTTPManagerError):
             self.init(error: error.toNSError(), response: response)
-        case let .Error(response, error):
+        case let .error(response, error):
             self.init(error: error as NSError, response: response)
-        case .Canceled:
+        case .canceled:
             self.init(canceled: ())
         }
     }
@@ -505,16 +505,16 @@ extension HTTPManagerRequest {
     /// The timeout interval of the request, in seconds. If `nil`, the session's default
     /// timeout interval is used. Default is `nil`.
     @objc(timeoutInterval) public var __objc_timeoutInterval: NSNumber? {
-        get { return timeoutInterval }
-        set { timeoutInterval = newValue as NSTimeInterval? }
+        get { return timeoutInterval as NSNumber? }
+        set { timeoutInterval = newValue as TimeInterval? }
     }
     
     /// The cache policy to use for the request. If `NSURLRequestUseProtocolCachePolicy`,
     /// the default cache policy is used. Default is `NSURLRequestUseProtocolCachePolicy`
     /// for GET/HEAD requests and `NSURLRequestReloadIgnoringLocalCacheData` for
     /// POST/PUT/PATCH/DELETE requests.
-    @objc(cachePolicy) public var __objc_cachePolicy: NSURLRequestCachePolicy {
-        return cachePolicy ?? NSURLRequestCachePolicy.UseProtocolCachePolicy
+    @objc(cachePolicy) public var __objc_cachePolicy: NSURLRequest.CachePolicy {
+        return cachePolicy ?? NSURLRequest.CachePolicy.useProtocolCachePolicy
     }
     
     /// Additional HTTP header fields to pass in the request. Default is `[:]`.
@@ -535,7 +535,7 @@ extension HTTPManagerRequest {
     ///
     /// If a value was previously set for the specified *field*, the supplied *value* is appended
     /// to the existing value using the appropriate field delimiter.
-    @objc(addValue:forHeaderField:) public func __objc_addValue(value: String, forHeaderField field: String) {
+    @objc(addValue:forHeaderField:) public func __objc_addValue(_ value: String, forHeaderField field: String) {
         headerFields.addValue(value, forHeaderField: field)
     }
     
@@ -543,7 +543,7 @@ extension HTTPManagerRequest {
     ///
     /// - Parameter value: The value for the header field.
     /// - Parameter field: The name of the header field. Header fields are case-insensitive.
-    @objc(setValue:forHeaderField:) public func __objc_setValue(value: String, forHeaderField field: String) {
+    @objc(setValue:forHeaderField:) public func __objc_setValue(_ value: String, forHeaderField field: String) {
         headerFields[field] = value
     }
     
@@ -551,7 +551,7 @@ extension HTTPManagerRequest {
     ///
     /// - Parameter field: The name of the header field. Header fields are case-insensitive.
     /// - Returns: The value for the header field, or `nil` if no value was set.
-    @objc(valueForHeaderField:) public func __objc_valueForHeaderField(field: String) -> String? {
+    @objc(valueForHeaderField:) public func __objc_valueForHeaderField(_ field: String) -> String? {
         return headerFields[field]
     }
 }
@@ -571,16 +571,16 @@ extension HTTPManagerNetworkRequest {
     ///   treated as successful but with a `nil` value.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   thread, you should just use `-performRequestWithCompletionQueue:completion:`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseWithHandler:)
-    public func __objc_parseWithHandler(handler: @convention(block) (response: NSURLResponse, data: NSData, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseWithHandler({ response, data -> AnyObject? in
+    public func __objc_parseWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ data: Data, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parse(with: { response, data -> Any? in
             var error: NSError?
-            if let object = handler(response: response, data: data, error: &error) {
+            if let object = handler(response, data, &error) {
                 return object
             } else if let error = error {
                 throw error
@@ -595,14 +595,14 @@ extension HTTPManagerNetworkRequest {
     /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
     /// the task executing, e.g. if you need to record the task identifier somewhere before the
     /// completion block fires.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `-resume` method.
     @objc(createTaskWithCompletion:)
-    public func __objc_createTaskWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
-        return createTaskWithCompletion { task, result in
-            handler(task: task, result: PMHTTPDataResult(result))
+    public func __objc_createTaskWithCompletion(_ completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return createTask { task, result in
+            completion(task, PMHTTPDataResult(result))
         }
     }
     
@@ -613,39 +613,39 @@ extension HTTPManagerNetworkRequest {
     /// completion block fires.
     /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
     ///   be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    @objc(createTaskWithCompletionOnQueue:handler:)
-    public func __objc_createTaskWithCompletion(onQueue queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
-        return createTaskWithCompletion(onQueue: queue) { task, result in
-            handler(task: task, result: PMHTTPDataResult(result))
+    @objc(createTaskWithCompletionQueue:completion:)
+    public func __objc_createTaskWithCompletionQueue(_ queue: OperationQueue?, completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return createTask(withCompletionQueue: queue) { task, result in
+            completion(task, PMHTTPDataResult(result))
         }
     }
     
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
-    /// - Parameter handler: The handler to call when the request is done. This
+    /// - Parameter completion: The handler to call when the request is done. This
     ///   handler is called on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     @objc(performRequestWithCompletion:)
-    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
-        return performRequestWithCompletion { task, result in
-            handler(task: task, result: PMHTTPDataResult(result))
+    public func __objc_performRequestWithCompletion(_ completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return performRequest { task, result in
+            completion(task, PMHTTPDataResult(result))
         }
     }
     
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
     /// - Parameter queue: The queue to call the handler on. May be `nil`.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    @objc(performRequestWithCompletionOnQueue:handler:)
-    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
-        return performRequestWithCompletion(onQueue: queue) { task, result in
-            handler(task: task, result: PMHTTPDataResult(result))
+    @objc(performRequestWithCompletionQueue:completion:)
+    public func __objc_performRequestWithCompletionQueue(_ queue: OperationQueue?, completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
+        return performRequest(withCompletionQueue: queue) { task, result in
+            completion(task, PMHTTPDataResult(result))
         }
     }
 }
@@ -655,10 +655,10 @@ extension HTTPManagerNetworkRequest {
 extension HTTPManagerDataRequest {
     /// The cache policy to use for the request. If `NSURLRequestUseProtocolCachePolicy`,
     /// the default cache policy is used. Default is `NSURLRequestUseProtocolCachePolicy`.
-    @objc(cachePolicy) public override var __objc_cachePolicy: NSURLRequestCachePolicy {
+    @objc(cachePolicy) public override var __objc_cachePolicy: NSURLRequest.CachePolicy {
         get { return super.__objc_cachePolicy }
         set {
-            if newValue == NSURLRequestCachePolicy.UseProtocolCachePolicy {
+            if newValue == NSURLRequest.CachePolicy.useProtocolCachePolicy {
                 cachePolicy = nil
             } else {
                 cachePolicy = newValue
@@ -684,8 +684,8 @@ extension HTTPManagerDataRequest {
     ///   it is always represented as `NSNull` regardless of this parameter.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     @objc(parseAsJSONOmitNulls:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { response, json -> Any? in
             return omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
         }))
     }
@@ -702,13 +702,13 @@ extension HTTPManagerDataRequest {
     ///   treated as successful but with a `nil` value.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   thread, you should just use `-performRequestWithCompletionQueue:completion:`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
@@ -727,17 +727,17 @@ extension HTTPManagerDataRequest {
     ///   treated as successful but with a `nil` value.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   thread, you should just use `-performRequestWithCompletionQueue:completion:`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ response, json -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { response, json -> Any? in
             var error: NSError?
             let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
-            if let object = handler(response: response, json: jsonObject, error: &error) {
+            if let object = handler(response, jsonObject, &error) {
                 return object
             } else if let error = error {
                 throw error
@@ -761,25 +761,25 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         set { _request.isIdempotent = newValue }
     }
     
-    public override var url: NSURL {
+    public override var url: URL {
         return _request.url
     }
     
-    public override var parameters: [NSURLQueryItem] {
+    public override var parameters: [URLQueryItem] {
         return _request.parameters
     }
     
-    public override var credential: NSURLCredential? {
+    public override var credential: URLCredential? {
         get { return _request.credential }
         set { _request.credential = newValue }
     }
     
-    public override var timeoutInterval: NSTimeInterval? {
+    public override var timeoutInterval: TimeInterval? {
         get { return _request.timeoutInterval }
         set { _request.timeoutInterval = newValue }
     }
     
-    public override var cachePolicy: NSURLRequestCachePolicy? {
+    public override var cachePolicy: NSURLRequest.CachePolicy? {
         return _request.cachePolicy
     }
     
@@ -868,12 +868,12 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// Performs an asynchronous request and calls the specified handler when done.
     /// - Parameter queue: (Optional) The queue to call the handler on. The default value
     ///   of `nil` means the handler will be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. The handler
+    /// - Parameter completion: The handler to call when the request is done. The handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     @nonobjc
-    public func createTaskWithCompletion(onQueue queue: NSOperationQueue? = nil, _ handler: (task: HTTPManagerTask, result: HTTPManagerTaskResult<AnyObject?>) -> Void) -> HTTPManagerTask {
-        return _request.createTaskWithCompletion(onQueue: queue, handler)
+    public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Any?>) -> Void) -> HTTPManagerTask {
+        return _request.createTask(withCompletionQueue: queue, completion: completion)
     }
     
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
@@ -881,14 +881,14 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// This method is intended for cases where you need access to the `NSURLSessionTask` prior to
     /// the task executing, e.g. if you need to record the task identifier somewhere before the
     /// completion block fires.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `-resume` method.
     @objc(createTaskWithCompletion:)
-    public func __objc_createTaskWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
-        return createTaskWithCompletion { task, result in
-            handler(task: task, result: PMHTTPResult(result))
+    public func __objc_createTaskWithCompletion(_ completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return createTask { task, result in
+            completion(task, PMHTTPResult(result))
         }
     }
     
@@ -899,56 +899,56 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// completion block fires.
     /// - Parameter queue: The queue to call the handler on. `nil` means the handler will
     ///   be called on a global concurrent queue.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
-    @objc(createTaskWithCompletionOnQueue:handler:)
-    public func __objc_createTaskWithCompletion(onQueue queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
-        return createTaskWithCompletion(onQueue: queue) { task, result in
-            handler(task: task, result: PMHTTPResult(result))
+    @objc(createTaskWithCompletionQueue:completion:)
+    public func __objc_createTaskWithCompletion(onQueue queue: OperationQueue?, completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return createTask(withCompletionQueue: queue) { task, result in
+            completion(task, PMHTTPResult(result))
         }
     }
     
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
-    /// - Parameter handler: The handler to call when the request is done. This
+    /// - Parameter completion: The handler to call when the request is done. This
     ///   handler is called on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     @objc(performRequestWithCompletion:)
-    public func __objc_performRequestWithCompletion(handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
-        return performRequestWithCompletion { task, result in
-            handler(task: task, result: PMHTTPResult(result))
+    public func __objc_performRequestWithCompletion(_ completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return performRequest { task, result in
+            completion(task, PMHTTPResult(result))
         }
     }
     
     /// Performs an asynchronous request and calls the specified handler when
     /// done.
     /// - Parameter queue: The queue to call the handler on. May be `nil`.
-    /// - Parameter handler: The handler to call when the request is done. This handler
+    /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
-    @objc(performRequestWithCompletionOnQueue:handler:)
-    public func __objc_performRequestWithCompletionOnQueue(queue: NSOperationQueue?, handler: @convention(block) (task: HTTPManagerTask, result: PMHTTPResult) -> Void) -> HTTPManagerTask {
-        return performRequestWithCompletion(onQueue: queue) { task, result in
-            handler(task: task, result: PMHTTPResult(result))
+    @objc(performRequestWithCompletionQueue:completion:)
+    public func __objc_performRequestWithCompletionQueue(_ queue: OperationQueue?, completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPResult) -> Void) -> HTTPManagerTask {
+        return performRequest(withCompletionQueue: queue) { task, result in
+            completion(task, PMHTTPResult(result))
         }
     }
     
-    internal let _request: HTTPManagerParseRequest<AnyObject?>
+    internal let _request: HTTPManagerParseRequest<Any?>
     
-    internal init(request: HTTPManagerParseRequest<AnyObject?>) {
+    internal init(request: HTTPManagerParseRequest<Any?>) {
         _request = request
         super.init(apiManager: request.apiManager, URL: request.baseURL, method: request.requestMethod, parameters: [])
     }
 
     public required init(__copyOfRequest request: HTTPManagerRequest) {
-        let request: HTTPManagerObjectParseRequest = unsafeDowncast(request)
+        let request = unsafeDowncast(request, to: HTTPManagerObjectParseRequest.self)
         _request = HTTPManagerParseRequest(__copyOfRequest: request._request)
         super.init(__copyOfRequest: request)
     }
     
-    internal override func prepareURLRequest() -> (NSMutableURLRequest -> Void)? {
+    internal override func prepareURLRequest() -> ((inout URLRequest) -> Void)? {
         return _request.prepareURLRequest()
     }
 }
@@ -978,8 +978,8 @@ extension HTTPManagerActionRequest {
     /// - Note: If the response is a 204 No Content, the result object
     ///   will return `nil` for `value`.
     @objc(parseAsJSONOmitNulls:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ result -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { result -> Any? in
             return result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
         }))
     }
@@ -996,13 +996,13 @@ extension HTTPManagerActionRequest {
     /// - Note: If the response is a 204 No Content, the result object
     ///   will return `nil` for `value`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   thread, you should just use `-performRequestWithCompletionQueue:completion:`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(handler: @convention(block) (response: NSURLResponse, json: AnyObject?, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
@@ -1022,17 +1022,17 @@ extension HTTPManagerActionRequest {
     ///   treated as successful but with a `nil` value.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     /// - Note: If you need to parse on a particular thread, such as on the main
-    ///   thread, you should just use `performRequestWithCompletion(_:)`
+    ///   thread, you should just use `-performRequestWithCompletionQueue:completion:`
     ///   instead.
     /// - Note: If the request is canceled, the results of the handler may be
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(omitNulls: Bool, withHandler handler: @convention(block) (response: NSURLResponse, json: AnyObject?, error: NSErrorPointer) -> AnyObject?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSONWithHandler({ result -> AnyObject? in
+    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { result -> Any? in
             var error: NSError?
             let jsonObject = result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
-            if let object = handler(response: result.response, json: jsonObject, error: &error) {
+            if let object = handler(result.response, jsonObject, &error) {
                 return object
             } else if let error = error {
                 throw error
@@ -1053,7 +1053,7 @@ extension HTTPManagerUploadJSONRequest {
     /// The JSON data to upload.
     /// - Requires: Values assigned to this property must be json-compatible.
     @objc(uploadJSON)
-    public var __objc_uploadJSON: AnyObject {
+    public var __objc_uploadJSON: Any {
         get { return uploadJSON.ns }
         set { uploadJSON = try! JSON(ns: newValue) }
     }

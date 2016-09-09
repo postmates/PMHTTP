@@ -35,7 +35,7 @@ final class HTTPServer {
     init() throws {
         shared = QueueConfined(label: "HTTPServer internal queue", value: Shared())
         listener = Listener(shared: shared)
-        try listener.socket.acceptOnInterface("lo0", port: 0)
+        try listener.socket.accept(onInterface: "lo0", port: 0)
         listener.log("Listening")
     }
     
@@ -71,8 +71,8 @@ final class HTTPServer {
             shared.listenErrorCallback = nil
             shared.unhandledRequestCallback = nil
         }
-        let block = listener.invalidate()
-        dispatch_block_wait(block, DISPATCH_TIME_FOREVER)
+        let workItem = listener.invalidate()
+        workItem.wait()
     }
     
     /// Shuts down all active connections and clears all request callbacks, including the
@@ -84,8 +84,8 @@ final class HTTPServer {
             shared.listenErrorCallback = nil
             shared.unhandledRequestCallback = nil
         }
-        let block = listener.reset()
-        dispatch_block_wait(block, DISPATCH_TIME_FOREVER)
+        let workItem = listener.reset()
+        workItem.wait()
     }
     
     /// Registers a request callback that fires on every request. The callback MUST invoke
@@ -109,7 +109,8 @@ final class HTTPServer {
     ///   unregister just this callback.
     ///
     /// - SeeAlso: `unregisterRequestCallback(_:)`, `clearRequestCallbacks()`.
-    func registerRequestCallback(callback: (request: Request, completionHandler: Response? -> Void) -> Void) -> CallbackToken {
+    @discardableResult
+    func registerRequestCallback(_ callback: @escaping (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void) -> CallbackToken {
         let token = CallbackToken()
         shared.asyncBarrier { shared in
             shared.requestCallbacks.append((token, callback))
@@ -134,13 +135,14 @@ final class HTTPServer {
     ///   unregister just this callback.
     ///
     /// - SeeAlso: `registerRequestCallback(_:)`.
-    func registerRequestCallbackForPath(path: String, ignoresTrailingSlash: Bool = false, callback: (request: Request, completionHandler: Response? -> Void) -> Void) -> CallbackToken {
+    @discardableResult
+    func registerRequestCallback(for path: String, ignoresTrailingSlash: Bool = false, callback: @escaping (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void) -> CallbackToken {
         var path = path
         if !path.hasPrefix("/") {
             path = "/\(path)"
         }
-        func pathComponents(path: String, includesTrailingSlash: Bool) -> [String]? {
-            let comps = path.unicodeScalars.split("/")
+        func pathComponents(_ path: String, includesTrailingSlash: Bool) -> [String]? {
+            let comps = path.unicodeScalars.split(separator: "/")
             let hasLeadingSlash = path.hasPrefix("/")
             let hasTrailingSlash = includesTrailingSlash && path.hasSuffix("/")
             var result: [String] = []
@@ -149,7 +151,7 @@ final class HTTPServer {
                 result.append("/")
             }
             for comp in comps {
-                guard let elt = String(comp).stringByRemovingPercentEncoding else {
+                guard let elt = String(comp).removingPercentEncoding else {
                     return nil
                 }
                 result.append(elt)
@@ -162,9 +164,9 @@ final class HTTPServer {
         let pathComps = pathComponents(path, includesTrailingSlash: !ignoresTrailingSlash)
         return registerRequestCallback { request, completionHandler in
             if let pathComps = pathComps,
-                requestPathComps = pathComponents(request.urlComponents.percentEncodedPath ?? "", includesTrailingSlash: !ignoresTrailingSlash)
-                where pathComps == requestPathComps {
-                callback(request: request, completionHandler: completionHandler)
+                let requestPathComps = pathComponents(request.urlComponents.percentEncodedPath, includesTrailingSlash: !ignoresTrailingSlash),
+                pathComps == requestPathComps {
+                callback(request, completionHandler)
             } else {
                 completionHandler(nil)
             }
@@ -175,10 +177,10 @@ final class HTTPServer {
     /// Does nothing if the callback has already been unregistered.
     ///
     /// - SeeAlso: `registerRequestCallback(_:)`, `clearRequestCallbacks()`.
-    func unregisterRequestCallback(token: CallbackToken) {
+    func unregisterRequestCallback(_ token: CallbackToken) {
         shared.asyncBarrier { shared in
-            if let idx = shared.requestCallbacks.indexOf({ $0.token === token }) {
-                shared.requestCallbacks.removeAtIndex(idx)
+            if let idx = shared.requestCallbacks.index(where: { $0.token === token }) {
+                shared.requestCallbacks.remove(at: idx)
             }
         }
     }
@@ -202,7 +204,7 @@ final class HTTPServer {
     
     /// A callback that's triggered if the listen socket shuts down with an error.
     /// The callback is fired on an arbitrary background queue.
-    var listenErrorCallback: (NSError -> Void)? {
+    var listenErrorCallback: ((Error) -> Void)? {
         get {
             return shared.sync({ $0.listenErrorCallback })
         }
@@ -216,7 +218,7 @@ final class HTTPServer {
     /// The callback must invoke `completionHandler` (on any thread) once and only once.
     /// the `response` parameter is a suggested response, but the callback may substitute
     /// any other response as desired.
-    var unhandledRequestCallback: ((request: Request, response: Response, completionHandler: Response -> Void) -> Void)? {
+    var unhandledRequestCallback: ((_ request: Request, _ response: Response, _ completionHandler: @escaping (Response) -> Void) -> Void)? {
         get {
             return shared.sync({ $0.unhandledRequestCallback })
         }
@@ -233,17 +235,17 @@ final class HTTPServer {
         case PATCH
         case DELETE
         case CONNECT
-        case Other(String)
+        case other(String)
         
         init(_ rawValue: String) {
             switch rawValue {
-            case comparable("HEAD", options: .CaseInsensitiveSearch): self = .HEAD
-            case comparable("GET", options: .CaseInsensitiveSearch): self = .GET
-            case comparable("POST", options: .CaseInsensitiveSearch): self = .POST
-            case comparable("PUT", options: .CaseInsensitiveSearch): self = .PUT
-            case comparable("PATCH", options: .CaseInsensitiveSearch): self = .PATCH
-            case comparable("DELETE", options: .CaseInsensitiveSearch): self = .DELETE
-            default: self = .Other(rawValue.uppercaseString)
+            case comparable("HEAD", options: .caseInsensitive): self = .HEAD
+            case comparable("GET", options: .caseInsensitive): self = .GET
+            case comparable("POST", options: .caseInsensitive): self = .POST
+            case comparable("PUT", options: .caseInsensitive): self = .PUT
+            case comparable("PATCH", options: .caseInsensitive): self = .PATCH
+            case comparable("DELETE", options: .caseInsensitive): self = .DELETE
+            default: self = .other(rawValue.uppercased())
             }
         }
         
@@ -256,19 +258,19 @@ final class HTTPServer {
             case .PATCH: return "PATCH"
             case .DELETE: return "DELETE"
             case .CONNECT: return "CONNECT"
-            case .Other(let s): return s
+            case .other(let s): return s
             }
         }
     }
     
-    private static let httpDateFormatter: NSDateFormatter = {
-        let formatter = NSDateFormatter()
-        let locale = NSLocale(localeIdentifier: "en_US_POSIX")
-        let calendar = NSCalendar(identifier: NSCalendarIdentifierGregorian)!
+    private static let httpDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        let locale = Locale(identifier: "en_US_POSIX")
+        var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale
         formatter.calendar = calendar
         formatter.locale = locale
-        formatter.timeZone = NSTimeZone(abbreviation: "GMT")!
+        formatter.timeZone = TimeZone(abbreviation: "GMT")!
         formatter.dateFormat = "EEE, dd MMM yyyy HH':'mm':'ss 'GMT'"
         return formatter
     }()
@@ -278,35 +280,35 @@ final class HTTPServer {
     /// An HTTP status code.
     enum Status : Int {
         // 2xx Success
-        case OK = 200
-        case Created = 201
-        case Accepted = 202
-        case NoContent = 204
+        case ok = 200
+        case created = 201
+        case accepted = 202
+        case noContent = 204
         // 3xx Redirection
-        case MultipleChoices = 300
-        case MovedPermanently = 301
-        case Found = 302
-        case SeeOther = 303
-        case NotModified = 304
-        case TemporaryRedirect = 307
+        case multipleChoices = 300
+        case movedPermanently = 301
+        case found = 302
+        case seeOther = 303
+        case notModified = 304
+        case temporaryRedirect = 307
         // 4xx Client Error
-        case BadRequest = 400
-        case Unauthorized = 401
-        case Forbidden = 403
-        case NotFound = 404
-        case MethodNotAllowed = 405
-        case NotAcceptable = 406
-        case Gone = 410
-        case LengthRequired = 411
-        case RequestEntityTooLarge = 413
-        case RequestURITooLong = 414
-        case UnsupportedMediaType = 415
+        case badRequest = 400
+        case unauthorized = 401
+        case forbidden = 403
+        case notFound = 404
+        case methodNotAllowed = 405
+        case notAcceptable = 406
+        case gone = 410
+        case lengthRequired = 411
+        case requestEntityTooLarge = 413
+        case requestURITooLong = 414
+        case unsupportedMediaType = 415
         // 5xx Server Error
-        case InternalServerError = 500
-        case NotImplemented = 501
-        case BadGateway = 502
-        case ServiceUnavailable = 503
-        case HTTPVersionNotSupported = 505
+        case internalServerError = 500
+        case notImplemented = 501
+        case badGateway = 502
+        case serviceUnavailable = 503
+        case httpVersionNotSupported = 505
         
         /// `true` iff the status is a 1xx status.
         var isInformational: Bool {
@@ -340,7 +342,7 @@ final class HTTPServer {
         var method: Method
         /// The URL components of the request. Always includes the `path`.
         /// Includes the `host` if the request contains the `Host` header.
-        var urlComponents: NSURLComponents
+        var urlComponents: URLComponents
         /// The HTTP version of the request.
         var httpVersion: HTTPVersion
         /// The HTTP headers.
@@ -348,12 +350,13 @@ final class HTTPServer {
         /// The HTTP headers provided after a chunked body, if any.
         var trailerHeaders: HTTPHeaders = [:]
         /// The request body, if provided.
-        var body: NSData?
+        var body: Data?
         
         var description: String {
-            return  "Request(\(method) \(urlComponents.path ?? "nil"), httpVersion: \(httpVersion), "
+            let path = urlComponents.path
+            return  "Request(\(method) \(path.isEmpty ? "(no path)" : path), httpVersion: \(httpVersion), "
                 + "headers: \(headers.dictionary), trailerHeaders: \(trailerHeaders.dictionary), "
-                + "body: \(body?.length ?? 0) bytes)"
+                + "body: \(body?.count ?? 0) bytes)"
         }
         
         var debugDescription: String {
@@ -361,9 +364,9 @@ final class HTTPServer {
                 + "headers: \(headers), trailerHeaders: \(trailerHeaders), body: \(body))"
         }
         
-        private init?(method: Method, requestTarget: String, httpVersion: HTTPVersion, headers: HTTPHeaders = [:], body: NSData? = nil) {
+        fileprivate init?(method: Method, requestTarget: String, httpVersion: HTTPVersion, headers: HTTPHeaders = [:], body: Data? = nil) {
             self.method = method
-            guard let comps = NSURLComponents(string: requestTarget) else { return nil }
+            guard let comps = URLComponents(string: requestTarget) else { return nil }
             urlComponents = comps
             self.httpVersion = httpVersion
             self.headers = headers
@@ -384,20 +387,20 @@ final class HTTPServer {
         /// The HTTP headers.
         var headers: HTTPHeaders
         /// The body, if any. If set, "Content-Length" will be provided automatically.
-        var body: NSData?
+        var body: Data?
         
-        init(status: Status, headers: HTTPHeaders = [:], body: NSData? = nil) {
+        init(status: Status, headers: HTTPHeaders = [:], body: Data? = nil) {
             self.status = status
             self.headers = headers
             self.body = body
             // If the headers don't include Date, let's set it automatically
-            if self.headers.indexForKey("Date") == nil {
-                self.headers["Date"] = HTTPServer.httpDateFormatter.stringFromDate(NSDate())
+            if self.headers.index(forKey: "Date") == nil {
+                self.headers["Date"] = HTTPServer.httpDateFormatter.string(from: Date())
             }
         }
         
         init(status: Status, headers: HTTPHeaders = [:], body: String) {
-            self.init(status: status, headers: headers, body: body.dataUsingEncoding(NSUTF8StringEncoding)!)
+            self.init(status: status, headers: headers, body: body.data(using: String.Encoding.utf8)!)
         }
         
         init(status: Status, headers: HTTPHeaders = [:], text: String) {
@@ -407,7 +410,7 @@ final class HTTPServer {
         }
         
         var description: String {
-            return "Response(\(status.rawValue) \(status), headers: \(headers.dictionary), body: \(body?.length ?? 0) bytes)"
+            return "Response(\(status.rawValue) \(status), headers: \(headers.dictionary), body: \(body?.count ?? 0) bytes)"
         }
         
         var debugDescription: String {
@@ -439,42 +442,42 @@ final class HTTPServer {
             var contentDisposition: ContentDisposition?
             /// The `Content-Type` header, or `nil` if no such header exists.
             var contentType: MediaType?
-            var body: NSData
+            var body: Data
             /// The body data parsed as a UTF-8 string, or `nil` if it couldn't be parsed.
             /// - Note: This ignores any encoding specified in a `"Content-Type"` header on
             ///   the part.
             var bodyText: String? {
-                return String(data: body, encoding: NSUTF8StringEncoding)
+                return String(data: body, encoding: String.Encoding.utf8)
             }
             
-            /// Parses an NSData containing everything between the boundaries.
+            /// Parses a `Data` containing everything between the boundaries.
             /// Returns `nil` if the headers are not well-formed.
-            init?(content: NSData) {
-                let anchoredEmptyLineRange = content.rangeOfData(CRLF, options: .Anchored, range: NSRange(0..<content.length)).toRange()
-                guard let emptyLineRange = anchoredEmptyLineRange ?? content.rangeOfData(CRLFCRLF, options: [], range: NSRange(0..<content.length)).toRange()
+            init?(content: Data) {
+                let anchoredEmptyLineRange = content.range(of: CRLF, options: .anchored, in: 0..<content.count)
+                guard let emptyLineRange = anchoredEmptyLineRange ?? content.range(of: CRLFCRLF, in: 0..<content.count)
                     else { return nil }
-                body = content.subdataWithRange(NSRange(emptyLineRange.endIndex..<content.length))
-                let headerData = content.subdataWithRange(NSRange(0..<emptyLineRange.startIndex))
-                guard let headerContent = String(bytes: headerData.bufferPointer, encoding: NSASCIIStringEncoding)?.chomped()
+                body = content.subdata(in: emptyLineRange.upperBound..<content.count)
+                let headerData = content.subdata(in: 0..<emptyLineRange.lowerBound)
+                guard let headerContent = String(data: headerData, encoding: String.Encoding.ascii)?.chomped()
                     else { return nil }
                 headers = HTTPHeaders()
-                var lines = unfoldLines(headerContent.componentsSeparatedByString("\r\n"))
+                var lines = unfoldLines(headerContent.components(separatedBy: "\r\n"))
                 if lines.last == "" {
                     lines.removeLast()
                 }
                 for line in lines {
-                    guard let idx = line.unicodeScalars.indexOf(":") else { return nil }
-                    let field = String(line.unicodeScalars.prefixUpTo(idx))
-                    var scalars = line.unicodeScalars.suffixFrom(idx.successor())
+                    guard let idx = line.unicodeScalars.index(of: ":") else { return nil }
+                    let field = String(line.unicodeScalars.prefix(upTo: idx))
+                    var scalars = line.unicodeScalars.suffix(from: line.unicodeScalars.index(after: idx))
                     // skip leading OWS
-                    if let idx = scalars.indexOf({ $0 != " " && $0 != "\t" }) {
-                        scalars = scalars.suffixFrom(idx)
+                    if let idx = scalars.index(where: { $0 != " " && $0 != "\t" }) {
+                        scalars = scalars.suffix(from: idx)
                         // skip trailing OWS
-                        let idx = scalars.reverse().indexOf({ $0 != " " && $0 != "\t" })!
+                        let idx = scalars.reversed().index(where: { $0 != " " && $0 != "\t" })!
                         // idx.base is the successor to the element, so prefixUpTo() cuts off at the right spot
-                        scalars = scalars.prefixUpTo(idx.base)
+                        scalars = scalars.prefix(upTo: idx.base)
                     } else {
-                        scalars = scalars.suffixFrom(scalars.endIndex)
+                        scalars = scalars.suffix(from: scalars.endIndex)
                     }
                     headers[field] = String(scalars)
                 }
@@ -483,14 +486,14 @@ final class HTTPServer {
             }
         }
         
-        enum Error: ErrorType {
-            case ContentTypeNotMultipart
-            case NoBody
-            case NoBoundary
-            case InvalidBoundary
-            case CannotFindFirstBoundary
-            case CannotFindBoundaryTerminator
-            case InvalidBodyPartHeaders
+        enum Error: Swift.Error {
+            case contentTypeNotMultipart
+            case noBody
+            case noBoundary
+            case invalidBoundary
+            case cannotFindFirstBoundary
+            case cannotFindBoundaryTerminator
+            case invalidBodyPartHeaders
         }
         
         /// The MIME type of the multipart body, such as `"multipart/form-data"`.
@@ -503,71 +506,70 @@ final class HTTPServer {
         /// Parses a multipart request.
         /// - Throws: `MultipartBody.Error` if the `Content-Type` is not
         ///   multipart or the `body` is not formatted properly.
-        private init(request: Request) throws {
-            guard let contentType = request.headers["Content-Type"].map(MediaType.init)
-                where contentType.type == "multipart"
-                else { throw Error.ContentTypeNotMultipart }
-            guard let boundary = contentType.params.find({ $0.0 == "boundary" })?.1
-                else { throw Error.NoBoundary }
+        fileprivate init(request: Request) throws {
+            guard let contentType = request.headers["Content-Type"].map(MediaType.init),
+                contentType.type == "multipart"
+                else { throw Error.contentTypeNotMultipart }
+            guard let boundary = contentType.params.first(where: { $0.0 == "boundary" })?.1
+                else { throw Error.noBoundary }
             guard let body = request.body
-                else { throw Error.NoBody }
+                else { throw Error.noBody }
             self.contentType = contentType.typeSubtype
-            guard !boundary.unicodeScalars.contains({ $0 == "\r" || $0 == "\n" }),
-                let boundaryData = "--\(boundary)".dataUsingEncoding(NSUTF8StringEncoding)
-                else { throw Error.InvalidBoundary }
-            let bytes = body.bufferPointer
-            func findBoundary(sourceRange: Range<Int>) -> (range: Range<Int>, isTerminator: Bool)? {
+            guard !boundary.unicodeScalars.contains(where: { $0 == "\r" || $0 == "\n" }),
+                let boundaryData = "--\(boundary)".data(using: String.Encoding.utf8)
+                else { throw Error.invalidBoundary }
+            func findBoundary(_ sourceRange: Range<Int>) -> (range: Range<Int>, isTerminator: Bool)? {
                 var sourceRange = sourceRange
                 repeat {
-                    guard var range = body.rangeOfData(boundaryData, options: [], range: NSRange(sourceRange)).toRange() else {
+                    guard var range = body.range(of: boundaryData, in: sourceRange) else {
                         // Couldn't find a boundary
                         return nil
                     }
-                    if range.startIndex >= 2 && (bytes[range.startIndex-2], bytes[range.startIndex-1]) == (0x0D, 0x0A) {
+                    if range.lowerBound >= 2 && (body[range.lowerBound-2], body[range.lowerBound-1]) == (0x0D, 0x0A) {
                         // The boundary is preceeded by CRLF.
                         // Include the CRLF in the range (as long as it's still within sourceRange)
-                        range.startIndex = max(sourceRange.startIndex, range.startIndex-2)
-                    } else if range.startIndex != 0 {
+                        range = Range(uncheckedBounds: (lower: max(sourceRange.lowerBound, range.lowerBound-2), upper: range.upperBound))
+                    } else if range.lowerBound != 0 {
                         // The boundary isn't at the start of the data, and isn't preceeded by CRLF.
                         // `range` doesn't contain any CRLF characters, so we can skip the whole thing.
-                        sourceRange.startIndex = range.endIndex
+                        sourceRange = Range(uncheckedBounds: (lower: range.upperBound, upper: sourceRange.upperBound))
                         continue
                     }
                     // Is this a terminator?
                     var isTerminator = false
-                    if range.endIndex + 1 < bytes.endIndex && (bytes[range.endIndex], bytes[range.endIndex+1]) == (0x2D, 0x2D) { // "--"
+                    if range.upperBound + 1 < body.endIndex && (body[range.upperBound], body[range.upperBound+1]) == (0x2D, 0x2D) { // "--"
                         isTerminator = true
-                        range.endIndex += 2
+                        range = Range(uncheckedBounds: (lower: range.lowerBound, upper: range.upperBound + 2))
                     }
                     // Skip optional LWS
-                    while range.endIndex != bytes.endIndex && (UnicodeScalar(bytes[range.endIndex]) == " " || UnicodeScalar(bytes[range.endIndex]) == "\t") {
-                        range.endIndex += 1
+                    while range.upperBound != body.endIndex && (UnicodeScalar(body[range.upperBound]) == " " || UnicodeScalar(body[range.upperBound]) == "\t") {
+                        range = Range(uncheckedBounds: (lower: range.lowerBound, upper: range.upperBound + 1))
                     }
-                    if isTerminator && range.endIndex == bytes.endIndex {
+                    if isTerminator && range.upperBound == body.endIndex {
                         // no more data, which is acceptable for the terminator line
                         return (range, isTerminator)
-                    } else if range.endIndex + 1 < bytes.endIndex && (bytes[range.endIndex], bytes[range.endIndex+1]) == (0x0D, 0x0A) { // the boundary is preceeded by CRLF
+                    } else if range.upperBound + 1 < body.endIndex && (body[range.upperBound], body[range.upperBound+1]) == (0x0D, 0x0A) { // the boundary is preceeded by CRLF
                         // CRLF terminator
-                        range.endIndex += 2
+                        range = Range(uncheckedBounds: (lower: range.lowerBound, upper: range.upperBound + 2))
                         return (range, isTerminator)
                     }
                     // Otherwise, this supposed boundary line isn't a valid boundary. Search again
-                    sourceRange.startIndex = range.endIndex
+                    sourceRange = Range(uncheckedBounds: (lower: range.upperBound, upper: sourceRange.upperBound))
                 } while true
             }
             parts = []
-            var sourceRange = 0..<body.length
+            var sourceRange: Range<Int> = 0..<body.count
             guard var boundaryInfo = findBoundary(sourceRange)
-                else { throw Error.CannotFindFirstBoundary }
+                else { throw Error.cannotFindFirstBoundary }
             while !boundaryInfo.isTerminator {
-                let startIdx = boundaryInfo.range.endIndex
-                sourceRange.startIndex = startIdx
+                let startIdx = boundaryInfo.range.upperBound
+                sourceRange = Range(uncheckedBounds: (lower: startIdx, upper: sourceRange.upperBound))
                 guard let nextBoundary = findBoundary(sourceRange)
-                    else { throw Error.CannotFindBoundaryTerminator }
+                    else { throw Error.cannotFindBoundaryTerminator }
                 boundaryInfo = nextBoundary
-                let content = body.subdataWithRange(NSRange(startIdx..<boundaryInfo.range.startIndex))
+                let content = body.subdata(in: startIdx..<boundaryInfo.range.lowerBound)
                 guard let part = Part(content: content)
-                    else { throw Error.InvalidBodyPartHeaders }
+                    else { throw Error.invalidBodyPartHeaders }
                 parts.append(part)
             }
         }
@@ -592,9 +594,9 @@ final class HTTPServer {
         init(_ rawValue: String) {
             let rawValue = trimLWS(rawValue)
             self.rawValue = rawValue
-            if let idx = rawValue.unicodeScalars.indexOf(";") {
-                value = trimLWS(String(rawValue.unicodeScalars.prefixUpTo(idx)))
-                params = DelimitedParameters(String(rawValue.unicodeScalars.suffixFrom(idx.successor())), delimiter: ";")
+            if let idx = rawValue.unicodeScalars.index(of: ";") {
+                value = trimLWS(String(rawValue.unicodeScalars.prefix(upTo: idx)))
+                params = DelimitedParameters(String(rawValue.unicodeScalars.suffix(from: rawValue.unicodeScalars.index(after: idx))), delimiter: ";")
             } else {
                 value = rawValue
                 params = DelimitedParameters("", delimiter: ";")
@@ -606,15 +608,15 @@ final class HTTPServer {
     private let listener: Listener
     
     private class Shared {
-        var listenErrorCallback: (NSError -> Void)?
-        var requestCallbacks: [(token: CallbackToken, callback: (request: Request, completionHandler: Response? -> Void) -> Void)] = []
-        var unhandledRequestCallback: ((request: Request, response: Response, completionHandler: Response -> Void) -> Void)?
+        var listenErrorCallback: ((Error) -> Void)?
+        var requestCallbacks: [(token: CallbackToken, callback: (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void)] = []
+        var unhandledRequestCallback: ((_ request: Request, _ response: Response, _ completionHandler: @escaping (Response) -> Void) -> Void)?
     }
     
     private class Listener : NSObject, GCDAsyncSocketDelegate {
         let shared: QueueConfined<Shared>
         let socket = GCDAsyncSocket()
-        let queue = dispatch_queue_create("HTTPServer listen queue", DISPATCH_QUEUE_SERIAL)
+        let queue = DispatchQueue(label: "HTTPServer listen queue")
         var connections: [Connection] = []
         
         init(shared: QueueConfined<Shared>) {
@@ -628,9 +630,8 @@ final class HTTPServer {
         }
         
         /// Stops listening for new connections and disconnects all existing connections.
-        /// Returns a `dispatch_block_t` created with `dispatch_block_create()` that can
-        // be waited on with `dispatch_block_wait(_:_:)` or `dispatch_block_notify(_:_:_:)`.
-        func invalidate() -> dispatch_block_t {
+        /// Returns a `DispatchWorkItem` that can be waited on with `.wait` or `.notify`.
+        func invalidate() -> DispatchWorkItem {
             log("Invalidated")
             socket.delegate = nil
             socket.disconnect()
@@ -638,33 +639,32 @@ final class HTTPServer {
         }
         
         /// Disconnects all existing connections but does not stop listening for new ones.
-        /// Returns a `dispatch_block_t` created with `dispatch_block_create()` that can
-        // be waited on with `dispatch_block_wait(_:_:)` or `dispatch_block_notify(_:_:_:)`.
-        func reset() -> dispatch_block_t {
-            let block = dispatch_block_create(dispatch_block_flags_t(0)) {
+        /// Returns a `DispatchWorkItem` that can be waited on with `.wait` or `.notify`.
+        func reset() -> DispatchWorkItem {
+            let workItem = DispatchWorkItem {
                 for connection in self.connections {
                     connection.invalidate()
                 }
                 self.connections.removeAll()
             }
-            dispatch_async(queue, block)
-            return block
+            queue.async(execute: workItem)
+            return workItem
         }
         
-        private func log(@autoclosure msg: () -> String) {
+        func log(_ msg: @autoclosure () -> String) {
             if HTTPServer.enableDebugLogging {
-                NSLog("<HTTP Server %@:%hu> %@", socket.localHost ?? "nil", socket.localPort ?? 0, msg())
+                NSLog("<HTTP Server %@:%hu> %@", socket.localHost ?? "nil", socket.localPort, msg())
             }
         }
         
-        @objc func socket(sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
+        @objc func socket(_ sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
             let connection = Connection(shared: shared, listener: self, socket: newSocket)
             log("New connection (id: \(connection.connectionId)) from \(newSocket.connectedHost):\(newSocket.connectedPort)")
             connections.append(connection)
             connection.readRequestLine()
         }
         
-        @objc func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
+        @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
             // we should only get this if an error occurs, because we nil out the delegate before closing ourselves
             guard let err = err else {
                 log("Disconnected")
@@ -673,7 +673,7 @@ final class HTTPServer {
             log("Disconnected with error: \(err)")
             shared.async { shared in
                 if let callback = replace(&shared.listenErrorCallback, with: nil) {
-                    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0)) {
+                    DispatchQueue.global(qos: .utility).async {
                         callback(err)
                     }
                 }
@@ -685,10 +685,10 @@ final class HTTPServer {
         let shared: QueueConfined<Shared>
         weak var listener: Listener?
         let socket: GCDAsyncSocket
-        let queue = dispatch_queue_create("HTTPServer connection queue", DISPATCH_QUEUE_SERIAL)
+        let queue = DispatchQueue(label: "HTTPServer connection queue")
         var request: HTTPServer.Request?
         var chunkedBody: NSMutableData?
-        var chunkedTrailer: NSData?
+        var chunkedTrailer: Data?
         
         let connectionId: Int32 // DEBUG
         
@@ -711,7 +711,7 @@ final class HTTPServer {
             socket.disconnect()
         }
         
-        private func log(@autoclosure msg: () -> String) {
+        private func log(_ msg: @autoclosure () -> String) {
             if HTTPServer.enableDebugLogging {
                 NSLog("<HTTP Connection %d> %@", connectionId, msg())
             }
@@ -727,40 +727,40 @@ final class HTTPServer {
         
         func readRequestLine() {
             log("Reading request line...")
-            socket.readDataToData(CRLF, withTimeout: -1, tag: Tag.RequestLine.rawValue)
+            socket.readData(to: CRLF, withTimeout: -1, tag: Tag.requestLine.rawValue)
         }
         
         private func dispatchRequest() {
             log("Dispatching request")
             guard let request = self.request else {
-                return writeResponseAndClose(Response(status: .InternalServerError, text: "Couldn't find active request"))
+                return writeResponseAndClose(Response(status: .internalServerError, text: "Couldn't find active request"))
             }
             shared.async { shared in
                 let callbacks = shared.requestCallbacks
                 let unhandledRequestCallback = shared.unhandledRequestCallback
-                let queue = dispatch_queue_create("HTTPServer request callback queue", DISPATCH_QUEUE_SERIAL)
-                var gen = callbacks.generate()
+                let queue = DispatchQueue(label: "HTTPServer request callback queue")
+                var iter = callbacks.makeIterator()
                 func invokeNextCallback() {
-                    guard let (_, cb) = gen.next() else {
-                        let response = Response(status: .NotFound)
+                    guard let (_, cb) = iter.next() else {
+                        let response = Response(status: .notFound)
                         if let unhandledRequestCallback = unhandledRequestCallback {
                             self.log("Invoking unhandled request callback")
-                            unhandledRequestCallback(request: request, response: response) { response in
+                            unhandledRequestCallback(request, response) { response in
                                 self.writeResponse(response)
                             }
                         } else {
                             self.log("Request not handled; sending 404 Not Found")
-                            self.writeResponse(Response(status: .NotFound))
+                            self.writeResponse(Response(status: .notFound))
                         }
                         return
                     }
                     var invoked = false
-                    cb(request: request) { response in
+                    cb(request) { response in
                         // sanity check to make sure we haven't been called already
                         // we'll check again on `queue` because that's the definitive spot, but we're doing an early check here
                         // to provide a better stack trace if the precondition fails.
                         precondition(invoked == false, "HTTPServer request completion handler invoked more than once")
-                        dispatch_async(queue) {
+                        queue.async {
                             precondition(invoked == false, "HTTPServer request completion handler invoked more than once")
                             invoked = true
                             if let response = response {
@@ -771,21 +771,21 @@ final class HTTPServer {
                         }
                     }
                 }
-                dispatch_async(queue) {
+                queue.async {
                     invokeNextCallback()
                 }
             }
         }
         
-        private func writeResponse(response: Response) {
+        private func writeResponse(_ response: Response) {
             log("Writing response: \(response.status)")
             let request = replace(&self.request, with: nil)
             chunkedBody = nil
             chunkedTrailer = nil
             var response = response
             if let body = response.body {
-                response.headers.removeValueForKey("Transfer-Encoding")
-                response.headers["Content-Length"] = String(body.length)
+                response.headers["Transfer-Encoding"] = nil
+                response.headers["Content-Length"] = String(body.count)
             } else if response.headers["Content-Length"] == nil && response.headers["Transfer-Encoding"] == nil {
                 response.headers["Content-Length"] = "0"
             }
@@ -794,12 +794,12 @@ final class HTTPServer {
                 text += "\(field): \(value)\r\n"
             }
             text += "\r\n"
-            socket.writeData(text.dataUsingEncoding(NSUTF8StringEncoding)!, withTimeout: -1, tag: 0)
-            if let body = response.body where body.length > 0 {
+            socket.write(text.data(using: String.Encoding.utf8)!, withTimeout: -1, tag: 0)
+            if let body = response.body, !body.isEmpty {
                 switch (request?.method, response.status) {
                 case (.CONNECT?, _) where response.status.isSuccessful: fallthrough
                 case _ where response.status.isInformational: fallthrough
-                case (_, .NoContent), (_, .NotModified):
+                case (_, .noContent), (_, .notModified):
                     // no body can be present. Print a warning and throw it away
                     NSLog("warning: HTTPServer tried to send response \(response.status) to request method \(request?.method as ImplicitlyUnwrappedOptional) with non-empty body")
                     log("Disconnecting...")
@@ -809,13 +809,13 @@ final class HTTPServer {
                     // no body can be present, but sending Content-Length is legitimate, so just silently ignore the body
                     break
                 default:
-                    log("Writing response body (\(body.length) bytes)")
-                    socket.writeData(body, withTimeout: -1, tag: 0)
+                    log("Writing response body (\(body.count) bytes)")
+                    socket.write(body, withTimeout: -1, tag: 0)
                 }
             }
             // NB: We don't support comma-separated connection options here
-            if response.headers["Connection"]?.caseInsensitiveCompare("close") == .OrderedSame
-                || (request?.httpVersion == HTTPVersion(1,0) && response.headers["Connection"]?.caseInsensitiveCompare("keep-alive") != .OrderedSame)
+            if response.headers["Connection"]?.caseInsensitiveCompare("close") == .orderedSame
+                || (request?.httpVersion == HTTPVersion(1,0) && response.headers["Connection"]?.caseInsensitiveCompare("keep-alive") != .orderedSame)
                 || request?.httpVersion < HTTPVersion(1,0)
             {
                 log("Disconnecting...")
@@ -826,7 +826,7 @@ final class HTTPServer {
             }
         }
         
-        private func writeResponseAndClose(response: Response) {
+        private func writeResponseAndClose(_ response: Response) {
             var response = response
             response.headers["Connection"] = "close"
             writeResponse(response)
@@ -837,37 +837,37 @@ final class HTTPServer {
         /// The given closure is invoked for each header, with the old value (if one exists).
         /// The `field` parameter to the closure always contains the normalized name of the header.
         /// If the closure returns a `Response`, that response is sent to the server and the socket closed.
-        private func parseHeadersFromData(data: NSData, @noescape _ f: (field: String, value: String, oldValue: String?) -> Response? = { _ in nil }) -> HTTPHeaders? {
-            guard let line = String(bytes: data.bufferPointer, encoding: NSASCIIStringEncoding)?.chomped() else {
-                writeResponseAndClose(Response(status: .BadRequest, text: "Non-ASCII headers are not supported"))
+        private func parseHeadersFromData(_ data: Data, _ f: (_ field: String, _ value: String, _ oldValue: String?) -> Response? = { _ in nil }) -> HTTPHeaders? {
+            guard let line = String(data: data, encoding: String.Encoding.ascii)?.chomped() else {
+                writeResponseAndClose(Response(status: .badRequest, text: "Non-ASCII headers are not supported"))
                 return nil
             }
             var headers = HTTPHeaders()
-            var comps = unfoldLines(line.componentsSeparatedByString("\r\n"))
+            var comps = unfoldLines(line.components(separatedBy: "\r\n"))
             if comps.last == "" {
                 comps.removeLast()
             }
             for comp in comps {
-                guard let idx = comp.unicodeScalars.indexOf(":") else {
-                    writeResponseAndClose(Response(status: .BadRequest, text: "Illegal header line syntax"))
+                guard let idx = comp.unicodeScalars.index(of: ":") else {
+                    writeResponseAndClose(Response(status: .badRequest, text: "Illegal header line syntax"))
                     return nil
                 }
-                let field = String(comp.unicodeScalars.prefixUpTo(idx))
-                var scalars = comp.unicodeScalars.suffixFrom(idx.successor())
+                let field = String(comp.unicodeScalars.prefix(upTo: idx))
+                var scalars = comp.unicodeScalars.suffix(from: comp.unicodeScalars.index(after: idx))
                 // skip leading OWS
-                if let idx = scalars.indexOf({ $0 != " " && $0 != "\t" }) {
-                    scalars = scalars.suffixFrom(idx)
+                if let idx = scalars.index(where: { $0 != " " && $0 != "\t" }) {
+                    scalars = scalars.suffix(from: idx)
                     // skip trailing OWS
-                    let idx = scalars.reverse().indexOf({ $0 != " " && $0 != "\t" })!
+                    let idx = scalars.reversed().index(where: { $0 != " " && $0 != "\t" })!
                     // idx.base is the successor to the element, so prefixUpTo() cuts off at the right spot
-                    scalars = scalars.prefixUpTo(idx.base)
+                    scalars = scalars.prefix(upTo: idx.base)
                 } else {
-                    scalars = scalars.suffixFrom(scalars.endIndex)
+                    scalars = scalars.suffix(from: scalars.endIndex)
                 }
                 let value = String(scalars)
                 let normalizedField = HTTPHeaders.normalizedHTTPHeaderField(field)
                 let oldValue = headers.unsafeUpdateValue(value, forPreNormalizedKey: normalizedField)
-                if let response = f(field: normalizedField, value: value, oldValue: oldValue) {
+                if let response = f(normalizedField, value, oldValue) {
                     writeResponseAndClose(response)
                     return nil
                 }
@@ -877,38 +877,38 @@ final class HTTPServer {
         }
         
         private enum Tag: Int {
-            case RequestLine = 1
-            case RequestLineStrict
-            case Headers
-            case FixedLengthBody
-            case ChunkedBodySize
-            case ChunkedBodyData
-            case ChunkedBodyTrailer
+            case requestLine = 1
+            case requestLineStrict
+            case headers
+            case fixedLengthBody
+            case chunkedBodySize
+            case chunkedBodyData
+            case chunkedBodyTrailer
         }
         
-        @objc func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {
+        @objc func socket(_ sock: GCDAsyncSocket, didRead data: Data, withTag tag: Int) {
             switch Tag(rawValue: tag)! {
-            case .RequestLine:
+            case .requestLine:
                 // Robust servers should skip at least one CRLF before the request.
-                if data.isEqualToData(CRLF) {
+                if data == CRLF {
                     log("Skipping CRLF request prefix...")
-                    socket.readDataToData(CRLF, withTimeout: -1, tag: Tag.RequestLineStrict.rawValue)
+                    socket.readData(to: CRLF, withTimeout: -1, tag: Tag.requestLineStrict.rawValue)
                 } else {
                     fallthrough
                 }
-            case .RequestLineStrict:
-                guard let line = String(bytes: data.bufferPointer, encoding: NSASCIIStringEncoding)?.chomped() else {
+            case .requestLineStrict:
+                guard let line = String(data: data, encoding: String.Encoding.ascii)?.chomped() else {
                     log("Parsing request line: \(data)")
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Non-ASCII request line not supported"))
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Non-ASCII request line not supported"))
                 }
                 log("Parsing request line: \(String(reflecting: line))")
-                let comps = line.unicodeScalars.split(isSeparator: { $0 == " " }).map(String.init)
+                let comps = line.unicodeScalars.split(whereSeparator: { $0 == " " }).map(String.init)
                 guard comps.count == 3 else {
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid request line syntax"))
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Invalid request line syntax"))
                 }
                 var version = comps[2]
                 guard version.hasPrefix("HTTP/") else {
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Couldn't find HTTP version in request line"))
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Couldn't find HTTP version in request line"))
                 }
                 version.unicodeScalars.removeFirst(5)
                 let httpVersion: HTTPVersion
@@ -916,26 +916,26 @@ final class HTTPServer {
                 case "0.9": httpVersion = HTTPVersion(0,9)
                 case "1.0": httpVersion = HTTPVersion(1,0)
                 case "1.1": httpVersion = HTTPVersion(1,1)
-                default: return writeResponseAndClose(Response(status: .HTTPVersionNotSupported))
+                default: return writeResponseAndClose(Response(status: .httpVersionNotSupported))
                 }
                 let method = Method(comps[0])
-                if case .Other(let name) = method {
-                    return writeResponseAndClose(Response(status: .MethodNotAllowed, text: "Method \(name) not supported"))
+                if case .other(let name) = method {
+                    return writeResponseAndClose(Response(status: .methodNotAllowed, text: "Method \(name) not supported"))
                 }
                 guard let request = Request(method: method, requestTarget: comps[1], httpVersion: httpVersion) else {
-                    return writeResponseAndClose(Response(status: .BadRequest))
+                    return writeResponseAndClose(Response(status: .badRequest))
                 }
                 self.request = request
                 log("Reading request headers...")
-                socket.readDataToData(CRLFCRLF, withTimeout: -1, tag: Tag.Headers.rawValue)
-            case .Headers:
+                socket.readData(to: CRLFCRLF, withTimeout: -1, tag: Tag.headers.rawValue)
+            case .headers:
                 log("Parsing request headers")
                 guard var request = replace(&self.request, with: nil) else {
-                    return writeResponseAndClose(Response(status: .InternalServerError, text: "Couldn't find active request"))
+                    return writeResponseAndClose(Response(status: .internalServerError, text: "Couldn't find active request"))
                 }
                 var multipleContentLengths = false
                 guard let headers = parseHeadersFromData(data, { (field: String, value: String, oldValue: String?) in
-                    if field == "Content-Length", let oldValue = oldValue where oldValue != value {
+                    if field == "Content-Length", let oldValue = oldValue, oldValue != value {
                         multipleContentLengths = true
                     }
                     return nil
@@ -946,48 +946,47 @@ final class HTTPServer {
                 request.headers = headers
                 self.request = request
                 if let value = request.headers["Transfer-Encoding"] {
-                    if value.caseInsensitiveCompare("chunked") != .OrderedSame {
-                        return writeResponseAndClose(Response(status: .NotImplemented, text: "The only supported Transfer-Encoding is chunked"))
+                    if value.caseInsensitiveCompare("chunked") != .orderedSame {
+                        return writeResponseAndClose(Response(status: .notImplemented, text: "The only supported Transfer-Encoding is chunked"))
                     }
                     chunkedBody = NSMutableData()
                     chunkedTrailer = nil // just in case
                     log("Reading chunked body...")
-                    socket.readDataToData(CRLF, withTimeout: -1, tag: Tag.ChunkedBodySize.rawValue)
+                    socket.readData(to: CRLF, withTimeout: -1, tag: Tag.chunkedBodySize.rawValue)
                 } else if multipleContentLengths {
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Multiple Content-Length headers found"))
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Multiple Content-Length headers found"))
                 } else if let value = request.headers["Content-Length"] {
-                    if let length = Int(value) where length >= 0 {
+                    if let length = Int(value), length >= 0 {
                         if length == 0 {
                             dispatchRequest()
                         } else if length > 5 * 1024 * 1024 {
                             log("Content-Length too large (\(length) bytes)")
-                            return writeResponseAndClose(Response(status: .RequestEntityTooLarge, text: "Requests limited to 5MB"))
+                            return writeResponseAndClose(Response(status: .requestEntityTooLarge, text: "Requests limited to 5MB"))
                         } else {
                             log("Reading fixed length body (\(length) bytes)...")
-                            socket.readDataToLength(UInt(length), withTimeout: -1, tag: Tag.FixedLengthBody.rawValue)
+                            socket.readData(toLength: UInt(length), withTimeout: -1, tag: Tag.fixedLengthBody.rawValue)
                         }
                     } else {
-                        return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid Content-Length"))
+                        return writeResponseAndClose(Response(status: .badRequest, text: "Invalid Content-Length"))
                     }
                 } else {
                     // assume length of 0
                     dispatchRequest()
                 }
-            case .FixedLengthBody:
+            case .fixedLengthBody:
                 log("Received fixed length body")
                 guard var request = replace(&self.request, with: nil) else {
-                    return writeResponseAndClose(Response(status: .InternalServerError, text: "Couldn't find active request"))
+                    return writeResponseAndClose(Response(status: .internalServerError, text: "Couldn't find active request"))
                 }
                 request.body = data
                 self.request = request
                 dispatchRequest()
-            case .ChunkedBodySize:
+            case .chunkedBodySize:
                 log("Parsing chunked body chunk")
                 guard let chunkedBody = self.chunkedBody else {
-                    return writeResponseAndClose(Response(status: .InternalServerError, text: "Couldn't find active chunk body"))
+                    return writeResponseAndClose(Response(status: .internalServerError, text: "Couldn't find active chunk body"))
                 }
-                let buffer = data.bufferPointer
-                func isHexDigit(c: UInt8) -> Bool {
+                func isHexDigit(_ c: UInt8) -> Bool {
                     switch UnicodeScalar(c) {
                     case "0"..."9": return true
                     case "a"..."f": return true
@@ -995,11 +994,11 @@ final class HTTPServer {
                     default: return false
                     }
                 }
-                guard let idx = buffer.indexOf({ !isHexDigit($0) }) else {
+                guard let idx = data.index(where: { !isHexDigit($0) }) else {
                     // surely we should have found the CR
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid chunk syntax"))
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Invalid chunk syntax"))
                 }
-                switch UnicodeScalar(buffer[idx]) {
+                switch UnicodeScalar(data[idx]) {
                 case ";":
                     // the rest of the line is a chunk extension
                     // don't even bother parsing it for validity, we just ignore all extensions
@@ -1008,42 +1007,42 @@ final class HTTPServer {
                     // line ending
                     break
                 default:
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid chunk syntax"))
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Invalid chunk syntax"))
                 }
-                guard let size = UInt(String(buffer.prefixUpTo(idx).lazy.map({Character(UnicodeScalar($0))})), radix: 16) else {
-                    return writeResponseAndClose(Response(status: .BadRequest, text: "Invalid chunk size"))
+                guard let size = UInt(String(data.prefix(upTo: idx).lazy.map({Character(UnicodeScalar($0))})), radix: 16) else {
+                    return writeResponseAndClose(Response(status: .badRequest, text: "Invalid chunk size"))
                 }
                 if size == 0 {
                     log("Last chunk; reading trailer...")
-                    request?.body = chunkedBody
+                    request?.body = chunkedBody as Data
                     chunkedTrailer = nil // just in case
-                    socket.readDataToLength(2, withTimeout: -1, tag: Tag.ChunkedBodyTrailer.rawValue)
+                    socket.readData(toLength: 2, withTimeout: -1, tag: Tag.chunkedBodyTrailer.rawValue)
                 } else {
                     guard UInt(chunkedBody.length) + size <= 5 * 1024 * 1024 else {
                         log("Chunk too large (\(size) bytes, \(UInt(chunkedBody.length) + size) total)")
-                        return writeResponseAndClose(Response(status: .RequestEntityTooLarge, text: "Requests limited to 5MB"))
+                        return writeResponseAndClose(Response(status: .requestEntityTooLarge, text: "Requests limited to 5MB"))
                     }
                     log("Reading chunk data (\(size) bytes)...")
-                    socket.readDataToLength(size + 2, withTimeout: -1, tag: Tag.ChunkedBodyData.rawValue)
+                    socket.readData(toLength: size + 2, withTimeout: -1, tag: Tag.chunkedBodyData.rawValue)
                 }
-            case .ChunkedBodyData:
+            case .chunkedBodyData:
                 log("Received chunk data")
                 guard let chunkedBody = chunkedBody else {
-                    return writeResponseAndClose(Response(status: .InternalServerError, text: "Couldn't find active chunk body"))
+                    return writeResponseAndClose(Response(status: .internalServerError, text: "Couldn't find active chunk body"))
                 }
-                chunkedBody.appendData(data)
+                chunkedBody.append(data)
                 // the appended data had a CRLF trailer, chop it off now
                 chunkedBody.length -= 2
                 log("Reading next chunk...")
-                socket.readDataToData(CRLF, withTimeout: -1, tag: Tag.ChunkedBodySize.rawValue)
-            case .ChunkedBodyTrailer:
+                socket.readData(to: CRLF, withTimeout: -1, tag: Tag.chunkedBodySize.rawValue)
+            case .chunkedBodyTrailer:
                 log("Processing chunked body trailer")
                 if let chunkedTrailer = replace(&self.chunkedTrailer, with: nil) {
                     guard var request = replace(&self.request, with: nil) else {
-                        return writeResponseAndClose(Response(status: .InternalServerError, text: "Couldn't find active request"))
+                        return writeResponseAndClose(Response(status: .internalServerError, text: "Couldn't find active request"))
                     }
-                    let trailer = NSMutableData(data: chunkedTrailer)
-                    trailer.appendData(data)
+                    var trailer = chunkedTrailer
+                    trailer.append(data)
                     guard let headers = parseHeadersFromData(trailer) else {
                         // response was already written
                         return
@@ -1053,27 +1052,27 @@ final class HTTPServer {
                     dispatchRequest()
                 } else {
                     // either contains a CRLF or contains the first line of the trailer headers
-                    if data.isEqualToData(CRLF) {
+                    if data == CRLF {
                         dispatchRequest()
                     } else {
                         chunkedTrailer = data
                         log("Reading trailer headers...")
-                        socket.readDataToData(CRLFCRLF, withTimeout: -1, tag: Tag.ChunkedBodyTrailer.rawValue)
+                        socket.readData(to: CRLFCRLF, withTimeout: -1, tag: Tag.chunkedBodyTrailer.rawValue)
                     }
                 }
             }
         }
         
-        @objc func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
+        @objc func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
             log("Disconnected")
             if request != nil {
-                NSLog("HTTPServer: received disconnection while processing request; error: %@", err ?? "nil")
+                NSLog("HTTPServer: received disconnection while processing request; error: %@", (err as NSError?) ?? "nil")
             }
             socket.delegate = nil
             if let listener = listener {
-                dispatch_async(listener.queue) {
-                    if let idx = listener.connections.indexOf({ $0 === self }) {
-                        listener.connections.removeAtIndex(idx)
+                listener.queue.async {
+                    if let idx = listener.connections.index(where: { $0 === self }) {
+                        listener.connections.remove(at: idx)
                     }
                 }
             }
@@ -1081,10 +1080,10 @@ final class HTTPServer {
     }
 }
 
-extension String {
+private extension String {
     /// Returns the string with a trailing CRLF, CR, or LF chopped off, if present.
     /// Only chops off one line ending.
-    @warn_unused_result private func chomped() -> String {
+    func chomped() -> String {
         if hasSuffix("\r\n") {
             return String(unicodeScalars.dropLast(2))
         } else if hasSuffix("\r") || hasSuffix("\n") {
@@ -1095,7 +1094,7 @@ extension String {
     }
 }
 
-private func replace<T>(inout a: T, with b: T) -> T {
+private func replace<T>(_ a: inout T, with b: T) -> T {
     var value = b
     swap(&a, &value)
     return value
@@ -1105,50 +1104,44 @@ extension HTTPServer.Status : CustomStringConvertible {
     var description: String {
         let name: String
         switch self {
-        case .OK: name = "OK"
-        case .Created: name = "Created"
-        case .Accepted: name = "Accepted"
-        case .NoContent: name = "No Content"
-        case .MultipleChoices: name = "Multiple Choices"
-        case .MovedPermanently: name = "Moved Permanently"
-        case .Found: name = "Found"
-        case .SeeOther: name = "See Other"
-        case .NotModified: name = "Not Modified"
-        case .TemporaryRedirect: name = "Temporary Redirect"
-        case .BadRequest: name = "Bad Request"
-        case .Unauthorized: name = "Unauthorized"
-        case .Forbidden: name = "Forbidden"
-        case .NotFound: name = "Not Found"
-        case .MethodNotAllowed: name = "Method Not Allowed"
-        case .NotAcceptable: name = "Not Acceptable"
-        case .Gone: name = "Gone"
-        case .LengthRequired: name = "Length Required"
-        case .RequestEntityTooLarge: name = "Request Entity Too Large"
-        case .RequestURITooLong: name = "Request-URI Too Long"
-        case .UnsupportedMediaType: name = "Unsupported Media Type"
-        case .InternalServerError: name = "Internal Server Error"
-        case .NotImplemented: name = "Not Implemented"
-        case .BadGateway: name = "Bad Gateway"
-        case .ServiceUnavailable: name = "Service Unavailable"
-        case .HTTPVersionNotSupported: name = "HTTP Version Not Supported"
+        case .ok: name = "OK"
+        case .created: name = "Created"
+        case .accepted: name = "Accepted"
+        case .noContent: name = "No Content"
+        case .multipleChoices: name = "Multiple Choices"
+        case .movedPermanently: name = "Moved Permanently"
+        case .found: name = "Found"
+        case .seeOther: name = "See Other"
+        case .notModified: name = "Not Modified"
+        case .temporaryRedirect: name = "Temporary Redirect"
+        case .badRequest: name = "Bad Request"
+        case .unauthorized: name = "Unauthorized"
+        case .forbidden: name = "Forbidden"
+        case .notFound: name = "Not Found"
+        case .methodNotAllowed: name = "Method Not Allowed"
+        case .notAcceptable: name = "Not Acceptable"
+        case .gone: name = "Gone"
+        case .lengthRequired: name = "Length Required"
+        case .requestEntityTooLarge: name = "Request Entity Too Large"
+        case .requestURITooLong: name = "Request-URI Too Long"
+        case .unsupportedMediaType: name = "Unsupported Media Type"
+        case .internalServerError: name = "Internal Server Error"
+        case .notImplemented: name = "Not Implemented"
+        case .badGateway: name = "Bad Gateway"
+        case .serviceUnavailable: name = "Service Unavailable"
+        case .httpVersionNotSupported: name = "HTTP Version Not Supported"
         }
         return "\(rawValue) \(name)"
     }
 }
 
-private let CRLF: NSData = NSData(bytes: "\r\n", length: 2)
-private let CRLFCRLF: NSData = NSData(bytes: "\r\n\r\n", length: 4)
-
-extension NSData {
-    private var bufferPointer: UnsafeBufferPointer<UInt8> {
-        return UnsafeBufferPointer(start: UnsafePointer(bytes), count: length)
-    }
-}
+private let CRLF: Data = Data(bytes: [13, 10])
+private let CRLFCRLF: Data = Data(bytes: [13, 10, 13, 10])
 
 func ==(lhs: HTTPServer.Method, rhs: HTTPServer.Method) -> Bool {
     switch (lhs, rhs) {
-    case let (.Other(a), .Other(b)): return a == b
-    case (.Other, _), (_, .Other): return false
+    case let (.other(a), .other(b)): return a == b
+    case (.other, _), (_, .other): return false
     default: return lhs.string == rhs.string
     }
 }
@@ -1162,7 +1155,7 @@ func ==(lhs: HTTPServer.HTTPVersion, rhs: HTTPServer.HTTPVersion) -> Bool {
 /// - Note: The order of parameters is considered significant.
 func ==(lhs: HTTPServer.ContentDisposition, rhs: HTTPServer.ContentDisposition) -> Bool {
     return lhs.value == rhs.value
-        && lhs.params.elementsEqual(rhs.params, isEquivalent: { $0.0.caseInsensitiveCompare($1.0) == .OrderedSame && $0.1 == $1.1 })
+        && lhs.params.elementsEqual(rhs.params, by: { $0.0.caseInsensitiveCompare($1.0) == .orderedSame && $0.1 == $1.1 })
 }
 
 
@@ -1170,12 +1163,12 @@ func <(lhs: HTTPServer.HTTPVersion, rhs: HTTPServer.HTTPVersion) -> Bool {
     return lhs.major < rhs.major || (lhs.major == rhs.major && lhs.minor < rhs.minor)
 }
 
-func unfoldLines(lines: [String]) -> [String] {
+func unfoldLines(_ lines: [String]) -> [String] {
     var result: [String] = []
     result.reserveCapacity(lines.count)
     for var line in lines {
         if line.hasPrefix("\t") {
-            line.unicodeScalars.replaceRange(line.unicodeScalars.startIndex...line.unicodeScalars.startIndex, with: CollectionOfOne(" "))
+            line.unicodeScalars.replaceSubrange(line.unicodeScalars.startIndex...line.unicodeScalars.startIndex, with: CollectionOfOne(" "))
         }
         if line.hasPrefix(" ") {
             if var lastLine = result.popLast() {
@@ -1192,13 +1185,24 @@ func unfoldLines(lines: [String]) -> [String] {
 
 private struct StringComparable {
     let string: String
-    let options: NSStringCompareOptions
+    let options: NSString.CompareOptions
 }
 
-private func comparable(string: String, options: NSStringCompareOptions) -> StringComparable {
+private func comparable(_ string: String, options: NSString.CompareOptions) -> StringComparable {
     return StringComparable(string: string, options: options)
 }
 
 private func ~=(comparable: StringComparable, value: String) -> Bool {
-    return comparable.string.compare(value, options: comparable.options) == .OrderedSame
+    return comparable.string.compare(value, options: comparable.options) == .orderedSame
+}
+
+// Swift 3 removed comparisons on Optionals
+private extension Optional where Wrapped: Comparable {
+    static func <(lhs: Wrapped?, rhs: Wrapped?) -> Bool {
+        switch (lhs, rhs) {
+        case let (a?, b?): return a < b
+        case (nil, _?): return true
+        default: return false
+        }
+    }
 }

@@ -46,11 +46,11 @@ class SipHashTests: XCTestCase {
             0xe1915f5cb1eca46c, 0xf325965ca16d629f, 0x575ff28e60381be5, 0x724506eb4c328a95
             ].map({UInt64(bigEndian: $0)})
         let key: (UInt64, UInt64) = (0x0706050403020100, 0x0f0e0d0c0b0a0908)
-        var buf = ContiguousArray<UInt8>(count: 64, repeatedValue: 0)
+        var buf = ContiguousArray<UInt8>(repeating: 0, count: 64)
         for i in 0..<buf.count {
             buf[i] = UInt8(i)
         }
-        for (i, exp) in expected.enumerate() {
+        for (i, exp) in expected.enumerated() {
             var hasher = SipHasher(key: key)
             // hash as a single write
             do {

@@ -17,36 +17,38 @@ class KVOTests: PMHTTPTestCase {
         // that it's safe to use one of these libraries with a KVO keypath of "networkTask.something".
         autoreleasepool {
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-                completionHandler(HTTPServer.Response(status: .OK))
+                completionHandler(HTTPServer.Response(status: .ok))
             }
             let task = expectationForRequestSuccess(HTTP.request(GET: "foo"))
             let networkTask = task.networkTask
-            waitForExpectationsWithTimeout(5, handler: nil)
-            let expectation = expectationWithDescription("objc association")
-            objc_setAssociatedObject(task, &assocKey, DeinitAction({ [unowned(unsafe) task] in
+            waitForExpectations(timeout: 5, handler: nil)
+            let expectation = self.expectation(description: "objc association")
+            objc_setAssociatedObject(task, &assocKey, DeinitAction({ [unowned(unsafe) task, weak expectation] in
                 XCTAssert(networkTask === task.networkTask)
-                expectation.fulfill()
+                DispatchQueue.main.async {
+                    expectation?.fulfill()
+                }
             }), objc_AssociationPolicy.OBJC_ASSOCIATION_RETAIN)
         }
-        waitForExpectationsWithTimeout(5, handler: nil)
+        waitForExpectations(timeout: 5, handler: nil)
     }
     
     func testKVOOnAutomaticRetry() {
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Length": "64", "Connection": "close"]))
+            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
         }
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .OK))
+            completionHandler(HTTPServer.Response(status: .ok))
         }
-        let req = HTTP.request(GET: "foo")
+        let req = HTTP.request(GET: "foo")!
         req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
         let task = expectationForRequestSuccess(req, startAutomatically: false)
         let networkTask = task.networkTask
-        keyValueObservingExpectationForObject(task, keyPath: "networkTask") { (object, change) -> Bool in
-            return object !== networkTask
+        _ = keyValueObservingExpectation(for: task, keyPath: "networkTask") { (object, change) -> Bool in
+            return (object as AnyObject) !== networkTask
         }
         task.resume()
-        waitForExpectationsWithTimeout(5, handler: nil)
+        waitForExpectations(timeout: 5, handler: nil)
     }
 }
 
@@ -54,7 +56,7 @@ private var kvoContext: () = ()
 private var assocKey: () = ()
 
 private class DeinitAction: NSObject {
-    init(_ handler: () -> Void) {
+    init(_ handler: @escaping () -> Void) {
         _handler = handler
     }
     

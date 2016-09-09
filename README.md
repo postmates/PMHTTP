@@ -66,7 +66,7 @@ A typical GET request looks like:
 // https://api.example.com/v1/search?query=%s
 let task = HTTP.request(GET: "search", parameters: ["query": "cute cats"])
     .parseAsJSON()
-    .performRequestWithCompletion(onQueue: .mainQueue()) { task, result in
+    .performRequest(withCompletionQueue: .main) { task, result in
         switch result {
         case let .Success(response, json):
             // Do something with the parsed JSON.
@@ -85,10 +85,10 @@ A POST request might look like:
 ```swift
 // https://api.example.com/v1/submit_cat
 let task = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])
-    .parseAsJSONWithHandler({ response, json in
+    .parseAsJSON(with: { response, json in
         return try SubmitCatResponse(json: json)
     })
-    .performRequestWithCompletion(onQueue: .mainQueue()) { task, result in
+    .performRequest(withCompletionQueue: .main) { task, result in
         switch result {
         case let .Success(response, value):
             // value is a SubmitCatResponse
@@ -105,16 +105,16 @@ A `multipart/form-data` upload might look like:
 
 ```swift
 // https://api.example.com/v1/submit_cat with photo
-let req = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])
+let req = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])!
 // We could add the image synchronously, but it's better to be asynchronous.
-req.addMultipartBodyWithBlock { upload in
+req.addMultipartBody { upload in
     // This block executes on a background queue.
     if let data = UIImageJPEGRepresentation(catPhoto, 0.9) {
-        upload.addMultipartData(data, withName: "photo", mimeType: "image/jpeg")
+        upload.addMultipart(data: data, withName: "photo", mimeType: "image/jpeg")
     }
 }
-let task = req.parseAsJSONWithHandler({ try SubmitCatResponse(json: $1) })
-    .performRequestWithCompletion(onQueue: .mainQueue()) { task, result in
+let task = req.parseAsJSON(with: { try SubmitCatResponse(json: $1) })
+    .performRequest(withCompletionQueue: .main) { task, result in
         // ...
 }
 ```
@@ -128,7 +128,7 @@ the `HTTP` global variable is accessed. This might look like:
 
 ```swift
 extension AppDelegate: HTTPManagerConfigurable {
-    public func configureHTTPManager(httpManager: HTTPManager) {
+    public func configure(httpManager: HTTPManager) {
         httpManager.environment = HTTPManager.Environment(string: /* ... */)
         let config = NSURLSessionConfiguration.defaultSessionConfiguration()
         config.timeoutIntervalForRequest = 10
@@ -316,9 +316,9 @@ However, this behavior is inappropriate for most REST API requests, and `NSURLSe
 document its caching strategy for such responses. To handle this case, PMHTTP inspects JSON
 responses for appropriate caching headers and explicitly prevents responses from being cached
 if they do not include the appropriate cache directives. By default this behavior is only applied
-to requests created with `.parseAsJSON()` or `.parseAsJSONWithHandler(_:)`, although it can be
+to requests created with `.parseAsJSON()` or `.parseAsJSON(with:)`, although it can be
 overridden on a per-request basis (see `HTTPManagerRequest.defaultResponseCacheStoragePolicy`).
-Notably, requests created with `.parseWithHandler(_:)` do not use this cache strategy as it would
+Notably, requests created with `.parse(with:)` do not use this cache strategy as it would
 interfere with caching image requests.
 
 #### Mocking

@@ -17,14 +17,15 @@ import Foundation
 public extension HTTPManager {
     /// Parses the `Date` header from a URL response and returns it.
     ///
-    /// - Parameter response: An `NSURLResponse` that the header is pulled from. If this
-    ///   is not an `NSHTTPURLResponse`, `nil` is returned.
+    /// - Parameter response: A `URLResponse` that the header is pulled from. If this
+    ///   is not an `HTTPURLResponse`, `nil` is returned.
     /// - Returns: An `NSDate`, or `nil` if the header doesn't exist or has an invalid format.
-    static func parsedDateHeaderFromResponse(response: NSURLResponse) -> NSDate? {
-        guard let response = response as? NSHTTPURLResponse,
-            dateString = response.allHeaderFields["Date"] as? String
+    @objc(parsedDataHeaderFromResponse:)
+    static func parsedDateHeader(from response: URLResponse) -> Date? {
+        guard let response = response as? HTTPURLResponse,
+            let dateString = response.allHeaderFields["Date"] as? String
             else { return nil }
-        return parsedDateHeaderFromString(dateString)
+        return parsedDateHeader(from: dateString)
     }
     
     /// Parses a header value that is formatted like the "Date" HTTP header.
@@ -38,43 +39,44 @@ public extension HTTPManager {
     ///
     /// - Parameter dateString: The string value of the HTTP header.
     /// - Returns: An `NSDate`, or `nil` if `dateString` contains an invalid format.
-    static func parsedDateHeaderFromString(dateString: String) -> NSDate? {
-        return rfc1123DateFormatter.dateFromString(dateString)
-            ?? rfc850DateFormatter.dateFromString(dateString)
-            ?? asctimeDateFormatter.dateFromString(dateString)
+    @objc(parsedDateHeaderFromString:)
+    static func parsedDateHeader(from dateString: String) -> Date? {
+        return rfc1123DateFormatter.date(from: dateString)
+            ?? rfc850DateFormatter.date(from: dateString)
+            ?? asctimeDateFormatter.date(from: dateString)
     }
     
-    private static let posixLocale = NSLocale(localeIdentifier: "en_US_POSIX")
-    private static let gregorianCalendar: NSCalendar = {
-        let calendar = NSCalendar(calendarIdentifier: NSCalendarIdentifierGregorian)!
-        calendar.timeZone = NSTimeZone(forSecondsFromGMT: 0)
+    private static let posixLocale = Locale(identifier: "en_US_POSIX")
+    private static let gregorianCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         return calendar
     }()
-    private static let rfc1123DateFormatter: NSDateFormatter = {
-        let formatter = NSDateFormatter()
+    private static let rfc1123DateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
         formatter.locale = posixLocale
         formatter.calendar = gregorianCalendar
         formatter.timeZone = gregorianCalendar.timeZone
         formatter.dateFormat = "EEE',' dd MMM yyyy HH':'mm':'ss 'GMT'"
-        formatter.lenient = false
+        formatter.isLenient = false
         return formatter
     }()
-    private static let rfc850DateFormatter: NSDateFormatter = {
-        let formatter = NSDateFormatter()
+    private static let rfc850DateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
         formatter.locale = posixLocale
         formatter.calendar = gregorianCalendar
         formatter.timeZone = gregorianCalendar.timeZone
         formatter.dateFormat = "EEEE',' dd'-'MMM'-'yy HH':'mm':'ss 'GMT'"
-        formatter.lenient = false
+        formatter.isLenient = false
         // From RFC 2616 Section 19.3 Tolerant Applications:
         // > HTTP/1.1 clients and caches SHOULD assume that an RFC-850 date
         // > which appears to be more than 50 years in the future is in fact
         // > in the past (this helps solve the "year 2000" problem).
-        formatter.twoDigitStartDate = gregorianCalendar.dateByAddingUnit(.Year, value: -49, toDate: NSDate(), options: [])
+        formatter.twoDigitStartDate = gregorianCalendar.date(byAdding: DateComponents(year: -49), to: Date())
         return formatter
     }()
-    private static let asctimeDateFormatter: NSDateFormatter = {
-        let formatter = NSDateFormatter()
+    private static let asctimeDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
         formatter.locale = posixLocale
         formatter.calendar = gregorianCalendar
         formatter.timeZone = gregorianCalendar.timeZone
@@ -82,7 +84,7 @@ public extension HTTPManager {
         // date format, ICU seems to treat stretches of consecutive whitespace all as a single space, so this should
         // still parse just fine. Luckily we don't have to generate these strings.
         formatter.dateFormat = "EEE MMM dd HH':'mm':'ss yyyy"
-        formatter.lenient = false
+        formatter.isLenient = false
         return formatter
     }()
 }

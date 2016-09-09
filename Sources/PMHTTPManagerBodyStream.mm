@@ -189,6 +189,14 @@ public:
     }
 }
 
+- (id)propertyForKey:(NSStreamPropertyKey)key {
+    return nil;
+}
+
+- (BOOL)setProperty:(id)property forKey:(NSStreamPropertyKey)key {
+    return NO;
+}
+
 - (void)scheduleInRunLoop:(NSRunLoop *)aRunLoop forMode:(NSString *)mode {
     if (_streamStatus.load(std::memory_order_relaxed) == NSStreamStatusClosed) {
         // We can't be scheduled while closed

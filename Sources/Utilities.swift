@@ -16,7 +16,7 @@ import Darwin
 
 /// Returns `true` iff the unicode scalar is a Linear White Space character
 /// (as defined by RFC 2616).
-internal func isLWS(us: UnicodeScalar) -> Bool {
+internal func isLWS(_ us: UnicodeScalar) -> Bool {
     switch us {
     case " ", "\t": return true
     default: return false
@@ -24,10 +24,10 @@ internal func isLWS(us: UnicodeScalar) -> Bool {
 }
 
 /// Trims any Linear White Space (as defined by RFC 2616) from both ends of the `String`.
-internal func trimLWS(str: String) -> String {
+internal func trimLWS(_ str: String) -> String {
     let scalars = str.unicodeScalars
-    let start = scalars.indexOf({ !isLWS($0) })
-    let end = scalars.reverse().indexOf({ !isLWS($0) })?.base
+    let start = scalars.index(where: { !isLWS($0) })
+    let end = scalars.reversed().index(where: { !isLWS($0) })?.base
     return String(scalars[(start ?? scalars.startIndex)..<(end ?? scalars.endIndex)])
 }
 
@@ -39,7 +39,7 @@ internal func trimLWS(str: String) -> String {
 /// will compare as equal.
 /// - Note: The `hashValue` of `CaseInsensitiveASCIIString` will not match the `hashValue` of `String`
 ///   even when the wrapped string is already lowercase.
-internal struct CaseInsensitiveASCIIString: Hashable, StringLiteralConvertible, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     /// The wrapped string.
     let string: String
     
@@ -61,7 +61,7 @@ internal struct CaseInsensitiveASCIIString: Hashable, StringLiteralConvertible, 
     }
     
     /// A 128-element array of the lowercase codepoint for all ASCII values 0-127.
-    private static let lowercaseTable: ContiguousArray<UInt8> = ContiguousArray(((0 as UInt8)...127).lazy.map({ x in
+    fileprivate static let lowercaseTable: ContiguousArray<UInt8> = ContiguousArray(((0 as UInt8)...127).lazy.map({ x in
         if x >= 0x41 && x <= 0x5a { // A-Z
             return x + 0x20
         } else {
@@ -91,14 +91,14 @@ internal struct CaseInsensitiveASCIIString: Hashable, StringLiteralConvertible, 
         return String(reflecting: string)
     }
     
-    func customMirror() -> Mirror {
+    var customMirror: Mirror {
         return Mirror(reflecting: string)
     }
 }
 
 func ==(lhs: CaseInsensitiveASCIIString, rhs: CaseInsensitiveASCIIString) -> Bool {
     return CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
-        var (lhsGen, rhsGen) = (lhs.string.utf16.generate(), rhs.string.utf16.generate())
+        var (lhsGen, rhsGen) = (lhs.string.utf16.makeIterator(), rhs.string.utf16.makeIterator())
         while true {
             switch (lhsGen.next(), rhsGen.next()) {
             case let (a?, b?):
@@ -134,7 +134,7 @@ func ~=(pattern: CaseInsensitiveASCIIString, value: String) -> Bool {
 /// ```
 /// - Bug: Does not actually validate the whole syntax. Invalid sequences will still be yielded
 ///   as written, e.g. `"\"baz\"=foo bar"` will yield `("\"baz\"", "foo bar")`.
-struct DelimitedParameters : SequenceType, CustomStringConvertible {
+struct DelimitedParameters : Sequence, CustomStringConvertible {
     /// The raw value that was used to initialize the `DelimitedParameters`.
     let rawValue: String
     /// The delimiter that separates the elements in the raw value.
@@ -144,8 +144,8 @@ struct DelimitedParameters : SequenceType, CustomStringConvertible {
         return rawValue
     }
     
-    func generate() -> Generator {
-        return Generator(scalars: rawValue.unicodeScalars, delimiter: delimiter)
+    func makeIterator() -> Iterator {
+        return Iterator(scalars: rawValue.unicodeScalars, delimiter: delimiter)
     }
     
     /// Constructs a `DelimitedParameters` from a given string.
@@ -163,20 +163,40 @@ struct DelimitedParameters : SequenceType, CustomStringConvertible {
         }
     }
     
-    struct Generator : GeneratorType {
+    struct Iterator : IteratorProtocol {
         private var scalars: String.UnicodeScalarView
         private let delimiter: UnicodeScalar
         
+        init(scalars: String.UnicodeScalarView, delimiter: UnicodeScalar) {
+            self.scalars = scalars
+            self.delimiter = delimiter
+        }
+        
         mutating func next() -> (String,String?)? {
+            func indexSequence(scalars: String.UnicodeScalarView, start: String.UnicodeScalarIndex, end: String.UnicodeScalarIndex) -> UnfoldSequence<String.UnicodeScalarIndex, (String.UnicodeScalarIndex, Bool)> {
+                return sequence(state: (start, true), next: { (state: inout (String.UnicodeScalarIndex, Bool)) -> String.UnicodeScalarIndex? in
+                    if !state.1 {
+                        scalars.formIndex(after: &state.0)
+                    } else {
+                        state.1 = false
+                    }
+                    if state.0 == end {
+                        return nil
+                    } else {
+                        return state.0
+                    }
+                })
+            }
+            
             /// Skips a quoted-string that starts at `start`. Returns the index of the first scalar
             /// past the end of the quoted-string, or `scalars.endIndex` if the string never ends.
-            func skipQuotedStringAt(start: String.UnicodeScalarIndex, scalars: String.UnicodeScalarView) -> String.UnicodeScalarIndex {
-                // we already know start contains a dquote, don't bother looking at it.
-                var gen = (start.successor()..<scalars.endIndex).generate()
-                while let idx = gen.next() {
+            func skipQuotedStringAt(_ start: String.UnicodeScalarIndex, scalars: String.UnicodeScalarView) -> String.UnicodeScalarIndex {
+                var iter = indexSequence(scalars: scalars, start: start, end: scalars.endIndex).makeIterator()
+                _ = iter.next() // we already know start contains a dquote, don't bother looking at it.
+                while let idx = iter.next() {
                     switch scalars[idx] {
-                    case "\"": return idx.successor()
-                    case "\\": _ = gen.next()
+                    case "\"": return scalars.index(after: idx)
+                    case "\\": _ = iter.next()
                     default: break
                     }
                 }
@@ -184,16 +204,16 @@ struct DelimitedParameters : SequenceType, CustomStringConvertible {
             }
             
             top: while true { // loop in case of empty parameters
-                guard let startIdx = scalars.indexOf({ !isLWS($0) }) else { return nil }
+                guard let startIdx = scalars.index(where: { !isLWS($0) }) else { return nil }
                 var equalIdx_: String.UnicodeScalarIndex?
-                loop: for idx in startIdx..<scalars.endIndex {
+                loop: for idx in indexSequence(scalars: scalars, start: startIdx, end: scalars.endIndex) {
                     switch scalars[idx] {
                     case "=":
                         equalIdx_ = idx
                         break loop
                     case delimiter:
                         // token with no value
-                        defer { scalars = scalars.suffixFrom(idx.successor()) }
+                        defer { scalars = scalars.suffix(from: scalars.index(after: idx)) }
                         if idx == startIdx { // empty parameter, loop again
                             continue top
                         } else {
@@ -206,9 +226,9 @@ struct DelimitedParameters : SequenceType, CustomStringConvertible {
                 guard let equalIdx = equalIdx_ else {
                     // final parameter has no value
                     defer { scalars = String.UnicodeScalarView() }
-                    return (String(scalars.suffixFrom(startIdx)), nil)
+                    return (String(scalars.suffix(from: startIdx)), nil)
                 }
-                let valueIdx = equalIdx.successor()
+                let valueIdx = scalars.index(after: equalIdx)
                 var nextIdx = valueIdx
                 if valueIdx != scalars.endIndex && scalars[valueIdx] == "\"" {
                     // skip the quoted-string
@@ -217,10 +237,10 @@ struct DelimitedParameters : SequenceType, CustomStringConvertible {
                     // to the non-quoted-string parse in case it is invalid.
                 }
                 var trailingLWSIdx: String.UnicodeScalarIndex?
-                for idx in nextIdx..<scalars.endIndex {
+                for idx in indexSequence(scalars: scalars, start: nextIdx, end: scalars.endIndex) {
                     switch scalars[idx] {
                     case delimiter:
-                        defer { scalars = scalars.suffixFrom(idx.successor()) }
+                        defer { scalars = scalars.suffix(from: scalars.index(after: idx)) }
                         return (String(scalars[startIdx..<equalIdx]), String(scalars[valueIdx..<(trailingLWSIdx ?? idx)]))
                     case let us where isLWS(us):
                         if trailingLWSIdx == nil {
@@ -274,16 +294,16 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
     init(_ rawValue: String) {
         let rawValue = trimLWS(rawValue)
         self.rawValue = rawValue
-        if let idx = rawValue.unicodeScalars.indexOf(";") {
-            typeSubtype = trimLWS(String(rawValue.unicodeScalars.prefixUpTo(idx)))
-            params = DelimitedParameters(String(rawValue.unicodeScalars.suffixFrom(idx.successor())), delimiter: ";")
+        if let idx = rawValue.unicodeScalars.index(of: ";") {
+            typeSubtype = trimLWS(String(rawValue.unicodeScalars.prefix(upTo: idx)))
+            params = DelimitedParameters(String(rawValue.unicodeScalars.suffix(from: rawValue.unicodeScalars.index(after: idx))), delimiter: ";")
         } else {
             typeSubtype = rawValue
             params = DelimitedParameters("", delimiter: ";")
         }
-        if let slashIdx = typeSubtype.unicodeScalars.indexOf("/") {
-            type = String(typeSubtype.unicodeScalars.prefixUpTo(slashIdx))
-            subtype = String(typeSubtype.unicodeScalars.suffixFrom(slashIdx.successor()))
+        if let slashIdx = typeSubtype.unicodeScalars.index(of: "/") {
+            type = String(typeSubtype.unicodeScalars.prefix(upTo: slashIdx))
+            subtype = String(typeSubtype.unicodeScalars.suffix(from: typeSubtype.unicodeScalars.index(after: slashIdx)))
         } else {
             type = typeSubtype
             subtype = ""
@@ -295,8 +315,8 @@ internal struct MediaType: Equatable, CustomStringConvertible, CustomDebugString
 /// The type, subtype, and parameter names are case-insensitive, but the parameter values are case-sensitive.
 /// - Note: The order of parameters is considered significant.
 func ==(lhs: MediaType, rhs: MediaType) -> Bool {
-    return lhs.typeSubtype.caseInsensitiveCompare(rhs.typeSubtype) == .OrderedSame
-        && lhs.params.elementsEqual(rhs.params, isEquivalent: { $0.0.caseInsensitiveCompare($1.0) == .OrderedSame && $0.1 == $1.1 })
+    return lhs.typeSubtype.caseInsensitiveCompare(rhs.typeSubtype) == .orderedSame
+        && lhs.params.elementsEqual(rhs.params, by: { $0.0.caseInsensitiveCompare($1.0) == .orderedSame && $0.1 == $1.1 })
 }
 
 /// Returns `true` iff `pattern` is equal to `value`, where a `type` or `subtype` of `*`
@@ -307,14 +327,14 @@ func ==(lhs: MediaType, rhs: MediaType) -> Bool {
 ///   parameters that `pattern` does not have, but any parameters in `pattern` must occur in
 ///   the same order in `value` (possibly with other parameters interspersed).
 func ~=(pattern: MediaType, value: MediaType) -> Bool {
-    if pattern.type != "*" && pattern.type.caseInsensitiveCompare(value.type) != .OrderedSame { return false }
-    if pattern.subtype != "*" && pattern.subtype.caseInsensitiveCompare(value.subtype) != .OrderedSame { return false }
+    if pattern.type != "*" && pattern.type.caseInsensitiveCompare(value.type) != .orderedSame { return false }
+    if pattern.subtype != "*" && pattern.subtype.caseInsensitiveCompare(value.subtype) != .orderedSame { return false }
     if !pattern.params.rawValue.isEmpty {
-        var pgen = pattern.params.generate()
-        var vgen = value.params.generate()
+        var pgen = pattern.params.makeIterator()
+        var vgen = value.params.makeIterator()
         outer: while let pparam = pgen.next() {
             while let vparam = vgen.next() {
-                if pparam.0.caseInsensitiveCompare(vparam.0) == .OrderedSame && pparam.1 == vparam.1 {
+                if pparam.0.caseInsensitiveCompare(vparam.0) == .orderedSame && pparam.1 == vparam.1 {
                     continue outer
                 }
             }
@@ -325,42 +345,31 @@ func ~=(pattern: MediaType, value: MediaType) -> Bool {
     return true
 }
 
-internal extension SequenceType {
-    func find(@noescape predicate: Generator.Element -> Bool) -> Generator.Element? {
-        for elt in self {
-            if predicate(elt) {
-                return elt
-            }
-        }
-        return nil
-    }
-}
-
-internal extension SequenceType {
-    func chain<Seq: SequenceType where Seq.Generator.Element == Self.Generator.Element>(seq: Seq) -> Chain<Self, Seq> {
+internal extension Sequence {
+    func chain<Seq: Sequence>(_ seq: Seq) -> Chain<Self, Seq> where Seq.Iterator.Element == Self.Iterator.Element {
         return Chain(self, seq)
     }
 }
 
-internal struct Chain<First: SequenceType, Second: SequenceType where First.Generator.Element == Second.Generator.Element>: SequenceType {
+internal struct Chain<First: Sequence, Second: Sequence>: Sequence where First.Iterator.Element == Second.Iterator.Element {
     init(_ first: First, _ second: Second) {
         self.first = first
         self.second = second
     }
     
-    func generate() -> ChainGenerator<First.Generator, Second.Generator> {
-        return ChainGenerator(first.generate(), second.generate())
+    func makeIterator() -> ChainGenerator<First.Iterator, Second.Iterator> {
+        return ChainGenerator(first.makeIterator(), second.makeIterator())
     }
     
     func underestimateCount() -> Int {
-        return first.underestimateCount() + second.underestimateCount()
+        return first.underestimatedCount + second.underestimatedCount
     }
     
     private let first: First
     private let second: Second
 }
 
-internal struct ChainGenerator<First: GeneratorType, Second: GeneratorType where First.Element == Second.Element>: GeneratorType {
+internal struct ChainGenerator<First: IteratorProtocol, Second: IteratorProtocol>: IteratorProtocol where First.Element == Second.Element {
     init(_ first: First, _ second: Second) {
         self.first = first
         self.second = second

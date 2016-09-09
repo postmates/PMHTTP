@@ -20,7 +20,7 @@ class PMHTTPTestCase: XCTestCase {
     static var cacheConfigured = false
     
     #if os(OSX)
-    static var _workaroundXCTestTimeoutTimer: dispatch_source_t?
+    static var _workaroundXCTestTimeoutTimer: DispatchSourceTimer?
     #endif
     
     class override func setUp() {
@@ -32,11 +32,12 @@ class PMHTTPTestCase: XCTestCase {
             // So we'll set up a timer that runs on the main queue every 50ms, to keep the tests nice and speedy.
             // Filed as rdar://problem/28064036.
             if _workaroundXCTestTimeoutTimer == nil {
-                let timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue())
+                let timer = DispatchSource.makeTimerSource(queue: .main)
                 _workaroundXCTestTimeoutTimer = timer
-                dispatch_source_set_event_handler(timer, {})
-                dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, Int64(50 * NSEC_PER_MSEC)), 50 * NSEC_PER_MSEC, 10 * NSEC_PER_MSEC)
-                dispatch_resume(timer)
+                timer.setEventHandler {}
+                let interval = DispatchTimeInterval.milliseconds(50)
+                timer.scheduleRepeating(deadline: .now() + interval, interval: interval)
+                timer.resume()
             }
         #endif
         httpServer = try! HTTPServer()
@@ -44,7 +45,7 @@ class PMHTTPTestCase: XCTestCase {
             // Bypass the shared URL cache and use an in-memory cache only.
             // This avoids issues seen with the on-disk cache being locked when we try to remove cached responses.
             let config = HTTP.sessionConfiguration
-            config.URLCache = NSURLCache(memoryCapacity: 20*1024*1024, diskCapacity: 0, diskPath: nil)
+            config.urlCache = URLCache(memoryCapacity: 20*1024*1024, diskCapacity: 0, diskPath: nil)
             HTTP.sessionConfiguration = config
             cacheConfigured = true
         }
@@ -62,7 +63,7 @@ class PMHTTPTestCase: XCTestCase {
         super.setUp()
         httpServer.reset()
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)")!
-        HTTP.sessionConfiguration.URLCache?.removeAllCachedResponses()
+        HTTP.sessionConfiguration.urlCache?.removeAllCachedResponses()
         HTTP.defaultCredential = nil
         HTTP.defaultRetryBehavior = nil
     }
@@ -81,25 +82,25 @@ class PMHTTPTestCase: XCTestCase {
     private let expectationTasks: Locked<[HTTPManagerTask]> = Locked([])
     
     @available(*, unavailable)
-    override func waitForExpectationsWithTimeout(timeout: NSTimeInterval, handler: XCWaitCompletionHandler?) {
-        waitForExpectationsWithTimeout(timeout, file: #file, line: #line, handler: handler)
+    override func waitForExpectations(timeout: TimeInterval, handler: XCWaitCompletionHandler?) {
+        waitForExpectations(timeout: timeout, file: #file, line: #line, handler: handler)
     }
     
-    func waitForExpectationsWithTimeout(timeout: NSTimeInterval, file: StaticString = #file, line: UInt = #line, handler: XCWaitCompletionHandler?) {
+    func waitForExpectations(timeout: TimeInterval, file: StaticString = #file, line: UInt = #line, handler: XCWaitCompletionHandler?) {
         var setUnhandledRequestCallback = false
         if httpServer.unhandledRequestCallback == nil {
             setUnhandledRequestCallback = true
             httpServer.unhandledRequestCallback = { request, response, completionHandler in
                 XCTFail("Unhandled request \(request)", file: file, line: line)
-                completionHandler(HTTPServer.Response(status: .NotFound, text: "Unhandled request"))
+                completionHandler(HTTPServer.Response(status: .notFound, text: "Unhandled request"))
             }
         }
-        super.waitForExpectationsWithTimeout(timeout) { error in
+        super.waitForExpectations(timeout: timeout) { error in
             if error != nil {
                 // timeout
                 var outstandingTasks: String = ""
                 self.expectationTasks.with { tasks in
-                    outstandingTasks = String(tasks)
+                    outstandingTasks = String(describing: tasks)
                     for task in tasks {
                         task.cancel()
                     }
@@ -115,27 +116,33 @@ class PMHTTPTestCase: XCTestCase {
         }
     }
     
-    func expectationForRequestSuccess<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: NSURLResponse, value: Request.ResultValue) -> Void = { _ in () }
+    @discardableResult
+    func expectationForRequestSuccess<Request: HTTPManagerRequest>(
+        _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse, _ value: Request.ResultValue) -> Void = { _ in () }
         ) -> HTTPManagerTask
+        where Request: HTTPManagerRequestPerformable
     {
-        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
-            switch result {
-            case let .Success(response, value):
-                completion(task: task, response: response, value: value)
-            case .Error(_, let error):
-                XCTFail("network request error: \(error)", file: file, line: line)
-            case .Canceled:
-                XCTFail("network request canceled", file: file, line: line)
+        let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks, weak expectation] task, result in
+            if case let .success(response, value) = result {
+                completion(task, response, value)
             }
-            expectationTasks.with { tasks in
-                if let idx = tasks.indexOf({ $0 === task }) {
-                    tasks.removeAtIndex(idx)
+            DispatchQueue.main.async {
+                switch result {
+                case .success: break
+                case .error(_, let error):
+                    XCTFail("network request error: \(error)", file: file, line: line)
+                case .canceled:
+                    XCTFail("network request canceled", file: file, line: line)
                 }
+                expectationTasks.with { tasks in
+                    if let idx = tasks.index(where: { $0 === task }) {
+                        tasks.remove(at: idx)
+                    }
+                }
+                expectation?.fulfill()
             }
-            expectation.fulfill()
         }
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
@@ -146,27 +153,33 @@ class PMHTTPTestCase: XCTestCase {
         return task
     }
     
-    func expectationForRequestFailure<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask, response: NSURLResponse?, error: ErrorType) -> Void = { _ in () }
+    @discardableResult
+    func expectationForRequestFailure<Request: HTTPManagerRequest>(
+        _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse?, _ error: Error) -> Void = { _ in () }
         ) -> HTTPManagerTask
+        where Request: HTTPManagerRequestPerformable
     {
-        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
-            switch result {
-            case .Success(let response, _):
-                XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
-            case let .Error(response, error):
-                completion(task: task, response: response, error: error)
-            case .Canceled:
-                XCTFail("network request canceled", file: file, line: line)
+        let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks, weak expectation] task, result in
+            if case let .error(response, error) = result {
+                completion(task, response, error)
             }
-            expectationTasks.with { tasks in
-                if let idx = tasks.indexOf({ $0 === task }) {
-                    tasks.removeAtIndex(idx)
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response, _):
+                    XCTFail("network request expected failure but was successful: \(response)", file: file, line: line)
+                case .error: break
+                case .canceled:
+                    XCTFail("network request canceled", file: file, line: line)
                 }
+                expectationTasks.with { tasks in
+                    if let idx = tasks.index(where: { $0 === task }) {
+                        tasks.remove(at: idx)
+                    }
+                }
+                expectation?.fulfill()
             }
-            expectation.fulfill()
         }
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
@@ -177,27 +190,33 @@ class PMHTTPTestCase: XCTestCase {
         return task
     }
     
-    func expectationForRequestCanceled<Request: HTTPManagerRequest where Request: HTTPManagerRequestPerformable>(
-        request: Request, queue: NSOperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: (task: HTTPManagerTask) -> Void = { _ in () }
+    @discardableResult
+    func expectationForRequestCanceled<Request: HTTPManagerRequest>(
+        _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
+        completion: @escaping (_ task: HTTPManagerTask) -> Void = { _ in () }
         ) -> HTTPManagerTask
+        where Request: HTTPManagerRequestPerformable
     {
-        let expectation = expectationWithDescription("\(request.requestMethod) request for \(request.url)")
-        let task = request.createTaskWithCompletion(onQueue: queue) { [expectationTasks] task, result in
-            switch result {
-            case .Success(let response, _):
-                XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
-            case .Error(_, let error):
-                XCTFail("network request error: \(error)", file: file, line: line)
-            case .Canceled:
-                completion(task: task)
+        let expectation = self.expectation(description: "\(request.requestMethod) request for \(request.url)")
+        let task = request.createTask(withCompletionQueue: queue) { [expectationTasks, weak expectation] task, result in
+            if case .canceled = result {
+                completion(task)
             }
-            expectationTasks.with { tasks in
-                if let idx = tasks.indexOf({ $0 === task }) {
-                    tasks.removeAtIndex(idx)
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response, _):
+                    XCTFail("network request expected cancellation but was successful: \(response)", file: file, line: line)
+                case .error(_, let error):
+                    XCTFail("network request error: \(error)", file: file, line: line)
+                case .canceled: break
                 }
+                expectationTasks.with { tasks in
+                    if let idx = tasks.index(where: { $0 === task }) {
+                        tasks.remove(at: idx)
+                    }
+                }
+                expectation?.fulfill()
             }
-            expectation.fulfill()
         }
         expectationTasks.with { tasks in
             let _ = tasks.append(task)
@@ -217,16 +236,10 @@ private final class Locked<T> {
         _value = value
     }
     
-    func with<R>(@noescape f: (inout T) -> R) -> R {
+    func with<R>(_ f: (inout T) -> R) -> R {
         _lock.lock()
         defer { _lock.unlock() }
         return f(&_value)
-    }
-    
-    func with(@noescape f: (inout T) -> Void) {
-        _lock.lock()
-        defer { _lock.unlock() }
-        f(&_value)
     }
 }
 

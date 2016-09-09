@@ -25,10 +25,10 @@ class NetworkActivityTests: PMHTTPTestCase {
         super.tearDown()
     }
     
-    func sanityCheck(file: StaticString = #file, line: UInt = #line) -> Bool {
+    func sanityCheck(_ file: StaticString = #file, line: UInt = #line) -> Bool {
         // Sanity check - we shouldn't have any outstanding tasks when beginning this test.
         // We need to spin the run loop once to ensure the block is invoked if it was enqueued.
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true)
+        CFRunLoopRunInMode(CFRunLoopMode.defaultMode, 0, true)
         guard numberOfOutstandingTasks == nil else {
             XCTFail("Test environment has outstanding tasks")
             return false
@@ -40,41 +40,41 @@ class NetworkActivityTests: PMHTTPTestCase {
         guard sanityCheck() else { return }
         
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .OK))
+            completionHandler(HTTPServer.Response(status: .ok))
         }
         expectationForRequestSuccess(HTTP.request(GET: "foo"))
-        waitForExpectationsWithTimeout(2, handler: nil)
+        waitForExpectations(timeout: 2, handler: nil)
         XCTAssertEqual(numberOfOutstandingTasks, 0)
         
         var countDuringRequest: Int?
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            dispatch_async(dispatch_get_main_queue()) {
+            DispatchQueue.main.async {
                 countDuringRequest = self.numberOfOutstandingTasks
-                completionHandler(HTTPServer.Response(status: .OK))
+                completionHandler(HTTPServer.Response(status: .ok))
             }
         }
         expectationForRequestSuccess(HTTP.request(GET: "foo"))
-        waitForExpectationsWithTimeout(2, handler: nil)
+        waitForExpectations(timeout: 2, handler: nil)
         XCTAssertEqual(countDuringRequest, 1)
         
         countDuringRequest = nil
-        let group = dispatch_group_create()
-        dispatch_group_enter(group) // our notify block has to run first, but it can't run yet
-        dispatch_group_notify(group, dispatch_get_main_queue()) {
+        let group = DispatchGroup()
+        group.enter() // our notify block has to run first, but it can't run yet
+        group.notify(queue: DispatchQueue.main) {
             countDuringRequest = self.numberOfOutstandingTasks
         }
         for _ in 0..<3 {
-            dispatch_group_enter(group)
+            group.enter()
             expectationForHTTPRequest(httpServer, path: "/foo", handler: { (request, completionHandler) in
-                dispatch_group_notify(group, dispatch_get_main_queue()) {
-                    completionHandler(HTTPServer.Response(status: .OK))
+                group.notify(queue: DispatchQueue.main) {
+                    completionHandler(HTTPServer.Response(status: .ok))
                 }
-                dispatch_group_leave(group)
+                group.leave()
             })
             expectationForRequestSuccess(HTTP.request(GET: "foo"))
         }
-        dispatch_group_leave(group)
-        waitForExpectationsWithTimeout(2, handler: nil)
+        group.leave()
+        waitForExpectations(timeout: 2, handler: nil)
         XCTAssertEqual(countDuringRequest, 3)
     }
     
@@ -86,18 +86,18 @@ class NetworkActivityTests: PMHTTPTestCase {
         let newHandler = { values.append($0) }
         
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            dispatch_async(dispatch_get_main_queue()) {
+            DispatchQueue.main.async {
                 // change the block on the main queue to make it easier to reason about ordering of operations
                 // the property itself is actually thread-safe
                 HTTPManager.networkActivityHandler = newHandler
                 // let the main queue drain before we call our completion handler
-                dispatch_async(dispatch_get_main_queue()) {
-                    completionHandler(HTTPServer.Response(status: .OK))
+                DispatchQueue.main.async {
+                    completionHandler(HTTPServer.Response(status: .ok))
                 }
             }
         }
         expectationForRequestSuccess(HTTP.request(GET: "foo"))
-        waitForExpectationsWithTimeout(2, handler: nil)
+        waitForExpectations(timeout: 2, handler: nil)
         // the old block will have been invoked for the task
         XCTAssertEqual(numberOfOutstandingTasks, 1)
         XCTAssertEqual(values, [1, 0])
@@ -106,13 +106,13 @@ class NetworkActivityTests: PMHTTPTestCase {
     func testResumeAfterFinish() {
         guard sanityCheck() else { return }
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .OK))
+            completionHandler(HTTPServer.Response(status: .ok))
         }
         let task = expectationForRequestSuccess(HTTP.request(GET: "foo"))
-        waitForExpectationsWithTimeout(2, handler: nil)
+        waitForExpectations(timeout: 2, handler: nil)
         task.resume()
         // spin the runloop just in case
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true)
+        CFRunLoopRunInMode(CFRunLoopMode.defaultMode, 0, true)
         XCTAssertEqual(0, numberOfOutstandingTasks)
     }
     
@@ -125,21 +125,21 @@ class NetworkActivityTests: PMHTTPTestCase {
         
         var values: [Int] = []
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-            dispatch_async(dispatch_get_main_queue()) {
+            DispatchQueue.main.async {
                 values.append(self.numberOfOutstandingTasks ?? -1)
-                completionHandler(HTTPServer.Response(status: .OK, headers: ["Content-Length": "64", "Connection": "close"]))
+                completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
             }
         }
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-            dispatch_async(dispatch_get_main_queue()) {
+            DispatchQueue.main.async {
                 values.append(self.numberOfOutstandingTasks ?? -1)
-                completionHandler(HTTPServer.Response(status: .OK, text: "success"))
+                completionHandler(HTTPServer.Response(status: .ok, text: "success"))
             }
         }
-        let req = HTTP.request(GET: "foo")
+        let req = HTTP.request(GET: "foo")!
         req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
         expectationForRequestSuccess(req)
-        waitForExpectationsWithTimeout(2, handler: nil)
+        waitForExpectations(timeout: 2, handler: nil)
         XCTAssertEqual(values, [1, 1])
         XCTAssertEqual(numberOfOutstandingTasks, 0)
     }

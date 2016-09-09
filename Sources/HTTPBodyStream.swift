@@ -20,7 +20,7 @@ internal final class HTTPBody {
     /// Returns an `NSInputStream` that produces a multipart/mixed HTTP body.
     /// - Note: Any `.Pending` body part must be evaluated before calling this
     ///   method, and should be waited on to guarantee the value is ready.
-    class func createMultipartMixedStream(boundary: String, parameters: [NSURLQueryItem], bodyParts: [MultipartBodyPart]) -> NSInputStream {
+    class func createMultipartMixedStream(_ boundary: String, parameters: [URLQueryItem], bodyParts: [MultipartBodyPart]) -> InputStream {
         let body = HTTPBody(boundary: boundary, parameters: parameters, bodyParts: bodyParts)
         return _PMHTTPManagerBodyStream(handler: { (buffer, maxLength) -> Int in
             return body.readIntoBuffer(buffer, maxLength)
@@ -28,45 +28,45 @@ internal final class HTTPBody {
     }
     
     private let boundary: String
-    private var queryItemGenerator: Array<NSURLQueryItem>.Generator?
-    private var bodyPartGenerator: Array<MultipartBodyPart>.Generator
-    private var deferredPartGenerator: Array<MultipartBodyPart.Data>.Generator?
-    private var state: State = .Initial
+    private var queryItemGenerator: Array<URLQueryItem>.Iterator?
+    private var bodyPartGenerator: Array<MultipartBodyPart>.Iterator
+    private var deferredPartGenerator: Array<MultipartBodyPart.Data>.Iterator?
+    private var state: State = .initial
     
     private enum State {
-        case Initial
+        case initial
         /// Header includes the boundary and all header fields and the empty line
         /// terminator. The body part data should be able to be concatenated on the
         /// header in order to form a complete valid body part.
-        case Header(String.UTF8View, Content)
-        case Data(Content)
-        case Terminator(String.UTF8View)
-        case EOF
+        case header(String.UTF8View, Content)
+        case data(Content)
+        case terminator(String.UTF8View)
+        case eof
     }
     
     private enum Content {
-        case Data(NSData, offset: Int)
-        case Text(String.UTF8View)
+        case data(Data, offset: Int)
+        case text(String.UTF8View)
     }
     
-    private init(boundary: String, parameters: [NSURLQueryItem], bodyParts: [MultipartBodyPart]) {
+    private init(boundary: String, parameters: [URLQueryItem], bodyParts: [MultipartBodyPart]) {
         self.boundary = boundary
-        queryItemGenerator = parameters.generate()
-        bodyPartGenerator = bodyParts.generate()
+        queryItemGenerator = parameters.makeIterator()
+        bodyPartGenerator = bodyParts.makeIterator()
         advanceState()
     }
     
-    private func readIntoBuffer(bufferPtr: UnsafeMutablePointer<UInt8>, _ bufferLength: Int) -> Int {
+    private func readIntoBuffer(_ bufferPtr: UnsafeMutablePointer<UInt8>, _ bufferLength: Int) -> Int {
         var buffer = UnsafeMutableBufferPointer(start: bufferPtr, count: bufferLength)
-        func copyUTF8(inout buffer: UnsafeMutableBufferPointer<UInt8>, utf8: String.UTF8View) -> String.UTF8View.Index? {
+        func copyUTF8(_ buffer: inout UnsafeMutableBufferPointer<UInt8>, utf8: String.UTF8View) -> String.UTF8View.Index? {
             var count = 0
-            var ptr = buffer.baseAddress
+            var ptr = buffer.baseAddress!
             defer { buffer = UnsafeMutableBufferPointer(start: ptr, count: buffer.count - count) }
             for idx in utf8.indices {
                 if count == buffer.count {
                     return idx
                 }
-                ptr.initialize(utf8[idx])
+                ptr.initialize(to: utf8[idx])
                 ptr += 1
                 count += 1
             }
@@ -74,62 +74,62 @@ internal final class HTTPBody {
         }
         loop: while !buffer.isEmpty {
             switch state {
-            case let .Header(utf8, content):
+            case let .header(utf8, content):
                 if let idx = copyUTF8(&buffer, utf8: utf8) {
-                    state = .Header(utf8.suffixFrom(idx), content)
+                    state = .header(utf8.suffix(from: idx), content)
                 } else {
                     advanceState()
                 }
-            case let .Data(.Data(data, offset)):
-                let count = min(buffer.count, data.length - offset)
+            case let .data(.data(data, offset)):
+                let count = min(buffer.count, data.count - offset)
                 guard count > 0 else {
                     // we shouldn't hit this
                     break loop
                 }
                 let end = offset + count
-                data.getBytes(UnsafeMutablePointer(buffer.baseAddress), range: NSRange(offset..<end))
-                buffer = UnsafeMutableBufferPointer(start: buffer.baseAddress + count, count: buffer.count - count)
-                if end >= data.length {
+                data.copyBytes(to: buffer.baseAddress!, from: offset..<end)
+                buffer = UnsafeMutableBufferPointer(start: buffer.baseAddress! + count, count: buffer.count - count)
+                if end >= data.count {
                     advanceState()
                 } else {
-                    state = .Data(.Data(data, offset: end))
+                    state = .data(.data(data, offset: end))
                 }
-            case .Data(.Text(let utf8)):
+            case .data(.text(let utf8)):
                 if let idx = copyUTF8(&buffer, utf8: utf8) {
-                    state = .Data(.Text(utf8.suffixFrom(idx)))
+                    state = .data(.text(utf8.suffix(from: idx)))
                 } else {
                     advanceState()
                 }
-            case .Terminator(let utf8):
+            case .terminator(let utf8):
                 if let idx = copyUTF8(&buffer, utf8: utf8) {
-                    state = .Terminator(utf8.suffixFrom(idx))
+                    state = .terminator(utf8.suffix(from: idx))
                 } else {
                     advanceState()
                 }
-            case .EOF:
+            case .eof:
                 break loop
-            case .Initial:
+            case .initial:
                 fatalError("HTTPManager internal error: unreachable state .Initial in streamRead()")
             }
         }
-        return buffer.baseAddress - bufferPtr
+        return buffer.baseAddress! - bufferPtr
     }
     
     /// Sets `state` to the appropriate state for the next part.
     /// Once the `state` hits `.EOF` it stays there.
     private func advanceState() {
         switch state {
-        case .Header(_, let content):
-            state = .Data(content)
+        case .header(_, let content):
+            state = .data(content)
             // Make sure the content isn't empty. If it is, advance again.
             switch content {
-            case let .Data(data, offset) where data.length <= offset: return advanceState()
-            case .Text(let utf8) where utf8.isEmpty: return advanceState()
+            case let .data(data, offset) where data.count <= offset: return advanceState()
+            case .text(let utf8) where utf8.isEmpty: return advanceState()
             default: break
             }
-        case .Initial, .Data:
+        case .initial, .data:
             let prefix: String
-            if case .Initial = state {
+            if case .initial = state {
                 prefix = "" // no CRLF before the first boundary
             } else {
                 prefix = "\r\n"
@@ -143,7 +143,7 @@ internal final class HTTPBody {
                     + "Content-Disposition: form-data; name=\"\(quotedString(queryItem.name))\"\r\n"
                     + "Content-Type: text/plain; charset=utf-8\r\n"
                     + "\r\n"
-                state = .Header(header.utf8, .Text((queryItem.value ?? "").utf8))
+                state = .header(header.utf8, .text((queryItem.value ?? "").utf8))
             } else {
                 queryItemGenerator = nil
                 loop: while true {
@@ -153,10 +153,10 @@ internal final class HTTPBody {
                     } else {
                         deferredPartGenerator = nil
                         switch bodyPartGenerator.next() {
-                        case .Known(let data_)?:
+                        case .known(let data_)?:
                             data = data_
-                        case .Pending(let deferred)?:
-                            var gen = deferred.wait().generate()
+                        case .pending(let deferred)?:
+                            var gen = deferred.wait().makeIterator()
                             if let data_ = gen.next() {
                                 data = data_
                                 deferredPartGenerator = gen
@@ -164,7 +164,7 @@ internal final class HTTPBody {
                                 continue loop
                             }
                         case nil:
-                            state = .Terminator("\(prefix)--\(boundary)--\r\n".utf8)
+                            state = .terminator("\(prefix)--\(boundary)--\r\n".utf8)
                             break loop
                         }
                     }
@@ -172,11 +172,11 @@ internal final class HTTPBody {
                     let mimeType: String
                     let content: Content
                     switch data.content {
-                    case .Data(let data_):
-                        content = .Data(data_, offset: 0)
+                    case .data(let data_):
+                        content = .data(data_, offset: 0)
                         mimeType = data.mimeType ?? "application/octet-stream"
-                    case .Text(let text):
-                        content = .Text(text.utf8)
+                    case .text(let text):
+                        content = .text(text.utf8)
                         mimeType = data.mimeType ?? "text/plain; charset=utf-8"
                     }
                     let header = prefix
@@ -184,13 +184,13 @@ internal final class HTTPBody {
                         + "Content-Disposition: form-data; name=\"\(quotedString(data.name))\"\(filename)\r\n"
                         + "Content-Type: \(mimeType)\r\n"
                         + "\r\n"
-                    state = .Header(header.utf8, content)
+                    state = .header(header.utf8, content)
                     break
                 }
             }
-        case .Terminator:
-            state = .EOF
-        case .EOF:
+        case .terminator:
+            state = .eof
+        case .eof:
             break
         }
     }
@@ -201,27 +201,27 @@ internal final class HTTPBody {
         NSLog("<HTTPBody: 0x%@> %@", String(ptr, radix: 16), msg)
     }
     #else
-    @inline(__always) func log(@autoclosure _: () -> String) {}
+    @inline(__always) func log(_: @autoclosure () -> String) {}
     #endif
 }
 
 /// Returns a string with quotes and line breaks escaped.
 /// - Note: The returned string is *not* surrounded by quotes.
-private func quotedString(str: String) -> String {
+private func quotedString(_ str: String) -> String {
     // WebKit quotes by using percent escapes.
     // NB: Using UTF-16 here because that's the fastest encoding for String.
     // If we find a character that needs escaping, we switch to working with unicode scalars
     // as that's a collection that's actually mutable (unlike UTF16View).
-    if let idx = str.utf16.indexOf({ (c: UTF16.CodeUnit) in c == 0xD || c == 0xA || c == 0x22 /* " */ }) {
+    if let idx = str.utf16.index(where: { (c: UTF16.CodeUnit) in c == 0xD || c == 0xA || c == 0x22 /* " */ }) {
         // idx lies on a unicode scalar boundary
-        let start = idx.samePositionIn(str.unicodeScalars)!
-        var result = String(str.unicodeScalars.prefixUpTo(start))
-        for c in str.unicodeScalars.suffixFrom(start) {
+        let start = idx.samePosition(in: str.unicodeScalars)!
+        var result = String(str.unicodeScalars.prefix(upTo: start))
+        for c in str.unicodeScalars.suffix(from: start) {
             switch c {
-            case "\r": result.appendContentsOf("%0D")
-            case "\n": result.appendContentsOf("%0A")
-            case "\"": result.appendContentsOf("%22")
-            default: result.append(c)
+            case "\r": result.append("%0D")
+            case "\n": result.append("%0A")
+            case "\"": result.append("%22")
+            default: result.unicodeScalars.append(c)
             }
         }
         return result
