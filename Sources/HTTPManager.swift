@@ -239,8 +239,6 @@ public final class HTTPManager: NSObject {
             let setup: HTTPManagerConfigurable?
             #if os(OSX)
                 setup = NSApplication.sharedApplication().delegate as? HTTPManagerConfigurable
-            #elseif os(tvOS)
-                setup = UIApplication.sharedApplication().delegate as? HTTPManagerConfigurable
             #elseif os(watchOS)
                 setup = WKExtension.sharedExtension().delegate as? HTTPManagerConfigurable
             #elseif os(iOS)
@@ -255,6 +253,10 @@ public final class HTTPManager: NSObject {
                     // but we can use `valueForKey(_:)` to get it, and application extensions can still reference the type.
                     setup = (UIApplication.valueForKey("sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
                 }
+            #elseif os(tvOS)
+                // tvOS seems to respect APPLICATION_EXTENSION_API_ONLY even  though (AFAIK) there
+                // are no extensions on tvOS. Use the same iOS hack here.
+                setup = (UIApplication.valueForKey("sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
             #endif
             setup?.configureHTTPManager(self)
         }
