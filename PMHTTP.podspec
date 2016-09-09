@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "PMHTTP"
-  s.version      = "0.9.2"
+  s.version      = "1.0.0"
   s.summary      = "Swift/Obj-C HTTP framework with a focus on REST and JSON"
 
   s.description  = <<-DESC
@@ -25,5 +25,5 @@ Pod::Spec.new do |s|
   s.framework  = "CFNetwork"
   s.module_map = "Sources/module.modulemap"
 
-  s.dependency "PMJSON", "~> 0.9.4"
+  s.dependency "PMJSON", "~> 1.0"
 end
