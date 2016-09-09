@@ -609,7 +609,7 @@ final class HTTPServer {
     
     private class Shared {
         var listenErrorCallback: ((Error) -> Void)?
-        var requestCallbacks: [(token: CallbackToken, callback: @escaping (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void)] = []
+        var requestCallbacks: [(token: CallbackToken, callback: (_ request: Request, _ completionHandler: @escaping (Response?) -> Void) -> Void)] = []
         var unhandledRequestCallback: ((_ request: Request, _ response: Response, _ completionHandler: @escaping (Response) -> Void) -> Void)?
     }
     

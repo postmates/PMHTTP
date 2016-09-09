@@ -1,1 +1,1 @@
-github "postmates/PMJSON" "swift-3.0"
+github "postmates/PMJSON" ~> 1.0
