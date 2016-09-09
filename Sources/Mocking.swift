@@ -215,7 +215,7 @@ public final class HTTPMockManager: NSObject {
     ///   from any queue, but it is an error to not invoke it at all or to invoke it twice.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     public func addMock(url: String, httpMethod: String? = nil, queue: dispatch_queue_t? = nil, handler: (request: NSURLRequest, parameters: [String: String], completion: (response: NSHTTPURLResponse, body: NSData) -> Void) -> Void) -> HTTPMockToken {
-        let mock = HTTPMock(url: url, httpMethod: httpMethod, queue: queue ?? dispatch_queue_create("HTTPMock queue", DISPATCH_QUEUE_SERIAL)!, handler: handler)
+        let mock = HTTPMock(url: url, httpMethod: httpMethod, queue: queue ?? dispatch_queue_create("HTTPMock queue", DISPATCH_QUEUE_SERIAL), handler: handler)
         inner.asyncBarrier { inner in
             inner.mocks.append(mock)
         }
@@ -829,7 +829,7 @@ internal class HTTPMockURLProtocol: NSURLProtocol {
     static let requestProperty = "com.postmates.PMHTTP.mock"
     
     private let mock: HTTPMockInstance
-    private let queue = dispatch_queue_create("HTTPMockURLProtocol queue", DISPATCH_QUEUE_SERIAL)!
+    private let queue = dispatch_queue_create("HTTPMockURLProtocol queue", DISPATCH_QUEUE_SERIAL)
     private var loading: Bool = false
     
     override class func canInitWithRequest(request: NSURLRequest) -> Bool {

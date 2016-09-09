@@ -45,7 +45,7 @@ final class HTTPServer {
     
     /// Returns the host that the server is listening on.
     var host: String {
-        return listener.socket.localHost
+        return listener.socket.localHost!
     }
     
     /// Returns the port that the server is listening on.
@@ -613,8 +613,8 @@ final class HTTPServer {
     
     private class Listener : NSObject, GCDAsyncSocketDelegate {
         let shared: QueueConfined<Shared>
-        let socket = GCDAsyncSocket()!
-        let queue = dispatch_queue_create("HTTPServer listen queue", DISPATCH_QUEUE_SERIAL)!
+        let socket = GCDAsyncSocket()
+        let queue = dispatch_queue_create("HTTPServer listen queue", DISPATCH_QUEUE_SERIAL)
         var connections: [Connection] = []
         
         init(shared: QueueConfined<Shared>) {
@@ -657,14 +657,14 @@ final class HTTPServer {
             }
         }
         
-        @objc func socket(sock: GCDAsyncSocket!, didAcceptNewSocket newSocket: GCDAsyncSocket!) {
+        @objc func socket(sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
             let connection = Connection(shared: shared, listener: self, socket: newSocket)
             log("New connection (id: \(connection.connectionId)) from \(newSocket.connectedHost):\(newSocket.connectedPort)")
             connections.append(connection)
             connection.readRequestLine()
         }
         
-        @objc func socketDidDisconnect(sock: GCDAsyncSocket!, withError err: NSError!) {
+        @objc func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
             // we should only get this if an error occurs, because we nil out the delegate before closing ourselves
             guard let err = err else {
                 log("Disconnected")
@@ -685,7 +685,7 @@ final class HTTPServer {
         let shared: QueueConfined<Shared>
         weak var listener: Listener?
         let socket: GCDAsyncSocket
-        let queue = dispatch_queue_create("HTTPServer connection queue", DISPATCH_QUEUE_SERIAL)!
+        let queue = dispatch_queue_create("HTTPServer connection queue", DISPATCH_QUEUE_SERIAL)
         var request: HTTPServer.Request?
         var chunkedBody: NSMutableData?
         var chunkedTrailer: NSData?
@@ -794,7 +794,7 @@ final class HTTPServer {
                 text += "\(field): \(value)\r\n"
             }
             text += "\r\n"
-            socket.writeData(text.dataUsingEncoding(NSUTF8StringEncoding), withTimeout: -1, tag: 0)
+            socket.writeData(text.dataUsingEncoding(NSUTF8StringEncoding)!, withTimeout: -1, tag: 0)
             if let body = response.body where body.length > 0 {
                 switch (request?.method, response.status) {
                 case (.CONNECT?, _) where response.status.isSuccessful: fallthrough
@@ -886,7 +886,7 @@ final class HTTPServer {
             case ChunkedBodyTrailer
         }
         
-        @objc func socket(sock: GCDAsyncSocket!, didReadData data: NSData!, withTag tag: Int) {
+        @objc func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {
             switch Tag(rawValue: tag)! {
             case .RequestLine:
                 // Robust servers should skip at least one CRLF before the request.
@@ -1064,7 +1064,7 @@ final class HTTPServer {
             }
         }
         
-        @objc func socketDidDisconnect(sock: GCDAsyncSocket!, withError err: NSError!) {
+        @objc func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
             log("Disconnected")
             if request != nil {
                 NSLog("HTTPServer: received disconnection while processing request; error: %@", err ?? "nil")
