@@ -877,29 +877,13 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(body, data, "error body data")
                     XCTAssertEqual(json, ["ok": false, "title": nil, "elts": [nil, 1, nil, 2]], "error body json")
                     // Now check the converted version
-                    let nserror = error.toNSError()
+                    let nserror = error as NSError
                     XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
                     XCTAssertEqual(nserror.code, PMHTTPError.failedResponse.rawValue, "NSError code")
                     XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] as AnyObject? === response_, "NSError response")
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data as NSData, "NSError body data")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
-                    // And back again
-                    let bridged = HTTPManagerError(nserror)
-                    switch bridged {
-                    case let HTTPManagerError.failedResponse(statusCode_, response_, body_, json_)?:
-                        XCTAssert(response === response_, "bridged error response")
-                        XCTAssertEqual(statusCode_, statusCode, "bridged error status code")
-                        XCTAssertEqual(body_, body, "bridged error body data")
-                        // bridging will strip nulls, and pass numbers through NSNumber, so lets do that here too
-                        if let jsonNoNull = (json?.nsNoNull).flatMap({try? JSON(ns: $0)}) {
-                            XCTAssertEqual(json_, jsonNoNull, "bridged error body json")
-                        } else {
-                            XCTFail("Couldn't round-trip JSON payload through nsNoNull")
-                        }
-                    default:
-                        XCTFail("bridged error expected HTTPManagerError.FailedResponse, found \(bridged)")
-                    }
                 } else {
                     XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
                 }
@@ -922,24 +906,13 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(body, data, "error body data")
                     XCTAssertEqual(json, [1, 2, 3], "error body json")
                     // Now check the converted version
-                    let nserror = error.toNSError()
+                    let nserror = error as NSError
                     XCTAssertEqual(nserror.domain, PMHTTPErrorDomain, "NSError domain")
                     XCTAssertEqual(nserror.code, PMHTTPError.failedResponse.rawValue, "NSError code")
                     XCTAssert(nserror.userInfo[PMHTTPURLResponseErrorKey] as AnyObject? === response_, "NSError response")
                     XCTAssertEqual(nserror.userInfo[PMHTTPStatusCodeErrorKey] as? Int, 400, "NSError status code")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data as NSData?, "NSError body data")
                     XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
-                    // And back again
-                    let bridged = HTTPManagerError(nserror)
-                    switch bridged {
-                    case let HTTPManagerError.failedResponse(statusCode_, response_, body_, json_)?:
-                        XCTAssert(response === response_, "bridged error response")
-                        XCTAssertEqual(statusCode_, statusCode, "bridged error status code")
-                        XCTAssertEqual(body_, body, "bridged error body data")
-                        XCTAssertNil(json_, "bridged error body json")
-                    default:
-                        XCTFail("bridged error expected HTTPManagerError.FailedResponse, found \(bridged)")
-                    }
                 } else {
                     XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
                 }
