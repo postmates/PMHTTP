@@ -642,10 +642,12 @@ final class HTTPServer {
         /// Returns a `DispatchWorkItem` that can be waited on with `.wait` or `.notify`.
         func reset() -> DispatchWorkItem {
             let workItem = DispatchWorkItem {
-                for connection in self.connections {
-                    connection.invalidate()
+                autoreleasepool {
+                    for connection in self.connections {
+                        connection.invalidate()
+                    }
+                    self.connections.removeAll()
                 }
-                self.connections.removeAll()
             }
             queue.async(execute: workItem)
             return workItem
@@ -674,7 +676,9 @@ final class HTTPServer {
             shared.async { shared in
                 if let callback = replace(&shared.listenErrorCallback, with: nil) {
                     DispatchQueue.global(qos: .utility).async {
-                        callback(err)
+                        autoreleasepool {
+                            callback(err)
+                        }
                     }
                 }
             }
@@ -763,16 +767,20 @@ final class HTTPServer {
                         queue.async {
                             precondition(invoked == false, "HTTPServer request completion handler invoked more than once")
                             invoked = true
-                            if let response = response {
-                                self.writeResponse(response)
-                            } else {
-                                invokeNextCallback()
+                            autoreleasepool {
+                                if let response = response {
+                                    self.writeResponse(response)
+                                } else {
+                                    invokeNextCallback()
+                                }
                             }
                         }
                     }
                 }
                 queue.async {
-                    invokeNextCallback()
+                    autoreleasepool {
+                        invokeNextCallback()
+                    }
                 }
             }
         }

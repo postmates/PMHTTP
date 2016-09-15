@@ -92,9 +92,11 @@ internal enum MultipartBodyPart {
         func evaluate() {
             queue.async(flags: .barrier) {
                 guard self.value == nil else { return }
-                let helper = HTTPManagerUploadMultipart()
-                self.block(helper)
-                self.value = helper.multipartData
+                autoreleasepool {
+                    let helper = HTTPManagerUploadMultipart()
+                    self.block(helper)
+                    self.value = helper.multipartData
+                }
             }
         }
         
@@ -120,7 +122,9 @@ internal enum MultipartBodyPart {
                 guard let value = self.value else {
                     fatalError("HTTPManager internal error: invoked async() on Deferred without invoking evaluate()")
                 }
-                handler(value)
+                autoreleasepool {
+                    handler(value)
+                }
             }
             if let qosClass = qosClass {
                 queue.async(group: nil, qos: qosClass, flags: .enforceQoS, execute: block)

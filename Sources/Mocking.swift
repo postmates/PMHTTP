@@ -81,7 +81,9 @@ public final class HTTPMockManager: NSObject {
             let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + delay) {
-                    completion(response, data)
+                    autoreleasepool {
+                        completion(response, data)
+                    }
                 }
             } else {
                 completion(response, data)
@@ -194,7 +196,9 @@ public final class HTTPMockManager: NSObject {
             let response = HTTPURLResponse(url: request.url!, statusCode: mock.statusCode, httpVersion: "HTTP/1.1", headerFields: headers)!
             if mock.delay > 0 {
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + mock.delay) {
-                    completion(response, body)
+                    autoreleasepool {
+                        completion(response, body)
+                    }
                 }
             } else {
                 completion(response, body)
@@ -455,7 +459,9 @@ public extension HTTPManagerNetworkRequest {
             let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + delay) {
-                    completion(response, data)
+                    autoreleasepool {
+                        completion(response, data)
+                    }
                 }
             } else {
                 completion(response, data)
@@ -531,7 +537,9 @@ public extension HTTPManagerParseRequest {
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!
             if delay > 0 {
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: DispatchTime.now() + delay) {
-                    completion(response, Data())
+                    autoreleasepool {
+                        completion(response, Data())
+                    }
                 }
             } else {
                 completion(response, Data())
@@ -862,14 +870,18 @@ internal class HTTPMockURLProtocol: URLProtocol {
             self.loading = true
         }
         mock.queue.async {
-            self.mock.handler(self.request, self.mock.parameters) { (response, body) in
-                self.queue.async {
-                    guard self.loading else { return }
-                    self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-                    if !body.isEmpty {
-                        self.client?.urlProtocol(self, didLoad: body)
+            autoreleasepool {
+                self.mock.handler(self.request, self.mock.parameters) { (response, body) in
+                    self.queue.async {
+                        guard self.loading else { return }
+                        autoreleasepool {
+                            self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                            if !body.isEmpty {
+                                self.client?.urlProtocol(self, didLoad: body)
+                            }
+                            self.client?.urlProtocolDidFinishLoading(self)
+                        }
                     }
-                    self.client?.urlProtocolDidFinishLoading(self)
                 }
             }
         }

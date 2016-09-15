@@ -44,7 +44,9 @@ internal final class NetworkActivityManager: NSObject {
                     DispatchQueue.main.async { [data] in
                         data.pendingHandlerInvocation = false
                         if data.counter > 0, let handler = data.networkActivityHandler {
-                            handler(data.counter)
+                            autoreleasepool {
+                                handler(data.counter)
+                            }
                         }
                     }
                 }
@@ -55,7 +57,11 @@ internal final class NetworkActivityManager: NSObject {
                 inner.asyncBarrier {
                     $0.networkActivityHandler = newValue
                 }
-                DispatchQueue.main.async(execute: handler)
+                DispatchQueue.main.async {
+                    autoreleasepool {
+                        handler()
+                    }
+                }
             }
         }
     }

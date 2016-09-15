@@ -97,11 +97,13 @@ public final class HTTPManager: NSObject {
         }
         set {
             let config = unsafeDowncast(newValue.copy() as AnyObject, to: URLSessionConfiguration.self)
-            inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] in
-                $0.sessionConfiguration = config
-                $0.setHeader("User-Agent", value: value, overwrite: false)
-                if $0.session != nil {
-                    self.resetSession($0, invalidate: false)
+            inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] inner in
+                autoreleasepool {
+                    inner.sessionConfiguration = config
+                    inner.setHeader("User-Agent", value: value, overwrite: false)
+                    if inner.session != nil {
+                        self.resetSession(inner, invalidate: false)
+                    }
                 }
             }
         }
@@ -187,9 +189,11 @@ public final class HTTPManager: NSObject {
     /// - Note: Any tasks that have finished their network portion and are processing
     /// the results are not canceled.
     public func resetSession() {
-        inner.asyncBarrier {
-            if $0.session != nil {
-                self.resetSession($0, invalidate: true)
+        inner.asyncBarrier { inner in
+            if inner.session != nil {
+                autoreleasepool {
+                    self.resetSession(inner, invalidate: true)
+                }
             }
         }
     }
@@ -260,15 +264,19 @@ public final class HTTPManager: NSObject {
             #endif
             setup?.configure(httpManager: self)
         }
-        inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] in
-            $0.setHeader("User-Agent", value: value, overwrite: false)
-            self.resetSession($0, invalidate: false)
+        inner.asyncBarrier { [value=HTTPManager.defaultUserAgent] inner in
+            autoreleasepool {
+                inner.setHeader("User-Agent", value: value, overwrite: false)
+                self.resetSession(inner, invalidate: false)
+            }
         }
     }
     
     deinit {
         inner.asyncBarrier { inner in
-            inner.session?.finishTasksAndInvalidate()
+            autoreleasepool {
+                inner.session?.finishTasksAndInvalidate()
+            }
         }
     }
     
@@ -857,7 +865,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
                     callback(true)
                 case 1:
                     let queue = DispatchQueue.global(qos: task.userInitiated ? .userInitiated : .utility)
-                    queue.asyncAfter(deadline: DispatchTime.now() + delay, execute: { callback(true) })
+                    queue.asyncAfter(deadline: DispatchTime.now() + delay, execute: { autoreleasepool { callback(true) } })
                 default:
                     callback(false)
                 }
@@ -1291,7 +1299,9 @@ extension SessionDelegate: URLSessionDataDelegate {
             let result = apiTask.transitionState(to: .canceled)
             assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")
             queue.async {
-                processor(apiTask, .canceled, taskInfo.attempt, { _ in return false })
+                autoreleasepool {
+                    processor(apiTask, .canceled, taskInfo.attempt, { _ in return false })
+                }
             }
         } else {
             let result = apiTask.transitionState(to: .processing)
@@ -1301,21 +1311,25 @@ extension SessionDelegate: URLSessionDataDelegate {
                     func retry(_ apiManager: HTTPManager) -> Bool {
                         return apiManager.retryNetworkTask(taskInfo)
                     }
-                    if let error = error {
-                        processor(apiTask, .error(task.response, error), taskInfo.attempt, retry)
-                    } else if let response = task.response {
-                        processor(apiTask, .success(response, taskInfo.data as Data? ?? Data()), taskInfo.attempt, retry)
-                    } else {
-                        // this should be unreachable
-                        let userInfo = [NSLocalizedDescriptionKey: "internal error: task response was nil with no error"]
-                        processor(apiTask, .error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)), taskInfo.attempt, retry)
+                    autoreleasepool {
+                        if let error = error {
+                            processor(apiTask, .error(task.response, error), taskInfo.attempt, retry)
+                        } else if let response = task.response {
+                            processor(apiTask, .success(response, taskInfo.data as Data? ?? Data()), taskInfo.attempt, retry)
+                        } else {
+                            // this should be unreachable
+                            let userInfo = [NSLocalizedDescriptionKey: "internal error: task response was nil with no error"]
+                            processor(apiTask, .error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)), taskInfo.attempt, retry)
+                        }
                     }
                 }
             } else {
                 assert(result.oldState == .canceled, "internal HTTPManager error: tried to process task that's already completed")
                 // We must have canceled concurrently with the networking portion finishing
                 queue.async {
-                    processor(apiTask, .canceled, taskInfo.attempt, { _ in return false })
+                    autoreleasepool {
+                        processor(apiTask, .canceled, taskInfo.attempt, { _ in return false })
+                    }
                 }
             }
         }
@@ -1395,14 +1409,18 @@ extension SessionDelegate: URLSessionDataDelegate {
                 #if enableDebugLogging
                     self.log("providing stream for FormUrlEncoded")
                 #endif
-                completionHandler(InputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
+                autoreleasepool {
+                    completionHandler(InputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
+                }
             }
         case .json(let json)?:
             DispatchQueue.global(qos: taskInfo.task.userInitiated ? .userInitiated : .utility).async {
                 #if enableDebugLogging
                     self.log("providing stream for JSON")
                 #endif
-                completionHandler(InputStream(data: JSON.encodeAsData(json, pretty: false)))
+                autoreleasepool {
+                    completionHandler(InputStream(data: JSON.encodeAsData(json, pretty: false)))
+                }
             }
         case let .multipartMixed(boundary, parameters, bodyParts)?:
             if bodyParts.contains(where: { if case .pending = $0 { return true } else { return false } }) {
