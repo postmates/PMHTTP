@@ -726,28 +726,17 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
         switch self {
         case let .failedResponse(statusCode, response, body, json):
             let statusText = HTTPURLResponse.localizedString(forStatusCode: statusCode)
-            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), "
-                + "response: \(response), "
-                + "body: \(describeData(body)), "
-                + "bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unauthorized(credential, response, body, json):
-            return "HTTPManagerError.Unauthorized(credential: \(credential.map({String(reflecting: $0)}) ?? "nil"), "
-                + "response: \(response), "
-                + "body: \(describeData(body)), "
-                + "bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+            return "HTTPManagerError.Unauthorized(credential: \(credential.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unexpectedContentType(contentType, response, body):
-            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), "
-                + "response: \(response), "
-                + "body: \(describeData(body)))"
+            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), response: \(response), body: \(describeData(body)))"
         case let .unexpectedNoContent(response):
             return "HTTPManagerError.UnexpectedNoContent(response: \(response))"
         case let .unexpectedRedirect(statusCode, location, response, body):
             let statusText = HTTPURLResponse.localizedString(forStatusCode: statusCode)
             let bodyText = describeData(body)
-            return "HTTPManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), "
-                + "location: \(location as ImplicitlyUnwrappedOptional), "
-                + "response: \(response), "
-                + "body: \(bodyText))"
+            return "HTTPManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), location: \(location.map(String.init(describing:)) ?? "nil"), response: \(response), body: \(bodyText))"
         }
     }
 }
