@@ -372,7 +372,7 @@ github "postmates/PMHTTP" ~> 1.0
 This release supports Swift 3.0. For Swift 2.3 you can use
 
 ```
-github "postmates/PMHTTP" "v0.9.2"
+github "postmates/PMHTTP" ~> 0.9.3
 ```
 
 ### CocoaPods
@@ -380,6 +380,12 @@ To install using [CocoaPods](https://cocoapods.org), add the following to your P
 
 ```
 pod "PMHTTP", "~> 1.0"
+```
+
+This release supports Swift 3.0. For Swift 2.3 you can use:
+
+```
+pod "PMHTTP", "~> 0.9.3"
 ```
 
 ## License
@@ -399,10 +405,16 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 #### v1.0.1 (2016-09-12)
 
 * Adopt `CustomNSError` and deprecate the `NSError` bridging methods.
+* Add autoreleasepools to dispatch queues where appropriate.
+* Fix CocoaPods support.
 
 #### v1.0.0 (2016-09-09)
 
 * Support Swift 3.0.
+
+#### v0.9.3 (2016-09-09)
+
+* Fix building for tvOS.
 
 #### v0.9.2 (2016-09-09)
 
