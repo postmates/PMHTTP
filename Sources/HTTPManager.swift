@@ -445,6 +445,9 @@ public final class HTTPManagerEnvironment: NSObject {
     /// - Important: You MUST NOT access the global `HTTP` property from within this method.
     ///   Any attempt to do so will deadlock as the property has not finished initializing.
     func configure(httpManager: HTTPManager)
+    
+    @available(*, unavailable, renamed: "configure(httpManager:)")
+    func configureHTTPManager(_ httpManager: HTTPManager)
 }
 
 extension HTTPManager {
@@ -837,8 +840,6 @@ public final class HTTPManagerRetryBehavior: NSObject {
     }
     
     public enum Strategy: Equatable {
-        // NB: Lowercase enum cases matches expected Swift 3 naming conventions.
-        
         /// Retries a single time with no delay.
         case retryOnce
         /// Retries once immediately, and then a second time after the given delay.

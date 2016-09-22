@@ -38,6 +38,7 @@
 		9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0CF1C408EEC00297FC5 /* HTTPServer.swift */; };
 		9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */; };
 		9ED4FA181CC072F2001A0693 /* MultipartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA171CC072F2001A0693 /* MultipartTests.swift */; };
+		9ED5D3621D936295007C2A65 /* Deprecations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED5D3611D936295007C2A65 /* Deprecations.swift */; };
 		9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF69F51D2C343E00C6E603 /* KVOTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -91,6 +92,7 @@
 		9EC8F0D21C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTest+HTTPServerExpectation.swift"; sourceTree = "<group>"; };
 		9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPBodyStream.swift; sourceTree = "<group>"; };
 		9ED4FA171CC072F2001A0693 /* MultipartTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipartTests.swift; sourceTree = "<group>"; };
+		9ED5D3611D936295007C2A65 /* Deprecations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Deprecations.swift; sourceTree = "<group>"; };
 		9EEF69F51D2C343E00C6E603 /* KVOTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KVOTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -168,6 +170,7 @@
 				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
 				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
 				9E4C77A81C360714000FF8AC /* ObjectiveC.swift */,
+				9ED5D3611D936295007C2A65 /* Deprecations.swift */,
 				9E22DD291C88CEF200C49993 /* DateParsing.swift */,
 				9E139FA51C4EC83800A764BD /* PMHTTPError.h */,
 				9E139FA31C4EC82F00A764BD /* PMHTTPError.m */,
@@ -359,6 +362,7 @@
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,
 				9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */,
 				9E4C77A91C360714000FF8AC /* ObjectiveC.swift in Sources */,
+				9ED5D3621D936295007C2A65 /* Deprecations.swift in Sources */,
 				9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
