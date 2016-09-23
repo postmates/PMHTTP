@@ -14,6 +14,18 @@
 
 import Foundation
 
+public extension HTTPManager {
+    @available(*, unavailable, renamed: "parsedDateHeader(from:)")
+    @nonobjc static func parsedDataHeaderFromResponse(_ response: URLResponse) -> Date? {
+        return parsedDateHeader(from: response)
+    }
+    
+    @available(*, unavailable, renamed: "parsedDateHeader(from:)")
+    @nonobjc static func parsedDateHeaderFromString(_ string: String) -> Date? {
+        return parsedDateHeader(from: string)
+    }
+}
+
 public extension HTTPManagerEnvironment {
     @available(*, unavailable, renamed: "isPrefix(of:)")
     @nonobjc func isPrefixOf(_ url: URL) -> Bool {
