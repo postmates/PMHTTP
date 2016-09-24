@@ -20,7 +20,7 @@ public extension HTTPManager {
     /// - Parameter response: A `URLResponse` that the header is pulled from. If this
     ///   is not an `HTTPURLResponse`, `nil` is returned.
     /// - Returns: An `NSDate`, or `nil` if the header doesn't exist or has an invalid format.
-    @objc(parsedDataHeaderFromResponse:)
+    @objc(parsedDateHeaderFromResponse:)
     static func parsedDateHeader(from response: URLResponse) -> Date? {
         guard let response = response as? HTTPURLResponse,
             let dateString = response.allHeaderFields["Date"] as? String

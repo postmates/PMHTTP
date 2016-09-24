@@ -16,7 +16,7 @@ import Foundation
 
 public extension HTTPManager {
     @available(*, unavailable, renamed: "parsedDateHeader(from:)")
-    @nonobjc static func parsedDataHeaderFromResponse(_ response: URLResponse) -> Date? {
+    @nonobjc static func parsedDateHeaderFromResponse(_ response: URLResponse) -> Date? {
         return parsedDateHeader(from: response)
     }
     
