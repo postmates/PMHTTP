@@ -402,6 +402,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
+#### Development
+
+* Add more Obj-C request constructors.
+
 #### v1.0.3 (2016-09-23)
 
 * Fix obj-c name of `HTTPManager.parsedDateHeader(from:)`.

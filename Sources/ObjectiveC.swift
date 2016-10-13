@@ -22,6 +22,36 @@ extension HTTPManager {
         return HTTP
     }
     
+    /// Creates a GET request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Returns: An `HTTPManagerDataRequest`, or `nil` if the `path`  cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForGET:)
+    public func __objc_requestForGET(_ path: String) -> HTTPManagerDataRequest! {
+        return request(GET: path)
+    }
+    
+    /// Creates a DELETE request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Returns: An `HTTPManagerActionRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForDELETE:)
+    public func __objc_requestForDELETE(_ path: String) -> HTTPManagerActionRequest! {
+        return request(DELETE: path)
+    }
+    
+    /// Creates a POST request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPOST:)
+    public func __objc_requestForPOST(_ path: String) -> HTTPManagerUploadFormRequest! {
+        return request(POST: path)
+    }
+    
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -32,6 +62,50 @@ extension HTTPManager {
     public func __objc_requestForPOST(_ path: String, json object: Any) -> HTTPManagerUploadJSONRequest! {
         guard let json = try? JSON(ns: object) else { return nil }
         return request(POST: path, json: json)
+    }
+    
+    /// Creates a PUT request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPUT:)
+    public func __objc_requestForPUT(_ path: String) -> HTTPManagerUploadFormRequest! {
+        return request(PUT: path)
+    }
+    
+    /// Creates a PUT request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter json: The JSON-compatible object to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL` or `json` is not a JSON-compatible object.
+    @objc(requestForPUT:json:)
+    public func __objc_requestForPUT(_ path: String, json object: Any) -> HTTPManagerUploadJSONRequest! {
+        guard let json = try? JSON(ns: object) else { return nil }
+        return request(PUT: path, json: json)
+    }
+    
+    /// Creates a PATCH request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
+    ///   parsed by `NSURL`.
+    @objc(requestForPATCH:)
+    public func __objc_requestForPATCH(_ path: String) -> HTTPManagerUploadFormRequest! {
+        return request(PATCH: path)
+    }
+    
+    /// Creates a PATCH request.
+    /// - Parameter path: The path for the request, interpreted relative to the
+    ///   environment. May be an absolute URL.
+    /// - Parameter json: The JSON-compatible object to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
+    ///   be parsed by `NSURL` or `json` is not a JSON-compatible object.
+    @objc(requestForPATCH:json:)
+    public func __objc_requestForPATCH(_ path: String, json object: Any) -> HTTPManagerUploadJSONRequest! {
+        guard let json = try? JSON(ns: object) else { return nil }
+        return request(PATCH: path, json: json)
     }
 }
 
