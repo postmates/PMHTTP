@@ -85,6 +85,7 @@ public final class HTTPManagerTask: NSObject {
     
     /// Use `networkTask.suspend()` instead.
     @available(*, unavailable, message: "use networkTask.suspend() instead")
+    @nonobjc
     public func suspend() {}
     
     // NB: We don't expose a suspend() method here because that would produce surprising
