@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "PMHTTP"
-  s.version      = "1.0.3"
+  s.version      = "1.0.4"
   s.summary      = "Swift/Obj-C HTTP framework with a focus on REST and JSON"
 
   s.description  = <<-DESC
