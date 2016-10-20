@@ -15,6 +15,38 @@
 import Foundation
 import PMJSON
 
+/// Implements application/x-www-form-urlencoded encoding.
+///
+/// See [the spec](https://www.w3.org/TR/html5/forms.html#application/x-www-form-urlencoded-encoding-algorithm) for details.
+///
+/// - Note: We don't actually translate spaces into `+` because, while HTML says that query strings
+///   should be encoded using application/x-www-form-urlencoded (and therefore spaces should be `+`),
+///   there's no actual guarantee that servers interpret query strings that way, but all servers are
+///   guaranteed to interpret `%20` as a space.
+internal enum FormURLEncoded {
+    static func string(for queryItems: [URLQueryItem]) -> String {
+        guard !queryItems.isEmpty else {
+            return ""
+        }
+        // NB: don't use lazy here, or `joined(separator:)` will map all items twice.
+        // Better to have one array allocation than unnecessarily re-encoding all strings.
+        let encodedQueryItems = queryItems.map({ item -> String in
+            let encodedName = item.name.addingPercentEncoding(withAllowedCharacters: .urlQueryKeyAllowedCharacters) ?? ""
+            if let value = item.value {
+                let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowedCharacters) ?? ""
+                return "\(encodedName)=\(encodedValue)"
+            } else {
+                return encodedName
+            }
+        })
+        return encodedQueryItems.joined(separator: "&")
+    }
+    
+    static func data(for queryItems: [URLQueryItem]) -> Data {
+        return string(for: queryItems).data(using: .utf8) ?? Data()
+    }
+}
+
 internal enum UploadBody {
     case data(Data)
     case formUrlEncoded([URLQueryItem])
@@ -22,25 +54,6 @@ internal enum UploadBody {
     /// - Requires: The `boundary` must meet the rules for a valid multipart boundary
     ///   and must not contain any characters that require quoting.
     case multipartMixed(boundary: String, parameters: [URLQueryItem], bodyParts: [MultipartBodyPart])
-    
-    static func dataRepresentationForQueryItems(_ queryItems: [URLQueryItem]) -> Data {
-        guard !queryItems.isEmpty else {
-            return Data()
-        }
-        let cs = CharacterSet.urlQueryKeyValueAllowedCharacters
-        func encodeQueryItem(_ item: URLQueryItem) -> String {
-            let encodedName = item.name.addingPercentEncoding(withAllowedCharacters: cs) ?? ""
-            if let value = item.value {
-                let encodedValue = value.addingPercentEncoding(withAllowedCharacters: cs) ?? ""
-                return "\(encodedName)=\(encodedValue)"
-            } else {
-                return encodedName
-            }
-        }
-        let encodedQueryItems = queryItems.map(encodeQueryItem)
-        let encodedString = encodedQueryItems.joined(separator: "&")
-        return encodedString.data(using: String.Encoding.utf8)!
-    }
     
     /// Calls `evaluate()` on every pending multipart body.
     internal func evaluatePending() {
@@ -52,11 +65,28 @@ internal enum UploadBody {
 }
 
 private extension CharacterSet {
-    static let urlQueryKeyValueAllowedCharacters: CharacterSet = {
+    static let urlQueryKeyAllowedCharacters: CharacterSet = {
         var cs = CharacterSet.urlQueryAllowed
-        cs.remove(charactersIn: "&=")
+        cs.remove(charactersIn: "&=+")
+        cs.makeImmutable()
         return cs
     }()
+    
+    static let urlQueryValueAllowedCharacters: CharacterSet = {
+        var cs = CharacterSet.urlQueryAllowed
+        cs.remove(charactersIn: "&+")
+        cs.makeImmutable()
+        return cs
+    }()
+    
+    /// Ensures the wrapped character set is immutable.
+    ///
+    /// Mutable character sets are less efficient than immutable ones.
+    private mutating func makeImmutable() {
+        // The only way to ensure this right now is to bridge through Obj-C.
+        // There's also no way to test if we're mutable or not due to the _SwiftNativeNS* wrapper.
+        self = unsafeDowncast((self as NSCharacterSet).copy() as AnyObject, to: NSCharacterSet.self) as CharacterSet
+    }
 }
 
 internal enum MultipartBodyPart {

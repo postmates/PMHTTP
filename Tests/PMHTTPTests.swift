@@ -344,6 +344,42 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
     }
     
+    func testQueryItemEdgeCases() {
+        // https://www.w3.org/TR/html5/forms.html#application/x-www-form-urlencoded-encoding-algorithm
+        // x-www-form-urlencoded encoding converts spaces to `+`.
+        // URLQueryItem doesn't handle this conversion, and not all servers expect it.
+        // But because some do, we can't include `+` unescaped.
+        // And of course `&` and `=` need to be encoded.
+        
+        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "key", value: "value + space"), URLQueryItem(name: " +&=", value: " +&=")]
+        let encodedQuery = "foo=bar&key=value%20%2b%20space&%20%2b%26%3d=%20%2b%26="
+        
+        // GET
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            let query = request.urlComponents.percentEncodedQuery?.lowercased()
+            XCTAssertEqual(query, encodedQuery, "request query string")
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo", parameters: queryItems))
+        waitForExpectations(timeout: 5, handler: nil)
+        
+        // POST
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            guard request.headers["Content-Type"] == "application/x-www-form-urlencoded" else {
+                XCTFail("Unexpected content type: \(String(reflecting: request.headers["Content-Type"]))")
+                return completionHandler(HTTPServer.Response(status: .unsupportedMediaType))
+            }
+            guard let bodyText = request.body.flatMap({String(data: $0, encoding: String.Encoding.utf8)}) else {
+                XCTFail("Missing request body, or body not utf-8")
+                return completionHandler(HTTPServer.Response(status: .badRequest))
+            }
+            XCTAssertEqual(bodyText.lowercased(), encodedQuery, "request body")
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        expectationForRequestSuccess(HTTP.request(POST: "foo", parameters: queryItems))
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
     func testParse() {
         // parseAsJSON
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in

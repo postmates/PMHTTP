@@ -405,6 +405,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 #### Development
 
 * Add more Obj-C request constructors.
+* Fix encoding of `+` characters in query strings and `application/x-www-form-urlencoded` bodies.
 
 #### v1.0.3 (2016-09-23)
 

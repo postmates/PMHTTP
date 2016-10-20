@@ -48,11 +48,12 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         guard var comps = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             fatalError("HTTPManager: base URL cannot be parsed by NSURLComponents: \(baseURL.relativeString)")
         }
-        if var queryItems = comps.queryItems {
-            queryItems.append(contentsOf: parameters)
-            comps.queryItems = queryItems
+        if var query = comps.percentEncodedQuery, !query.isEmpty {
+            query += "&"
+            query += FormURLEncoded.string(for: parameters)
+            comps.percentEncodedQuery = query
         } else {
-            comps.queryItems = parameters
+            comps.percentEncodedQuery = FormURLEncoded.string(for: parameters)
         }
         return comps.url(relativeTo: baseURL.baseURL)!
     }
@@ -485,7 +486,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
         case .data(let data)?:
             request.httpBody = data
         case .formUrlEncoded(let queryItems)?:
-            request.httpBody = UploadBody.dataRepresentationForQueryItems(queryItems)
+            request.httpBody = FormURLEncoded.data(for: queryItems)
         case .json(let json)?:
             request.httpBody = JSON.encodeAsData(json, pretty: false)
         case let .multipartMixed(boundary, parameters, bodyParts)?:

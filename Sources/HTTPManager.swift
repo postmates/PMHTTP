@@ -1123,7 +1123,7 @@ extension HTTPManager {
         var urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
         if case .formUrlEncoded(let queryItems)? = uploadBody {
-            uploadBody = .data(UploadBody.dataRepresentationForQueryItems(queryItems))
+            uploadBody = .data(FormURLEncoded.data(for: queryItems))
         }
         uploadBody?.evaluatePending()
         if let mock = request.mock ?? mockManager.mockForRequest(urlRequest, environment: environment) {
@@ -1411,7 +1411,7 @@ extension SessionDelegate: URLSessionDataDelegate {
                     self.log("providing stream for FormUrlEncoded")
                 #endif
                 autoreleasepool {
-                    completionHandler(InputStream(data: UploadBody.dataRepresentationForQueryItems(queryItems)))
+                    completionHandler(InputStream(data: FormURLEncoded.data(for: queryItems)))
                 }
             }
         case .json(let json)?:
