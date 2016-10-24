@@ -150,6 +150,34 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
     }
     
+    func testNetworkTaskCancel() {
+        // Tests behavior of cancelling the networkTask instead of the HTTPManagerTask.
+        do {
+            // Cancel before we dispatch the request.
+            // Server should never see anything
+            let task = expectationForRequestCanceled(HTTP.request(GET: "foo"), startAutomatically: false)
+            task.networkTask.cancel()
+            task.resume()
+            waitForExpectations(timeout: 5, handler: nil)
+        }
+        
+        do {
+            // Cancel before the server returns
+            let requestSema = DispatchSemaphore(value: 0)
+            let resultSema = DispatchSemaphore(value: 0)
+            expectationForHTTPRequest(httpServer, path: "/foo", handler: { (request, completionHandler) in
+                requestSema.signal()
+                XCTAssert(resultSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
+                completionHandler(HTTPServer.Response(status: .ok))
+            })
+            let task = expectationForRequestCanceled(HTTP.request(GET: "foo"))
+            XCTAssert(requestSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
+            task.networkTask.cancel()
+            resultSema.signal()
+            waitForExpectations(timeout: 5, handler: nil)
+        }
+    }
+    
     func testIdempotence() {
         XCTAssertTrue(HTTP.request(GET: "foo").isIdempotent, "GET request")
         XCTAssertTrue(HTTP.request(PUT: "foo").isIdempotent, "PUT request")
