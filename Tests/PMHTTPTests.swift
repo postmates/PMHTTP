@@ -560,7 +560,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(contentType, "application/json", "error content type")
                     XCTAssertEqual(body, data, "error body")
                 } else {
-                    XCTFail("expected HTTPManagerError.UnexpectedContentType; found \(error)")
+                    XCTFail("expected HTTPManagerError.unexpectedContentType; found \(error)")
                 }
             }
             waitForExpectations(timeout: 5, handler: nil)
@@ -611,14 +611,14 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.unexpectedNoContent: break
-            default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
+            default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
         expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON(with: { _ in 42 })) { task, response, error in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.unexpectedNoContent: break
-            default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
+            default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
         expectationForRequestSuccess(HTTP.request(GET: "foo").parse(with: { _ in 42 })) { task, response, value in
@@ -639,7 +639,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "response status code")
             let header = (response as? HTTPURLResponse)?.allHeaderFields["Content-Type"] as? String
             XCTAssertNil(header, "response content type header")
-            // don't test mimeType, NSURLSession may return a non-nil value despite the server not specifying a content type
+            // don't test mimeType, URLSession may return a non-nil value despite the server not specifying a content type
             XCTAssertEqual(json, ["ok": true], "response body json value")
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -666,7 +666,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     } else {
                         XCTFail("error body was not a utf-8 string: \(body)")
                     }
-                default: XCTFail("expected error .UnexpectedContentType, found \(error)")
+                default: XCTFail("expected error .unexpectedContentType, found \(error)")
                 }
             }
             waitForExpectations(timeout: 5, handler: nil)
@@ -698,14 +698,14 @@ final class PMHTTPTests: PMHTTPTestCase {
                     } else {
                         XCTFail("error body was not a utf-8 string: \(body)")
                     }
-                default: XCTFail("expected error .UnexpectedContentType, found \(error)")
+                default: XCTFail("expected error .unexpectedContentType, found \(error)")
                 }
             }
             waitForExpectations(timeout: 5, handler: nil)
         }
         
         // wrong type - 204 No Content, GET request, JSON parse
-        // this should return .UnexpectedNoContent instead of .UnexpectedContentType
+        // this should return .unexpectedNoContent instead of .unexpectedContentType
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             XCTAssertEqual(request.method, HTTPServer.Method.GET, "request method")
             XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
@@ -717,7 +717,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertEqual(response?.mimeType, "text/html", "response MIME type")
             switch error {
             case HTTPManagerError.unexpectedNoContent: break
-            default: XCTFail("expected error .UnexpectedNoContent, found \(error)")
+            default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -804,7 +804,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -818,7 +818,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -828,13 +828,13 @@ final class PMHTTPTests: PMHTTPTestCase {
             completionHandler(HTTPServer.Response(status: .badRequest, body: "{ \"error\": \"You sent a bad request\" }"))
         }
         expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
-            // NSURLResponse.mimeType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
+            // URLResponse.mimeType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
             // Just assume it won't ever auto-detect JSON.
             XCTAssertNotEqual(response?.mimeType, "application/json", "response MIME type")
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -848,7 +848,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -875,7 +875,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -889,7 +889,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertNil(json, "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -899,13 +899,13 @@ final class PMHTTPTests: PMHTTPTestCase {
             completionHandler(HTTPServer.Response(status: .badRequest, body: "{ \"error\": \"You sent a bad request\" }"))
         }
         expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
-            // NSURLResponse.mimeType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
+            // URLResponse.mimeType will typically report something like text/plain in this case, but it's not guaranteed what it reports.
             // Just assume it won't ever auto-detect JSON.
             XCTAssertNotEqual(response?.mimeType, "application/json", "response MIME type")
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -919,7 +919,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -949,7 +949,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data as NSData, "NSError body data")
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyJSONErrorKey] as? NSDictionary, ["ok": false, "elts": [1, 2]], "NSError body json")
                 } else {
-                    XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                    XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
                 }
             }
             waitForExpectations(timeout: 5, handler: nil)
@@ -978,7 +978,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(nserror.userInfo[PMHTTPBodyDataErrorKey] as? NSData, data as NSData?, "NSError body data")
                     XCTAssertNil(nserror.userInfo[PMHTTPBodyJSONErrorKey], "NSError body json")
                 } else {
-                    XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                    XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
                 }
             }
             waitForExpectations(timeout: 5, handler: nil)
@@ -1263,11 +1263,11 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         
         // test basic redirections
-        // NB: Experimentally, NSURLSession treats 301 Moved Permanently like a 303 See Other and turns POST into GET.
-        // The RFC says this is erroneous behavior, but I guess NSURLSession can't change it without potentially breaking apps.
+        // NB: Experimentally, URLSession treats 301 Moved Permanently like a 303 See Other and turns POST into GET.
+        // The RFC says this is erroneous behavior, but I guess URLSession can't change it without potentially breaking apps.
         runTest(.movedPermanently, preserveMethodOnRedirect: false)
         // NB: In theory, clients shouldn't change the request method for 302 Found, but most of them change to GET.
-        // NSURLSession is one of these clients.
+        // URLSession is one of these clients.
         runTest(.found, preserveMethodOnRedirect: false)
         runTest(.seeOther, preserveMethodOnRedirect: false)
         runTest(.temporaryRedirect, preserveMethodOnRedirect: true)
@@ -1544,7 +1544,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(credential?.password, "secure", "error credential password")
                     XCTAssertEqual(json, ["error": "unauthorized"], "error body json")
                 } else {
-                    XCTFail("expected HTTPManagerError.Unauthorized, found \(error)")
+                    XCTFail("expected HTTPManagerError.unauthorized, found \(error)")
                 }
             }
             waitForExpectations(timeout: 5, handler: nil)

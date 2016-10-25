@@ -43,7 +43,7 @@ class MockingTests: PMHTTPTestCase {
                 XCTAssertEqual(statusCode, 404, "status code")
                 XCTAssertEqual(String(data: body, encoding: String.Encoding.utf8), "Mock response", "body text")
             } else {
-                XCTFail("Expected HTTPManagerErrror.FailedResponse, found \(error)")
+                XCTFail("Expected HTTPManagerErrror.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -171,8 +171,8 @@ class MockingTests: PMHTTPTestCase {
     
     func testMockColonComponent() {
         // Path components consisting of just a colon aren't counted as :components, but may trip up relative URL handling.
-        // NB: We use NSURL instead of NSURLComponents for parsing request paths, so we can't just use a relative path ":/foo"
-        // as NSURL parses that as something other than a path beginning with ":". But we can use an absolute URL instead.
+        // NB: We use URL instead of URLComponents for parsing request paths, so we can't just use a relative path ":/foo"
+        // as URL parses that as something other than a path beginning with ":". But we can use an absolute URL instead.
         HTTP.mockManager.addMock(for: ":/foo", statusCode: 200, text: "Mock response")
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.address)/:/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "mock response status code")
@@ -444,7 +444,7 @@ class MockingTests: PMHTTPTestCase {
             if case HTTPManagerError.failedResponse(statusCode: let statusCode, response: _, body: _, bodyJson: _) = error {
                 XCTAssertEqual(statusCode, 500, "status code")
             } else {
-                XCTFail("Expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("Expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -559,7 +559,7 @@ class MockingTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(statusCode, _, _, _) = error {
                 XCTAssertEqual(statusCode, 500, "status code")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -576,7 +576,7 @@ class MockingTests: PMHTTPTestCase {
             if case let HTTPManagerError.failedResponse(statusCode, _, _, _) = error {
                 XCTAssertEqual(statusCode, 500, "status code")
             } else {
-                XCTFail("expected HTTPManagerError.FailedResponse, found \(error)")
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
         }
         waitForExpectations(timeout: 5, handler: nil)

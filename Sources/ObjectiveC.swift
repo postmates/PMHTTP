@@ -221,7 +221,7 @@ extension HTTPManagerRetryBehavior {
     ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
     ///
     ///   **Important:** This block must be executed at some point or the task will be stuck in the
-    ///   `.Processing` state forever.
+    ///   `.processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
     @objc(retryBehaviorWithHandler:)
@@ -253,7 +253,7 @@ extension HTTPManagerRetryBehavior {
     ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
     ///
     ///   **Important:** This block must be executed at some point or the task will be stuck in the
-    ///   `.Processing` state forever.
+    ///   `.processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
     @objc(retryBehaviorIgnoringIdempotenceWithHandler:)
@@ -266,7 +266,7 @@ extension HTTPManagerRetryBehavior {
     /// Returns a retry behavior that retries once automatically for networking errors.
     ///
     /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
-    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// `PMJSON.JSONParserError` with a code of `.unexpectedEOF` (as this may indicate a
     /// truncated response). The request will not be retried for networking errors that
     /// are unlikely to change when retrying.
     ///
@@ -292,7 +292,7 @@ extension HTTPManagerRetryBehavior {
     /// delay.
     ///
     /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
-    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// `PMJSON.JSONParserError` with a code of `.unexpectedEOF` (as this may indicate a
     /// truncated response). The request will not be retried for networking errors that
     /// are unlikely to change when retrying.
     ///
@@ -592,7 +592,7 @@ extension HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data with the specified handler.
     /// - Note: If the server responds with 204 No Content, the parse handler is
     ///   invoked with an empty data. The handler may choose to return the error
-    ///   `HTTPManagerError.UnexpectedNoContent` if it does not handle this case.
+    ///   `HTTPManagerError.unexpectedNoContent` if it does not handle this case.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -699,7 +699,7 @@ extension HTTPManagerDataRequest {
     /// Returns a new request that parses the data as JSON.
     /// Any nulls in the JSON are represented as `NSNull`.
     /// - Note: If the server responds with 204 No Content, the parse is skipped
-    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
+    ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     @objc(parseAsJSON)
     public func __objc_parseAsJSON() -> HTTPManagerObjectParseRequest {
@@ -708,7 +708,7 @@ extension HTTPManagerDataRequest {
     
     /// Returns a new request that parses the data as JSON.
     /// - Note: If the server responds with 204 No Content, the parse is skipped
-    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
+    ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
@@ -723,7 +723,7 @@ extension HTTPManagerDataRequest {
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler. Any nulls in the JSON are represented as `NSNull`.
     /// - Note: If the server responds with 204 No Content, the parse is skipped
-    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
+    ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -745,7 +745,7 @@ extension HTTPManagerDataRequest {
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler.
     /// - Note: If the server responds with 204 No Content, the parse is skipped
-    ///   and `HTTPManagerError.UnexpectedNoContent` is returned as the parse result.
+    ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
     /// - Parameter omitNulls: If `true`, nulls in the JSON are omitted from the result.
     ///   If `false`, nulls are represented as `NSNull`. If the top-level value is null,
     ///   it is always represented as `NSNull` regardless of this parameter.
@@ -868,7 +868,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// response is a 204 No Content, the MIME type is not checked. For all other 2xx
     /// responses, if at least one expected content type is provided, the MIME type
     /// must match one of them. If it doesn't match any, the parse handler will be
-    /// skipped and `HTTPManagerError.UnexpectedContentType` will be returned as the result.
+    /// skipped and `HTTPManagerError.unexpectedContentType` will be returned as the result.
     ///
     /// - Note: The MIME type is only tested if the response includes a `Content-Type` header.
     ///   If the `Content-Type` header is missing, the response will always be assumed to be

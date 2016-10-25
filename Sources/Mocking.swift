@@ -216,7 +216,7 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter queue: (Optional) A `dispatch_queue_t` to run the handler on. The default value
     ///   of `nil` means to use a private serial queue.
     /// - Parameter handler: A block to execute in order to provide the mock response. The block
-    ///   has arguments `request`, `parameters`, and `completion`. `request` is the `NSURLRequest`
+    ///   has arguments `request`, `parameters`, and `completion`. `request` is the `URLRequest`
     ///   that matched the mock. `parameters` is a dictionary that contains a value for each `:name`
     ///   token from the `url` (note: the key is just `"name"`, not `":name"`). `completion` is a
     ///   block that must be invoked to provide the response. The `completion` block may be invoked
@@ -246,7 +246,7 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter handler: A block to execute in order to provide the mock response. The block
     ///   has arguments `state`, `request`, `parameters`, and `completion`. `state` is the same `state`
     ///   value passed to this method, and any mutations to `state` are visible to subsequent invocations
-    ///   of this same block. `request` is the `NSURLRequest` that matched the mock. `parameters` is a
+    ///   of this same block. `request` is the `URLRequest` that matched the mock. `parameters` is a
     ///   dictionary that contains a value for each `:name` token from the `url` (note: the key is just
     ///   `"name"`, not `":name"`). `completion` is a block that must be invoked to provide the response.
     ///   The `completion` block may be invoked from any queue, but it is an error to not invoke it at
@@ -324,7 +324,7 @@ public final class HTTPMockManager: NSObject {
 }
 
 public extension HTTPMockManager {
-    /// A convenience function for reading the body data from an `NSURLRequest`.
+    /// A convenience function for reading the body data from a `URLRequest`.
     ///
     /// If the request has `HTTPBody` set, it is returned, otherwise if it has `HTTPBodyStream`,
     /// the stream is read to exhaustion. If the request has no body, an empty `NSData` is returned.
@@ -610,7 +610,7 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
         self.httpMethod = httpMethod
         self.queue = queue
         self.handler = handler
-        // NB: NSURLComponents parses ":foo/bar" as a path but NSURL does not.
+        // NB: URLComponents parses ":foo/bar" as a path but URL does not.
         guard var comps = URLComponents(string: url) else {
             NSLog("[HTTPManager] Warning: Mock was added with the URL \(String(reflecting: url)) but the URL could not be parsed, so the mock will never match.")
             handleURL = { _ in .noMatch}
@@ -780,10 +780,10 @@ private extension URLComponents {
         return result
     }
     
-    /// Returns an `NSURLComponents` that represents `self` resolved against a base components.
+    /// Returns a `URLComponents` that represents `self` resolved against a base components.
     ///
-    /// This is roughly equivalent to `NSURLComponents.URLRelativeToURL(_:)?.absoluteURL` except
-    /// it doesn't touch `NSURL` and so preserves RFC 3986 behavior throughout. Notably, this
+    /// This is roughly equivalent to `URLComponents.url(relativeTo:)?.absoluteURL` except
+    /// it doesn't touch `URL` and so preserves RFC 3986 behavior throughout. Notably, this
     /// correctly handles paths beginning with `:`.
     func componentsRelativeTo(_ components: URLComponents) -> URLComponents {
         var result: URLComponents = self
@@ -861,7 +861,7 @@ internal class HTTPMockURLProtocol: URLProtocol {
     
     override func startLoading() {
         guard request.url != nil else {
-            // I don't know how an NSURLRequest URL can be nil but we can't evaluate our mock if it is.
+            // I don't know how a URLRequest URL can be nil but we can't evaluate our mock if it is.
             struct InvalidURLError: Error {}
             client?.urlProtocol(self, didFailWithError: InvalidURLError())
             return

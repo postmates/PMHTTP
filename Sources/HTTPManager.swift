@@ -314,9 +314,9 @@ public final class HTTPManager: NSObject {
 /// ```
 /// extension HTTPManagerEnvironment {
 ///     /// The Production environment.
-///     @nonobjc static let Production = HTTPManagerEnvironment(baseURL: NSURL(string: "https://example.com/api/v1")!)!
+///     @nonobjc static let Production = HTTPManagerEnvironment(baseURL: URL(string: "https://example.com/api/v1")!)!
 ///     /// The Staging environment.
-///     @nonobjc static let Staging = HTTPManagerEnvironment(baseURL: NSURL(string: "https://stage.example.com/api/v1")!)!
+///     @nonobjc static let Staging = HTTPManagerEnvironment(baseURL: URL(string: "https://stage.example.com/api/v1")!)!
 /// }
 /// ```
 ///
@@ -412,7 +412,7 @@ public final class HTTPManagerEnvironment: NSObject {
         super.init()
     }
     
-    /// `NSURLComponents` object equivalent to `baseURL`.
+    /// `URLComponents` object equivalent to `baseURL`.
     /// This property is `private` because the returned object is mutable but should not be mutated.
     /// It only exists to avoid re-parsing the URL every time its components is accessed.
     private let baseURLComponents: URLComponents
@@ -457,7 +457,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
     /// - Returns: An `HTTPManagerDataRequest`, or `nil` if the `path`  cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForGET:parameters:)
     public func request(GET path: String, parameters: [String: Any] = [:]) -> HTTPManagerDataRequest! {
         return request(GET: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
@@ -468,7 +468,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string.
     /// - Returns: An `HTTPManagerDataRequest`, or `nil` if the `path`  cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForGET:queryItems:)
     public func request(GET path: String, parameters: [URLQueryItem]) -> HTTPManagerDataRequest! {
         return constructRequest(path, f: { HTTPManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
@@ -480,7 +480,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
     /// - Returns: An `HTTPManagerActionRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForDELETE:parameters:)
     public func request(DELETE path: String, parameters: [String: Any] = [:]) -> HTTPManagerActionRequest! {
         return request(DELETE: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
@@ -491,7 +491,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string.
     /// - Returns: An `HTTPManagerActionRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForDELETE:queryItems:)
     public func request(DELETE path: String, parameters: [URLQueryItem]) -> HTTPManagerActionRequest! {
         return constructRequest(path, f: { HTTPManagerActionRequest(apiManager: self, URL: $0, method: .DELETE, parameters: parameters) })
@@ -503,7 +503,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForPOST:parameters:)
     public func request(POST path: String, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest! {
         return request(POST: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
@@ -514,7 +514,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForPOST:queryItems:)
     public func request(POST path: String, parameters: [URLQueryItem]) -> HTTPManagerUploadFormRequest! {
         return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .POST, parameters: parameters) })
@@ -525,7 +525,7 @@ extension HTTPManager {
     /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
     /// - Parameter data: The data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot
-    ///   be parsed by `NSURL`.
+    ///   be parsed by `URL`.
     @objc(requestForPOST:contentType:data:)
     public func request(POST path: String, contentType: String = "application/octet-stream", data: Data) -> HTTPManagerUploadDataRequest! {
         return constructRequest(path, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .POST, contentType: contentType, data: data) })
@@ -535,7 +535,7 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
-    ///   be parsed by `NSURL`.
+    ///   be parsed by `URL`.
     @nonobjc public func request(POST path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
     }
@@ -546,7 +546,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForPUT:parameters:)
     public func request(PUT path: String, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest! {
         return request(PUT: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
@@ -557,7 +557,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForPUT:queryItems:)
     public func request(PUT path: String, parameters: [URLQueryItem]) -> HTTPManagerUploadFormRequest! {
         return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PUT, parameters: parameters) })
@@ -568,7 +568,7 @@ extension HTTPManager {
     /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
     /// - Parameter data: The data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot
-    ///   be parsed by `NSURL`.
+    ///   be parsed by `URL`.
     @objc(requestForPUT:contentType:data:)
     public func request(PUT path: String, contentType: String = "application/octet-stream", data: Data) -> HTTPManagerUploadDataRequest! {
         return constructRequest(path, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .PUT, contentType: contentType, data: data) })
@@ -578,7 +578,7 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
-    ///   be parsed by `NSURL`.
+    ///   be parsed by `URL`.
     @nonobjc public func request(PUT path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PUT, json: json) })
     }
@@ -589,7 +589,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForPATCH:parameters:)
     public func request(PATCH path: String, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest! {
         return request(PATCH: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
@@ -600,7 +600,7 @@ extension HTTPManager {
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
-    ///   parsed by `NSURL`.
+    ///   parsed by `URL`.
     @objc(requestForPATCH:queryItems:)
     public func request(PATCH path: String, parameters: [URLQueryItem]) -> HTTPManagerUploadFormRequest! {
         return constructRequest(path, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PATCH, parameters: parameters) })
@@ -611,7 +611,7 @@ extension HTTPManager {
     /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
     /// - Parameter data: The data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot
-    ///   be parsed by `NSURL`.
+    ///   be parsed by `URL`.
     @objc(requestForPATCH:contentType:data:)
     public func request(PATCH path: String, contentType: String = "application/octet-stream", data: Data) -> HTTPManagerUploadDataRequest! {
         return constructRequest(path, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .PATCH, contentType: contentType, data: data) })
@@ -621,7 +621,7 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON data to upload as the body of the request.
     /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if the `path` cannot
-    ///   be parsed by `NSURL`.
+    ///   be parsed by `URL`.
     @nonobjc public func request(PATCH path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PATCH, json: json) })
     }
@@ -651,17 +651,17 @@ extension HTTPManager {
 public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringConvertible {
     /// An HTTP response was returned that indicates failure.
     /// - Parameter statusCode: The HTTP status code. Any code outside of 2xx or 3xx indicates failure.
-    /// - Parameter response: The `NSHTTPURLResponse` object.
+    /// - Parameter response: The `HTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
     /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
     ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
     ///   `bodyJson` is `nil`.
-    /// - Note: 401 Unauthorized errors are represented by `HTTPManagerError.Unauthorized` instead of
+    /// - Note: 401 Unauthorized errors are represented by `HTTPManagerError.unauthorized` instead of
     ///   `FailedResponse`.
     case failedResponse(statusCode: Int, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// A 401 Unauthorized HTTP response was returned.
-    /// - Parameter credential: The `NSURLCredential` that was used in the request, if any.
-    /// - Parameter response: The `NSHTTPURLResponse` object.
+    /// - Parameter credential: The `URLCredential` that was used in the request, if any.
+    /// - Parameter response: The `HTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
     /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
     ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
@@ -672,21 +672,21 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     /// - Note: Custom parse requests (using `parse(with:)`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
     /// - Parameter contentType: The Content-Type header of the HTTP response.
-    /// - Parameter response: The `NSHTTPURLResponse` object.
+    /// - Parameter response: The `HTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
     case unexpectedContentType(contentType: String, response: HTTPURLResponse, body: Data)
     /// An HTTP response returned a 204 No Content where an entity was expected.
     /// This is only thrown automatically from parse requests with a GET or HEAD method.
     /// - Note: Custom parse requests (using `parse(with:)`) do not throw this automatically, but
     ///   the parse handler may choose to throw it.
-    /// - Parameter response: The `NSHTTPURLResponse` object.
+    /// - Parameter response: The `HTTPURLResponse` object.
     case unexpectedNoContent(response: HTTPURLResponse)
     /// A redirect was encountered while trying to parse a response that has redirects disabled.
     /// This can only be returned if `HTTPManagerRequest.shouldFollowRedirects` is set to `false`
     /// and the request is configured to parse the response.
     /// - Parameter statusCode: The 3xx HTTP status code.
     /// - Parameter location: The contents of the `"Location"` header, interpreted as a URL, or `nil` if
-    /// - Parameter response: The `NSHTTPURLResponse` object.
+    /// - Parameter response: The `HTTPURLResponse` object.
     ///   the header is missing or cannot be parsed.
     /// - Parameter body: The body of the response, if any.
     case unexpectedRedirect(statusCode: Int, location: URL?, response: HTTPURLResponse, body: Data)
@@ -737,17 +737,17 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
         switch self {
         case let .failedResponse(statusCode, response, body, json):
             let statusText = HTTPURLResponse.localizedString(forStatusCode: statusCode)
-            return "HTTPManagerError.FailedResponse(statusCode: \(statusCode) \(statusText), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+            return "HTTPManagerError.failedResponse(statusCode: \(statusCode) \(statusText), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unauthorized(credential, response, body, json):
-            return "HTTPManagerError.Unauthorized(credential: \(credential.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+            return "HTTPManagerError.unauthorized(credential: \(credential.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unexpectedContentType(contentType, response, body):
-            return "HTTPManagerError.UnexpectedContentType(contentType: \(String(reflecting: contentType)), response: \(response), body: \(describeData(body)))"
+            return "HTTPManagerError.unexpectedContentType(contentType: \(String(reflecting: contentType)), response: \(response), body: \(describeData(body)))"
         case let .unexpectedNoContent(response):
-            return "HTTPManagerError.UnexpectedNoContent(response: \(response))"
+            return "HTTPManagerError.unexpectedNoContent(response: \(response))"
         case let .unexpectedRedirect(statusCode, location, response, body):
             let statusText = HTTPURLResponse.localizedString(forStatusCode: statusCode)
             let bodyText = describeData(body)
-            return "HTTPManagerError.UnexpectedRedirect(statusCode: \(statusCode) \(statusText), location: \(location.map(String.init(describing:)) ?? "nil"), response: \(response), body: \(bodyText))"
+            return "HTTPManagerError.unexpectedRedirect(statusCode: \(statusCode) \(statusText), location: \(location.map(String.init(describing:)) ?? "nil"), response: \(response), body: \(bodyText))"
         }
     }
 }
@@ -795,7 +795,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
     ///
     ///   **Important:** This block must be executed at some point or the task will be stuck in the
-    ///   `.Processing` state forever.
+    ///   `.processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
     public init(_ handler: @escaping (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
@@ -831,7 +831,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   This block may be executed immediately or it may be saved and executed later on any thread or queue.
     ///
     ///   **Important:** This block must be executed at some point or the task will be stuck in the
-    ///   `.Processing` state forever.
+    ///   `.processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
     public init(ignoringIdempotence handler: @escaping (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
@@ -876,8 +876,8 @@ public final class HTTPManagerRetryBehavior: NSObject {
     
     /// Returns a retry behavior that retries automatically for networking errors.
     ///
-    /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
-    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
+    /// A networking error is defined as many errors in `URLError`, or a
+    /// `PMJSON.JSONParserError` with a code of `.unexpectedEOF` (as this may indicate a
     /// truncated response). The request will not be retried for networking errors that
     /// are unlikely to change when retrying.
     ///
@@ -905,9 +905,9 @@ public final class HTTPManagerRetryBehavior: NSObject {
     /// Returns a retry behavior that retries automatically for networking errors or a
     /// 503 Service Unavailable response.
     ///
-    /// A networking error is defined as many errors in the `NSURLErrorDomain`, or a
-    /// `PMJSON.JSONParserError` with a code of `.UnexpectedEOF` (as this may indicate a
-    /// truncated response).The request will not be retried for networking errors that
+    /// A networking error is defined as many errors in `URLError`, or a
+    /// `PMJSON.JSONParserError` with a code of `.unexpectedEOF` (as this may indicate a
+    /// truncated response). The request will not be retried for networking errors that
     /// are unlikely to change when retrying.
     ///
     /// If the request is non-idempotent, it only retries if the error indicates that a
@@ -949,7 +949,7 @@ public func ==(lhs: HTTPManagerRetryBehavior.Strategy, rhs: HTTPManagerRetryBeha
 
 private extension Error {
     /// Returns `true` if `self` is a transient networking error, or is a `PMJSON.JSONParserError`
-    /// with a code of `.UnexpectedEOF`.
+    /// with a code of `.unexpectedEOF`.
     func isTransientNetworkingError() -> Bool {
         switch self {
         case let error as JSONParserError where error.code == .unexpectedEOF:
@@ -1005,7 +1005,7 @@ private extension Error {
         }
     }
     
-    /// Returns `true` if `self` is an `HTTPManagerError.FailedResponse(503, ...)`.
+    /// Returns `true` if `self` is an `HTTPManagerError.failedResponse(503, ...)`.
     func is503ServiceUnavailable() -> Bool {
         switch self {
         case let error as HTTPManagerError:
@@ -1091,7 +1091,7 @@ private class SessionDelegate: NSObject {
         super.init()
     }
     
-    /// A task identifier for an `NSURLSessionTask`.
+    /// A task identifier for a `URLSessionTask`.
     typealias TaskIdentifier = Int
     
     struct TaskInfo {
@@ -1116,7 +1116,7 @@ extension HTTPManager {
     /// - Parameter processor: The processing block. The `retry` parameter to the block is a closure that may be
     ///   executed to attempt to retry the task. If executed, the retry block will return `true` if the task could be
     ///   retried or `false` otherwise. If the task is not retried (or if retrying fails), the processor must arrange
-    ///   for the task to transition to `.Completed` (unless it's already been canceled).
+    ///   for the task to transition to `.completed` (unless it's already been canceled).
     /// - Returns: An `HTTPManagerTask`.
     /// - Important: After creating the task, you must start it by calling the `resume()` method.
     internal func createNetworkTaskWithRequest(_ request: HTTPManagerRequest, uploadBody: UploadBody?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ attempt: Int, _ retry: @escaping (HTTPManager) -> Bool) -> Void) -> HTTPManagerTask {
@@ -1156,13 +1156,13 @@ extension HTTPManager {
         return apiTask
     }
     
-    /// Transitions the given task back into `.Running` with a new network task.
+    /// Transitions the given task back into `.running` with a new network task.
     ///
     /// This method updates the `SessionDelegate`'s `tasks` dictionary for the new
     /// network task, but it does not attempt to remove any existing entry for the
     /// old task. The caller is responsible for removing the old entry.
     ///
-    /// The newly-created `NSURLSessionTask` is automatically resumed.
+    /// The newly-created `URLSessionTask` is automatically resumed.
     ///
     /// - Parameter taskInfo: The `TaskInfo` object representing the task to retry.
     /// - Returns: `true` if the task is retrying, or `false` if it could not be retried
@@ -1277,7 +1277,7 @@ extension SessionDelegate: URLSessionDataDelegate {
     @objc func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         // NB: If we canceled during the networking portion, we delay reporting the
         // cancellation until the networking portion is done. This should show up here
-        // as either an NSURLErrorCancelled error, or simply the inability to transition
+        // as either a URLError.cancelled error, or simply the inability to transition
         // to processing due to the state being cancelled (which may happen if the task
         // cancellation occurs concurrently with the networking finishing).
         
@@ -1295,7 +1295,7 @@ extension SessionDelegate: URLSessionDataDelegate {
         let queue = DispatchQueue.global(qos: apiTask.userInitiated ? .userInitiated : .utility)
         if let error = error as? URLError, error.code == .cancelled {
             // Either we canceled during the networking portion, or someone called
-            // cancel() on the NSURLSessionTask directly. In the latter case, treat it
+            // cancel() on the URLSessionTask directly. In the latter case, treat it
             // as a cancellation anyway.
             let result = apiTask.transitionState(to: .canceled)
             assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")

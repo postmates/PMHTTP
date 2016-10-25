@@ -188,7 +188,7 @@ class MultipartTests: PMHTTPTestCase {
     }
     
     func testParametersAndBodyParts() {
-        // NB: Use NSURLQueryItem for parameters so we know what the order is.
+        // NB: Use URLQueryItem for parameters so we know what the order is.
         let req = HTTP.request(POST: "foo", parameters: [URLQueryItem(name: "message", value: "Hello world"), URLQueryItem(name: "foo", value: "bar")])!
         req.addMultipart(text: "Who put the bomp in the bomp, ba bomp, ba bomp?", withName: "question")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in

@@ -18,7 +18,7 @@ import PMHTTP.Private
 
 internal final class HTTPBody {
     /// Returns an `NSInputStream` that produces a multipart/mixed HTTP body.
-    /// - Note: Any `.Pending` body part must be evaluated before calling this
+    /// - Note: Any `.pending` body part must be evaluated before calling this
     ///   method, and should be waited on to guarantee the value is ready.
     class func createMultipartMixedStream(_ boundary: String, parameters: [URLQueryItem], bodyParts: [MultipartBodyPart]) -> InputStream {
         let body = HTTPBody(boundary: boundary, parameters: parameters, bodyParts: bodyParts)
@@ -116,7 +116,7 @@ internal final class HTTPBody {
     }
     
     /// Sets `state` to the appropriate state for the next part.
-    /// Once the `state` hits `.EOF` it stays there.
+    /// Once the `state` hits `.eof` it stays there.
     private func advanceState() {
         switch state {
         case .header(_, let content):

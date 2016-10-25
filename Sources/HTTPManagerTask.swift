@@ -59,7 +59,7 @@ public final class HTTPManagerTask: NSObject {
         return false
     }
     
-    /// Invokes `resume()` on the underlying `NSURLSessionTask`.
+    /// Invokes `resume()` on the underlying `URLSessionTask`.
     ///
     /// - Important: You should always use this method instead of invoking `resume()`
     ///   on the `networkTask`.
@@ -102,7 +102,7 @@ public final class HTTPManagerTask: NSObject {
     /// task is canceled. If the operation is processing the results, the
     /// results processor is canceled at the earliest opportunity.
     ///
-    /// Calling this on a task that's already moved to `.Completed` is a no-op.
+    /// Calling this on a task that's already moved to `.completed` is a no-op.
     public func cancel() {
         willChangeValue(forKey: "state")
         defer { didChangeValue(forKey: "state") }
@@ -147,10 +147,10 @@ public final class HTTPManagerTask: NSObject {
         return (result.completed, State(result.oldState))
     }
     
-    /// Resets the state back to `.Running` and replaces the `networkTask` property with
-    /// a new value. If the state cannot be transitioned back to `.Running` the `networkTask`
+    /// Resets the state back to `.running` and replaces the `networkTask` property with
+    /// a new value. If the state cannot be transitioned back to `.running` the `networkTask`
     /// property is not modified.
-    /// - Parameter networkTask: The new `NSURLSessionTask` to use for the `networkTask` property.
+    /// - Parameter networkTask: The new `URLSessionTask` to use for the `networkTask` property.
     /// - Returns: A tuple where `ok` is `true` if the task was reset, otherwise `false`, and `oldState`
     ///   describes the state the task was in when the transition was attempted.
     internal func resetStateToRunning(with networkTask: URLSessionTask) -> (ok: Bool, oldState: State) {
@@ -307,7 +307,7 @@ public enum HTTPManagerTaskResult<Value> {
         }
     }
     
-    /// Returns `true` iff `self` is `.Success`.
+    /// Returns `true` iff `self` is `.success`.
     public var isSuccess: Bool {
         switch self {
         case .success: return true
@@ -315,7 +315,7 @@ public enum HTTPManagerTaskResult<Value> {
         }
     }
     
-    /// Returns `true` iff `self` is `.Error`.
+    /// Returns `true` iff `self` is `.error`.
     public var isError: Bool {
         switch self {
         case .error: return true
@@ -323,7 +323,7 @@ public enum HTTPManagerTaskResult<Value> {
         }
     }
     
-    /// Returns `true` iff `self` is `.Canceled`.
+    /// Returns `true` iff `self` is `.canceled`.
     public var isCanceled: Bool {
         switch self {
         case .canceled: return true
@@ -343,7 +343,7 @@ public enum HTTPManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    /// Errors thrown by the block are caught and turned into `.Error` results.
+    /// Errors thrown by the block are caught and turned into `.error` results.
     public func map<T>(try f: (URLResponse, Value) throws -> T) -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value):
@@ -369,7 +369,7 @@ public enum HTTPManagerTaskResult<Value> {
     
     /// Maps a successful task result through the given block.
     /// Errored and canceled results are returned as they are.
-    /// Errors thrown by the block are caught and turned into `.Error` results.
+    /// Errors thrown by the block are caught and turned into `.error` results.
     public func andThen<T>(try f: (URLResponse, Value) throws -> HTTPManagerTaskResult<T>) -> HTTPManagerTaskResult<T> {
         switch self {
         case let .success(response, value):
