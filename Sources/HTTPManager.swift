@@ -1420,7 +1420,7 @@ extension SessionDelegate: URLSessionDataDelegate {
                     self.log("providing stream for JSON")
                 #endif
                 autoreleasepool {
-                    completionHandler(InputStream(data: JSON.encodeAsData(json, pretty: false)))
+                    completionHandler(InputStream(data: JSON.encodeAsData(json)))
                 }
             }
         case let .multipartMixed(boundary, parameters, bodyParts)?:
