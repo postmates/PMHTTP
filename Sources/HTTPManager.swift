@@ -212,7 +212,7 @@ public final class HTTPManager: NSObject {
         self.init(shared: false)
     }
     
-    private class Inner {
+    fileprivate class Inner {
         var environment: Environment?
         var sessionConfiguration: URLSessionConfiguration = .default
         var defaultCredential: URLCredential?

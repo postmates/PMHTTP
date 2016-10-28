@@ -405,7 +405,7 @@ private class KVOLog<T: AnyObject>: NSObject {
         _observing = false
     }
     
-    private override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         // FIXME: Use ObjectIdentifier.address or whatever it's called once it's available
         guard context == Unmanaged.passUnretained(_context).toOpaque() else {
             return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
