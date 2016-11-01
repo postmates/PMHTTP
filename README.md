@@ -406,6 +406,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 * Support `text/json` in addition to `application/json`.
 * Add 2 convenience methods for uploading `UIImage`s as PNG or JPEG data.
+* Add `objcError` property to `PMHTTPResult`.
 * Fix Xcode 8.1 compatibility of unit tests.
 
 #### v1.0.4 (2016-10-20)

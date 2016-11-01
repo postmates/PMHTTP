@@ -366,6 +366,19 @@ public class PMHTTPResult: NSObject, NSCopying {
     ///   return `nil` from both `value` and `error`.
     public let error: NSError?
     
+    /// Returns the error or canceled state as an `NSError`, or `nil` if successful.
+    ///
+    /// Canceled results are converted into `NSURLErrorCancelled` errors.
+    public var objcError: NSError? {
+        if isSuccess {
+            return nil
+        } else if let error = error {
+            return error
+        } else {
+            return NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil)
+        }
+    }
+    
     /// Creates and returns a new `PMHTTPResult` representing a successful result.
     public init(value: Any?, response: URLResponse) {
         isSuccess = true
