@@ -317,15 +317,15 @@ extension HTTPManagerRetryBehavior {
 // MARK: - Result
 
 public extension HTTPManagerTaskResult {
-    /// Returns the error or canceled state as an `NSError`, or `nil` if successful.
+    /// Returns the error or canceled state as an `Error`, or `nil` if successful.
     ///
     /// Canceled results are converted into `NSURLErrorCancelled` errors.
-    var objcError: NSError? {
+    var objcError: Error? {
         switch self {
         case .success:
             return nil
         case .error(_, let error):
-            return error as NSError
+            return error
         case .canceled:
             return NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil)
         }
