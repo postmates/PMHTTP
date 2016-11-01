@@ -427,6 +427,24 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         waitForExpectations(timeout: 5, handler: nil)
         
+        // parseAsJSON for text/json
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            XCTAssertEqual(request.method, HTTPServer.Method.GET)
+            XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
+            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "text/json"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parseAsJSON()) { task, response, value in
+            if let response = response as? HTTPURLResponse {
+                XCTAssertEqual(response.statusCode, 200, "response status code")
+                XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "text/json", "response Content-Type header")
+            } else {
+                XCTFail("Non–HTTP Response found: \(response)")
+            }
+            XCTAssertEqual(response.mimeType, "text/json", "response MIME type")
+            XCTAssertEqual(value, ["array": [1,2,3], "ok": true])
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+        
         // parseAsJSON(with:)
         do {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
@@ -801,6 +819,20 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
             XCTAssertEqual(response?.mimeType, "application/json", "response MIME type")
+            if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
+                XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
+            } else {
+                XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+        
+        // Error with JSON response using text/json
+        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+            completionHandler(HTTPServer.Response(status: .badRequest, headers: ["Content-Type": "text/json"], body: "{ \"error\": \"You sent a bad request\" }"))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
+            XCTAssertEqual(response?.mimeType, "text/json", "response MIME type")
             if case let HTTPManagerError.failedResponse(_, _, _, json) = error {
                 XCTAssertEqual(json, ["error": "You sent a bad request"], "error body json")
             } else {

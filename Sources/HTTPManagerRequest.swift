@@ -583,7 +583,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
                 let json: JSON?
                 switch response.mimeType.map(MediaType.init) {
                 case _ where task.assumeErrorsAreJSON: fallthrough
-                case MediaType("application/json")?: json = try? JSON.decode(data)
+                case MediaType("application/json")?, MediaType("text/json")?: json = try? JSON.decode(data)
                 default: json = nil
                 }
                 if statusCode == 401 { // Unauthorized
@@ -672,7 +672,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
             }
@@ -698,7 +698,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
     public func parseAsJSON<T>(with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
             }
@@ -740,8 +740,8 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         return _contentType
     }
     
-    /// The expected MIME type of the response. Defaults to `["application/json"]` for
-    /// JSON parse requests, or `[]` for requests created with `parse(with:)`.
+    /// The expected MIME type of the response. Defaults to `["application/json"]`
+    /// for JSON parse requests, or `[]` for requests created with `parse(with:)`.
     ///
     /// This property is used to generate the `Accept` header, if not otherwise specified by
     /// the request. If multiple values are provided, they're treated as a priority list
@@ -855,7 +855,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     let json: JSON?
                     switch response.mimeType.map(MediaType.init) {
                     case _ where task.assumeErrorsAreJSON: fallthrough
-                    case MediaType("application/json")?: json = try? JSON.decode(data)
+                    case MediaType("application/json")?, MediaType("text/json")?: json = try? JSON.decode(data)
                     default: json = nil
                     }
                     if statusCode == 401 { // Unauthorized
@@ -870,11 +870,16 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     if mimeType?.rawValue == contentType.rawValue {
                         mimeType = nil
                     }
+                    let contentTypeAlias = contentTypeAliases[contentType.typeSubtype].map(MediaType.init)
+                    let mimeTypeAlias = mimeType.flatMap({ contentTypeAliases[$0.typeSubtype].map(MediaType.init) })
                     let valid = expectedContentTypes.contains(where: {
                         // ignore the parameters from expectedContentTypes
                         let pattern = MediaType(MediaType($0).typeSubtype)
                         if let mimeType = mimeType, pattern ~= mimeType { return true }
-                        return pattern ~= contentType
+                        if pattern ~= contentType { return true }
+                        if let contentTypeAliases = contentTypeAlias, pattern ~= contentTypeAliases { return true }
+                        if let mimeTypeAlias = mimeTypeAlias, pattern ~= mimeTypeAlias { return true }
+                        return false
                     })
                     if !valid {
                         throw HTTPManagerError.unexpectedContentType(contentType: (mimeType ?? contentType).rawValue, response: response, body: data)
@@ -905,12 +910,12 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     // This is a closure instead of just `T?` to avoid bloating the request object if `T` is large.
     internal var dataMock: (() -> T)?
     
-    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentType: String? = nil, defaultResponseCacheStoragePolicy: URLCache.StoragePolicy? = nil, parseHandler: @escaping (URLResponse, Data) throws -> T) {
+    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentTypes: [String] = [], defaultResponseCacheStoragePolicy: URLCache.StoragePolicy? = nil, parseHandler: @escaping (URLResponse, Data) throws -> T) {
         self.parseHandler = parseHandler
         prepareRequestHandler = request.prepareURLRequest()
         _contentType = request.contentType
         self.uploadBody = uploadBody
-        self.expectedContentTypes = expectedContentType.map({ [$0] }) ?? []
+        self.expectedContentTypes = expectedContentTypes
         super.init(apiManager: request.apiManager, URL: request.url, method: request.requestMethod, parameters: request.parameters)
         isIdempotent = request.isIdempotent
         credential = request.credential
@@ -951,6 +956,8 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         }
     }
 }
+
+private let contentTypeAliases: [String: String] = ["text/json": "application/json"]
 
 private func acceptHeaderValueForContentTypes(_ contentTypes: [String]) -> String {
     guard var value = contentTypes.first else { return "" }
@@ -1014,7 +1021,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   204 No Content.
     /// - Returns: An `HTTPManagerParseRequest`.
     public func parseAsJSON() -> HTTPManagerParseRequest<JSON?> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if (response as? HTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
@@ -1040,7 +1047,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
     public func parseAsJSON<T>(with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
-        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentType: "application/json", defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 // No Content
                 return try handler(.noContent(response))

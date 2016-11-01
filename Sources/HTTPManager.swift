@@ -653,9 +653,9 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     /// - Parameter statusCode: The HTTP status code. Any code outside of 2xx or 3xx indicates failure.
     /// - Parameter response: The `HTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
-    /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
-    ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
-    ///   `bodyJson` is `nil`.
+    /// - Parameter bodyJson: If the response `Content-Type` is `application/json` or `text/json`, contains
+    ///   the results of decoding the body as JSON. If the decode fails, or the `Content-Type` is not
+    ///   `application/json` or `text/json`, `bodyJson` is `nil`.
     /// - Note: 401 Unauthorized errors are represented by `HTTPManagerError.unauthorized` instead of
     ///   `FailedResponse`.
     case failedResponse(statusCode: Int, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
@@ -663,9 +663,9 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     /// - Parameter credential: The `URLCredential` that was used in the request, if any.
     /// - Parameter response: The `HTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
-    /// - Parameter bodyJson: If the response `Content-Type` is `application/json`, contains the results
-    ///   of decoding the body as JSON. If the decode fails, or the `Content-Type` is not `application/json`,
-    ///   `bodyJson` is `nil`.
+    /// - Parameter bodyJson: If the response `Content-Type` is `application/json` or `text/json`, contains
+    ///   the results of decoding the body as JSON. If the decode fails, or the `Content-Type` is not
+    ///   `application/json` or `text/json`, `bodyJson` is `nil`.
     case unauthorized(credential: URLCredential?, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.

@@ -857,8 +857,8 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         set { _request.mock = newValue }
     }
     
-    /// The expected MIME type of the response. Defaults to `["application/json"]` for
-    /// JSON parse requests, or `[]` for requests created with `-parseWithHandler:`.
+    /// The expected MIME type of the response. Defaults to `["application/json"]`
+    /// for JSON parse requests, or `[]` for requests created with `-parseWithHandler:`.
     ///
     /// This property is used to generate the `Accept` header, if not otherwise specified by
     /// the request. If multiple values are provided, they're treated as a priority list

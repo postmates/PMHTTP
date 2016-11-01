@@ -49,7 +49,7 @@ extern NSString * const PMHTTPURLResponseErrorKey;
 /// @see <tt>PMHTTPErrorFailedResponse</tt>, <tt>PMHTTPErrorUnexpectedContentType</tt>, <tt>PMHTTPErrorUnexpectedRedirect</tt>.
 extern NSString * const PMHTTPBodyDataErrorKey;
 /// The corresponding value is an \c NSDictionary with the body of the response decoded as JSON.
-/// This key may not be present if the response \c Content-Type is not <tt>application/json</tt>,
+/// This key may not be present if the response \c Content-Type is not <tt>application/json</tt> or <tt>text/json</tt>,
 /// if the JSON decode fails, or if the JSON top-level value is not an object.
 /// The dictionary does not include any \c NSNull values.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>.

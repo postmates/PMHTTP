@@ -402,6 +402,11 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
+#### Development
+
+* Support `text/json` in addition to `application/json`.
+* Fix Xcode 8.1 compatibility of unit tests.
+
 #### v1.0.4 (2016-10-20)
 
 * Add more Obj-C request constructors.
