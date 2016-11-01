@@ -14,6 +14,7 @@
 		9E11A8DC1D1B4AC100D63318 /* NetworkActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */; };
 		9E139FA41C4EC82F00A764BD /* PMHTTPError.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E139FA31C4EC82F00A764BD /* PMHTTPError.m */; };
 		9E139FA61C4EC9EE00A764BD /* PMHTTPError.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E139FA51C4EC83800A764BD /* PMHTTPError.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		9E14D4FF1DC81E4800BE34D5 /* PlatformSpecific.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E14D4FE1DC81E4800BE34D5 /* PlatformSpecific.swift */; };
 		9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E22DD291C88CEF200C49993 /* DateParsing.swift */; };
 		9E22DD2C1C88D09100C49993 /* DateParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */; };
 		9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E29514A1C4D95CB001D38AC /* Utilities.swift */; };
@@ -61,6 +62,7 @@
 		9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityTests.swift; sourceTree = "<group>"; };
 		9E139FA31C4EC82F00A764BD /* PMHTTPError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPError.m; sourceTree = "<group>"; };
 		9E139FA51C4EC83800A764BD /* PMHTTPError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMHTTPError.h; sourceTree = "<group>"; };
+		9E14D4FE1DC81E4800BE34D5 /* PlatformSpecific.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlatformSpecific.swift; sourceTree = "<group>"; };
 		9E22DD291C88CEF200C49993 /* DateParsing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateParsing.swift; sourceTree = "<group>"; };
 		9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateParsingTests.swift; sourceTree = "<group>"; };
 		9E29514A1C4D95CB001D38AC /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
@@ -163,10 +165,11 @@
 				9E7DDF241C18F2B600EA43AD /* PMHTTP.h */,
 				9E7DDF4A1C1A388400EA43AD /* HTTPManager.swift */,
 				9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */,
-				9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */,
 				9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */,
-				9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */,
 				9EA4EE341CB71E4F00E4E531 /* Mocking.swift */,
+				9E14D4FE1DC81E4800BE34D5 /* PlatformSpecific.swift */,
+				9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */,
+				9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */,
 				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
 				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
 				9E4C77A81C360714000FF8AC /* ObjectiveC.swift */,
@@ -362,6 +365,7 @@
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,
 				9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */,
 				9E4C77A91C360714000FF8AC /* ObjectiveC.swift in Sources */,
+				9E14D4FF1DC81E4800BE34D5 /* PlatformSpecific.swift in Sources */,
 				9ED5D3621D936295007C2A65 /* Deprecations.swift in Sources */,
 				9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */,
 			);
