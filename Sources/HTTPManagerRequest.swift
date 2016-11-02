@@ -670,13 +670,14 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
     /// - Note: If the server responds with 204 No Content, the parse is skipped
     ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
+    /// - Parameter options: Options to use for JSON parsing. Defaults to `[]`.
     /// - Returns: An `HTTPManagerParseRequest`.
-    public func parseAsJSON() -> HTTPManagerParseRequest<JSON> {
+    public func parseAsJSON(options: JSONOptions = []) -> HTTPManagerParseRequest<JSON> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
             }
-            return try JSON.decode(data)
+            return try JSON.decode(data, options: options)
         })
     }
     
@@ -684,6 +685,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     /// the specified handler.
     /// - Note: If the server responds with 204 No Content, the parse is skipped
     ///   and `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
+    /// - Parameter options: Options to use for JSON parsing. Defaults to `[]`.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -697,12 +699,12 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
             }
-            return try handler(response, JSON.decode(data))
+            return try handler(response, JSON.decode(data, options: options))
         })
     }
     
@@ -1019,20 +1021,22 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     /// Returns a new request that parses the data as JSON.
     /// - Note: The parse result is `nil` if and only if the server responded with
     ///   204 No Content.
+    /// - Parameter options: Options to use for JSON parsing. Defaults to `[]`.
     /// - Returns: An `HTTPManagerParseRequest`.
-    public func parseAsJSON() -> HTTPManagerParseRequest<JSON?> {
+    public func parseAsJSON(options: JSONOptions = []) -> HTTPManagerParseRequest<JSON?> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if (response as? HTTPURLResponse)?.statusCode == 204 {
                 // No Content
                 return nil
             } else {
-                return try JSON.decode(data)
+                return try JSON.decode(data, options: options)
             }
         })
     }
     
     /// Returns a new request that parses the data as JSON and passes it through
     /// the specified handler.
+    /// - Parameter options: Options to use for JSON parsing. Defaults to `[]`.
     /// - Parameter handler: The handler to call as part of the request
     ///   processing. This handler is not guaranteed to be called on any
     ///   particular thread. The handler returns the new value for the request.
@@ -1046,13 +1050,13 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 // No Content
                 return try handler(.noContent(response))
             } else {
-                return try handler(.success(response, JSON.decode(data)))
+                return try handler(.success(response, JSON.decode(data, options: options)))
             }
         })
     }
