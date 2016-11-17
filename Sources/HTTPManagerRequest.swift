@@ -1171,6 +1171,31 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
         multipartBodies.append(.pending(.init(block)))
     }
     
+    /// Adds a block that's invoked asynchronously to provide multipart bodies for this request.
+    ///
+    /// The block is invoked on an arbitrary thread when task requests a new body stream.
+    /// Any multipart bodies added by the block will be inserted into the request body.
+    ///
+    /// The associated block will only ever be invoked once even if the request is used to create
+    /// multiple tasks.
+    ///
+    /// - Note: Using this method means that the `Content-Length` cannot be calculated for this
+    ///   request. When calling APIs that need a defined `Content-Length` you must provide all
+    ///   of the upload data up-front.
+    ///
+    /// - Parameter block: The block that provides the multipart bodies. This block is
+    ///   invoked on an arbitrary background thread. The `HTTPManagerUploadMultipart`
+    ///   parameter can be used to add multipart bodies to the request. This object is
+    ///   only valid for the duration of the block's execution.
+    /// - Returns: `self`.
+    ///
+    /// - SeeAlso: `addMultipart(data:withName:mimeType:filename:)`,
+    ///   `addMultipart(text:withName:)`.
+    @nonobjc public func withMultipartBody(using block: @escaping (HTTPManagerUploadMultipart) -> Void) -> HTTPManagerUploadFormRequest {
+        addMultipartBody(with: block)
+        return self
+    }
+    
     /// Executes a block with `self` as the argument, and then returns `self` again.
     /// - Parameter f: A block to execute, with `self` as the argument.
     /// - Returns: `self`.

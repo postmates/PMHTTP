@@ -409,6 +409,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Add `objcError` property to `PMHTTPResult`.
 * Fix Xcode 8.1 compatibility of unit tests.
 * Add optional `options` parameter to `parseAsJSON()` and `parseAsJSON(with:)`.
+* Add `withMultipartBody(using:)` to `HTTPManagerUploadFormRequest`.
 
 #### v1.0.4 (2016-10-20)
 
