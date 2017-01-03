@@ -171,7 +171,7 @@ extension HTTPManagerError: CustomNSError {
 
 extension HTTPManagerError {
     /// Returns an `NSError` that represents a given `ErrorType`.
-    @available(*, deprecated, message: "cast the error using `as NSError` instead")
+    @available(*, unavailable, message: "cast the error using `as NSError` instead")
     public static func toNSError(_ error: Error) -> NSError {
         return error as NSError
     }
@@ -181,7 +181,7 @@ extension HTTPManagerError {
     ///   In particular, null values will be stripped and JSON payloads where the top-level value is not an
     ///   object will be omitted.
     /// - SeeAlso: `init?(_ error:)`.
-    @available(*, deprecated, message: "cast the error using `as NSError` instead")
+    @available(*, unavailable, message: "cast the error using `as NSError` instead")
     public func toNSError() -> NSError {
         return self as NSError
     }
@@ -192,7 +192,7 @@ extension HTTPManagerError {
     ///   In particular, null values will be stripped and JSON payloads where the top-level value is not an
     ///   object will be omitted from the `NSError` version.
     /// - SeeAlso: `toNSError()`.
-    @available(*, deprecated, message: "cast the error using `as? HTTPManagerError` instead")
+    @available(*, unavailable, message: "cast the error using `as? HTTPManagerError` instead")
     public init?(_ error: NSError) {
         guard let httpError = error as? HTTPManagerError else { return nil }
         self = httpError
