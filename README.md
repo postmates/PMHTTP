@@ -407,9 +407,11 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Support `text/json` in addition to `application/json`.
 * Add 2 convenience methods for uploading `UIImage`s as PNG or JPEG data.
 * Add `objcError` property to `PMHTTPResult`.
+* Change `objcError` on `HTTPManagerTaskResult` to `Error?` instead of `NSError?`.
 * Fix Xcode 8.1 compatibility of unit tests.
 * Add optional `options` parameter to `parseAsJSON()` and `parseAsJSON(with:)`.
 * Add `withMultipartBody(using:)` to `HTTPManagerUploadFormRequest`.
+* Rename `parse(with:)`, `parseAsJSON(options:with:)`, and `addMultipartBody(with:)` to use the parameter name `using:` instead, which is more in line with Swift 3 Foundation naming conventions.
 
 #### v1.0.4 (2016-10-20)
 

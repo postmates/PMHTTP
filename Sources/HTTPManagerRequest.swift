@@ -519,7 +519,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parse<T>(with handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parse<T>(using handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, parseHandler: handler)
     }
     
@@ -699,7 +699,7 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(options: JSONOptions = [], using handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 throw HTTPManagerError.unexpectedNoContent(response: response)
@@ -1050,7 +1050,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(options: JSONOptions = [], using handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 // No Content
@@ -1167,7 +1167,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     /// - SeeAlso: `addMultipart(data:withName:mimeType:filename:)`,
     ///   `addMultipart(text:withName:)`.
     @objc(addMultipartBodyWithBlock:)
-    public func addMultipartBody(with block: @escaping (HTTPManagerUploadMultipart) -> Void) {
+    public func addMultipartBody(using block: @escaping (HTTPManagerUploadMultipart) -> Void) {
         multipartBodies.append(.pending(.init(block)))
     }
     
@@ -1192,7 +1192,7 @@ public final class HTTPManagerUploadFormRequest: HTTPManagerActionRequest {
     /// - SeeAlso: `addMultipart(data:withName:mimeType:filename:)`,
     ///   `addMultipart(text:withName:)`.
     @nonobjc public func withMultipartBody(using block: @escaping (HTTPManagerUploadMultipart) -> Void) -> HTTPManagerUploadFormRequest {
-        addMultipartBody(with: block)
+        addMultipartBody(using: block)
         return self
     }
     

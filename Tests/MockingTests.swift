@@ -669,7 +669,7 @@ class MockingTests: PMHTTPTestCase {
         }
         
         do {
-            let req = HTTP.request(GET: "foo").parse(with: { _ -> Int in
+            let req = HTTP.request(GET: "foo").parse(using: { _ -> Int in
                 XCTFail("Parse handler unexpectedly called")
                 return 42
             }).mock(value: 123)

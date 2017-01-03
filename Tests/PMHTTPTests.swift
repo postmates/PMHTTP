@@ -114,7 +114,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .ok))
             })
             let req = HTTP.request(GET: "foo")!
-                .parse(with: { (response, data) -> Int in
+                .parse(using: { (response, data) -> Int in
                     requestSema.signal()
                     XCTAssert(resultSema.wait(timeout: DispatchTime.now() + 2) == .success, "timeout on dispatch semaphore")
                     return 42
@@ -452,7 +452,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header")
                 completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{ \"array\": [1, 2, 3], \"ok\": true }"))
             }
-            let req = HTTP.request(GET: "foo").parseAsJSON(with: { response, json -> Int in
+            let req = HTTP.request(GET: "foo").parseAsJSON(using: { response, json -> Int in
                 XCTAssertEqual((response as? HTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "application/json", "response content type")
                 XCTAssertEqual(response.mimeType, "application/json", "response MIME type")
                 let ok = json["ok"]?.bool
@@ -479,7 +479,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .ok, text: "foobar"))
             }
             struct InvalidUTF8Error: Error {}
-            let req = HTTP.request(GET: "foo").parse(with: { response, data -> String in
+            let req = HTTP.request(GET: "foo").parse(using: { response, data -> String in
                 XCTAssertEqual((response as? HTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/plain", "response Content-Type header")
                 XCTAssertEqual(response.mimeType, "text/plain", "response MIME type")
                 guard let str = String(data: data, encoding: String.Encoding.utf8) else {
@@ -632,14 +632,14 @@ final class PMHTTPTests: PMHTTPTestCase {
             default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON(with: { _ in 42 })) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON(using: { _ in 42 })) { task, response, error in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.unexpectedNoContent: break
             default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestSuccess(HTTP.request(GET: "foo").parse(with: { _ in 42 })) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parse(using: { _ in 42 })) { task, response, value in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual(value, 42, "response body parse value")
         }
@@ -697,7 +697,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "text/html"], body: "Hello world"))
             }
-            let req = HTTP.request(GET: "foo").parse(with: { _ -> Int in
+            let req = HTTP.request(GET: "foo").parse(using: { _ -> Int in
                 XCTFail("parse handler unexpectedly called")
                 return 42
             })
@@ -748,7 +748,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .noContent, headers: ["Content-Type": "text/html"]))
             }
-            let req = HTTP.request(GET: "foo").parse(with: { response, data -> Int in
+            let req = HTTP.request(GET: "foo").parse(using: { response, data -> Int in
                 XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
                 XCTAssertEqual((response as? HTTPURLResponse)?.allHeaderFields["Content-Type"] as? String, "text/html", "response content type header")
                 XCTAssertEqual(response.mimeType, "text/html", "response MIME type")
@@ -797,7 +797,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "[1, 2"))
             }
             struct CantBeThrownError: Error {}
-            let req = HTTP.request(GET: "foo").parseAsJSON(with: { (response, json) -> Int in
+            let req = HTTP.request(GET: "foo").parseAsJSON(using: { (response, json) -> Int in
                 throw CantBeThrownError()
             })
             expectationForRequestFailure(req) { task, response, error in
@@ -1154,7 +1154,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
                     completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
                 }
-                let req = request.parseAsJSON(with: { result -> Int in
+                let req = request.parseAsJSON(using: { result -> Int in
                     return Int(try result.getJSON().getArray("ary", { try $0.reduce(0, { try $0 + $1.getInt64() }) }))
                 })
                 expectationForRequestSuccess(req) { task, response, value in
@@ -1171,7 +1171,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     completionHandler(HTTPServer.Response(status: .ok, text: "foobar"))
                 }
                 struct DecodeError: Error {}
-                let req = request.parse(with: { response, data -> String in
+                let req = request.parse(using: { response, data -> String in
                     guard let str = String(data: data, encoding: String.Encoding.utf8) else {
                         throw DecodeError()
                     }
@@ -1204,7 +1204,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.headers["Accept"], "application/json", "request accept header (\(method))")
                     completionHandler(HTTPServer.Response(status: .noContent))
                 }
-                let req = request.parseAsJSON(with: { result -> Int in
+                let req = request.parseAsJSON(using: { result -> Int in
                     XCTAssertEqual((result.response as? HTTPURLResponse)?.statusCode, 204, "parse handler response status code (\(method))")
                     XCTAssertNil(result.json, "parse handler json value (\(method))")
                     return 42
@@ -1222,7 +1222,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(request.method, HTTPServer.Method(String(method)), "request method (\(method))")
                     completionHandler(HTTPServer.Response(status: .noContent))
                 }
-                let req = request.parse(with: { response, data -> String? in
+                let req = request.parse(using: { response, data -> String? in
                     XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code (\(method))")
                     XCTAssertEqual(0, data.count, "response data length (\(method))")
                     return "foo"
@@ -1485,13 +1485,13 @@ final class PMHTTPTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "foo")!
             XCTAssert(req.defaultResponseCacheStoragePolicy == .allowed, "request cache storage policy")
             XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .notAllowed, "json parse request cache storage policy")
-            XCTAssert(req.parseAsJSON(with: { $1 }).defaultResponseCacheStoragePolicy == .notAllowed, "json with handler parse request cache storage policy")
+            XCTAssert(req.parseAsJSON(using: { $1 }).defaultResponseCacheStoragePolicy == .notAllowed, "json with handler parse request cache storage policy")
         }
         do {
             let req = HTTP.request(DELETE: "foo")!
             XCTAssert(req.defaultResponseCacheStoragePolicy == .allowed, "request cache storage policy")
             XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .notAllowed, "json parse request cache storage policy")
-            XCTAssert(req.parseAsJSON(with: { $0.json }).defaultResponseCacheStoragePolicy == .notAllowed, "json with handler parse request cache storage policy")
+            XCTAssert(req.parseAsJSON(using: { $0.json }).defaultResponseCacheStoragePolicy == .notAllowed, "json with handler parse request cache storage policy")
         }
     }
     

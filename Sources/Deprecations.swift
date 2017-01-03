@@ -75,9 +75,14 @@ public extension HTTPManagerActionRequest.JSONResult {
 // NB: Can't move the HTTPManagerConfigurable deprecation here as it must be in the protocol declaration
 
 public extension HTTPManagerNetworkRequest {
-    @available(*, unavailable, renamed: "parse(with:)")
+    @available(*, unavailable, renamed: "parse(using:)")
     @nonobjc func parseWithHandler<T>(_ handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
-        return parse(with: handler)
+        return parse(using: handler)
+    }
+    
+    @available(*, unavailable, renamed: "parse(using:)")
+    @nonobjc public func parse<T>(with handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
+        return parse(using: handler)
     }
     
     @available(*, unavailable, renamed: "createTask(withCompletionQueue:completion:)")
@@ -94,9 +99,14 @@ extension HTTPManagerRequestPerformable {
 }
 
 public extension HTTPManagerDataRequest {
-    @available(*, unavailable, renamed: "parseAsJSON(with:)")
+    @available(*, unavailable, renamed: "parseAsJSON(using:)")
     @nonobjc public func parseAsJSONWithHandler<T>(_ handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
-        return parseAsJSON(with: handler)
+        return parseAsJSON(using: handler)
+    }
+    
+    @available(*, unavailable, renamed: "parseAsJSON(options:using:)")
+    @nonobjc public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+        return parseAsJSON(options: options, using: handler)
     }
 }
 
@@ -108,9 +118,14 @@ public extension HTTPManagerParseRequest {
 }
 
 public extension HTTPManagerActionRequest {
-    @available(*, unavailable, renamed: "parseAsJSON(with:)")
+    @available(*, unavailable, renamed: "parseAsJSON(using:)")
     @nonobjc public func parseAsJSONWithHandler<T>(_ handler: @escaping (_ result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
-        return parseAsJSON(with: handler)
+        return parseAsJSON(using: handler)
+    }
+    
+    @available(*, unavailable, renamed: "parseAsJSON(options:using:)")
+    @nonobjc public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+        return parseAsJSON(options: options, using: handler)
     }
 }
 
@@ -120,14 +135,19 @@ public extension HTTPManagerUploadFormRequest {
         addMultipart(data: data, withName: name, mimeType: mimeType, filename: filename)
     }
     
+    @available(*, unavailable, renamed: "addMultipartBody(using:)")
+    @nonobjc public func addMultipartBody(with block: @escaping (HTTPManagerUploadMultipart) -> Void) {
+        addMultipartBody(using: block)
+    }
+    
     @available(*, unavailable, renamed: "addMultipart(text:withName:)")
     @nonobjc public func addMultipartText(_ text: String, withName name: String) {
         addMultipart(text: text, withName: name)
     }
     
-    @available(*, unavailable, renamed: "addMultipartBody(with:)")
+    @available(*, unavailable, renamed: "addMultipartBody(using:)")
     @nonobjc public func addMultipartBodyWithBlock(_ block: @escaping (HTTPManagerUploadMultipart) -> Void) {
-        addMultipartBody(with: block)
+        addMultipartBody(using: block)
     }
 }
 

@@ -621,7 +621,7 @@ extension HTTPManagerNetworkRequest {
     ///   the event of a cancelation.
     @objc(parseWithHandler:)
     public func __objc_parseWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ data: Data, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parse(with: { response, data -> Any? in
+        return HTTPManagerObjectParseRequest(request: parse(using: { response, data -> Any? in
             var error: NSError?
             if let object = handler(response, data, &error) {
                 return object
@@ -728,7 +728,7 @@ extension HTTPManagerDataRequest {
     /// - Returns: An `HTTPManagerObjectParseRequest`.
     @objc(parseAsJSONOmitNulls:)
     public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { response, json -> Any? in
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { response, json -> Any? in
             return omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
         }))
     }
@@ -777,7 +777,7 @@ extension HTTPManagerDataRequest {
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
     public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { response, json -> Any? in
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { response, json -> Any? in
             var error: NSError?
             let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
             if let object = handler(response, jsonObject, &error) {
@@ -1022,7 +1022,7 @@ extension HTTPManagerActionRequest {
     ///   will return `nil` for `value`.
     @objc(parseAsJSONOmitNulls:)
     public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { result -> Any? in
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { result -> Any? in
             return result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
         }))
     }
@@ -1072,7 +1072,7 @@ extension HTTPManagerActionRequest {
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
     public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
-        return HTTPManagerObjectParseRequest(request: parseAsJSON(with: { result -> Any? in
+        return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { result -> Any? in
             var error: NSError?
             let jsonObject = result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
             if let object = handler(result.response, jsonObject, &error) {

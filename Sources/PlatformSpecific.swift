@@ -30,7 +30,7 @@ import Foundation
         ///   - name: The name of the multipart body. This is the name the server expects.
         ///   - filename: The filename of the attachment. Optional.
         public func addMultipartPNG(for image: UIImage, withName name: String, filename: String? = nil) {
-            self.addMultipartBody(with: { upload in
+            self.addMultipartBody(using: { upload in
                 guard let data = UIImagePNGRepresentation(image) else { return }
                 upload.addMultipart(data: data, withName: name, mimeType: "image/png", filename: filename)
             })
@@ -55,7 +55,7 @@ import Foundation
         ///   - name: The name of the multipart body. This is the name the server expects.
         ///   - filename: The filename of the attachment. Optional.
         public func addMultipartJPEG(for image: UIImage, withCompressionQuality quality: CGFloat, name: String, filename: String? = nil) {
-            self.addMultipartBody(with: { upload in
+            self.addMultipartBody(using: { upload in
                 guard let data = UIImageJPEGRepresentation(image, quality) else { return }
                 upload.addMultipart(data: data, withName: name, mimeType: "image/jpeg", filename: filename)
             })
