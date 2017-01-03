@@ -25,5 +25,5 @@ Pod::Spec.new do |s|
   s.framework  = "CFNetwork"
   s.module_map = "Sources/module.modulemap"
 
-  s.dependency "PMJSON", "~> 1.2"
+  s.dependency "PMJSON", "~> 1.2", "< 3.0"
 end
