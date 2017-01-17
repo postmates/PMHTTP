@@ -18,8 +18,6 @@ import PMJSON
 
 class MultipartTests: PMHTTPTestCase {
     func testOneTextPart() {
-        HTTPServer.enableDebugLogging = true
-        defer { HTTPServer.enableDebugLogging = false }
         let req = HTTP.request(POST: "foo")!
         req.addMultipart(text: "Hello world", withName: "message")
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
