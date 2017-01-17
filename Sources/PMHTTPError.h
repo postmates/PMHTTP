@@ -15,7 +15,7 @@
 @import Foundation;
 
 /// Error domain for \c HTTPManager errors.
-extern NSString * const PMHTTPErrorDomain;
+extern NSString * _Nonnull const PMHTTPErrorDomain;
 
 /// Error codes for \c HTTPManager errors.
 typedef NS_ENUM(NSInteger, PMHTTPError) {
@@ -40,29 +40,29 @@ typedef NS_ENUM(NSInteger, PMHTTPError) {
 
 /// The corresponding value is an \c NSNumber with the status code of the response.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>, <tt>PMHTTPErrorUnexpectedRedirect</tt>.
-extern NSString * const PMHTTPStatusCodeErrorKey;
+extern NSString * _Nonnull const PMHTTPStatusCodeErrorKey;
 /// The corresponding value is the \c NSHTTPURLResponse that represents the response.
 /// This key is provided for all errors in the <tt>PMHTTPErrorDomain</tt> domain.
 /// @see <tt>PMHTTPError</tt>.
-extern NSString * const PMHTTPURLResponseErrorKey;
+extern NSString * _Nonnull const PMHTTPURLResponseErrorKey;
 /// The corresponding value is a \c NSData with the body of the response.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>, <tt>PMHTTPErrorUnexpectedContentType</tt>, <tt>PMHTTPErrorUnexpectedRedirect</tt>.
-extern NSString * const PMHTTPBodyDataErrorKey;
+extern NSString * _Nonnull const PMHTTPBodyDataErrorKey;
 /// The corresponding value is an \c NSDictionary with the body of the response decoded as JSON.
 /// This key may not be present if the response \c Content-Type is not <tt>application/json</tt> or <tt>text/json</tt>,
 /// if the JSON decode fails, or if the JSON top-level value is not an object.
 /// The dictionary does not include any \c NSNull values.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>.
-extern NSString * const PMHTTPBodyJSONErrorKey;
+extern NSString * _Nonnull const PMHTTPBodyJSONErrorKey;
 /// The corresponding value is the \c NSURLCredential that was used in the request, if any.
 /// @see <tt>PMHTTPErrorUnauthorized</tt>.
-extern NSString * const PMHTTPCredentialErrorKey;
+extern NSString * _Nonnull const PMHTTPCredentialErrorKey;
 /// The corresponding value is a \c NSString with the Content-Type of the response.
 /// @see <tt>PMHTTPErrorUnexpectedContentType</tt>.
-extern NSString * const PMHTTPContentTypeErrorKey;
+extern NSString * _Nonnull const PMHTTPContentTypeErrorKey;
 /// The corresponding value is an \c NSURL with the Location of the response. May be \c nil.
 /// @see <tt>PMHTTPErrorUnexpectedRedirect</tt>.
-extern NSString * const PMHTTPLocationErrorKey;
+extern NSString * _Nonnull const PMHTTPLocationErrorKey;
 
 // Helper functions
 
