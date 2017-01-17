@@ -368,6 +368,62 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             }
         }
     }
+    
+    func testRetryNetworkPriority() {
+        // Retrying tasks should preserve the network task priority that the previous task had.
+        
+        do {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
+            }
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .ok, text: "success"))
+            }
+            let req = HTTP.request(GET: "foo")!
+            req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
+            let task = expectationForRequestSuccess(req, startAutomatically: false) { task, response, value in
+                XCTAssert(response === task.networkTask.response)
+                XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+                XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "success")
+            }
+            let networkTask = task.networkTask
+            XCTAssertNotEqual(networkTask.priority, 0.3, "original network task priority")
+            networkTask.priority = 0.3
+            task.resume()
+            waitForExpectations(timeout: 5) { error in
+                guard error == nil else { return }
+                XCTAssert(networkTask !== task.networkTask, "network task didn't change")
+                XCTAssertEqual(task.networkTask.priority, 0.3, "network task priority")
+            }
+        }
+        
+        // Also test user-initiated tasks to ensure they don't reset their priority
+        do {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
+            }
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                completionHandler(HTTPServer.Response(status: .ok, text: "success"))
+            }
+            let req = HTTP.request(GET: "foo")!
+            req.userInitiated = true
+            req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
+            let task = expectationForRequestSuccess(req, startAutomatically: false) { task, response, value in
+                XCTAssert(response === task.networkTask.response)
+                XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+                XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "success")
+            }
+            let networkTask = task.networkTask
+            XCTAssertNotEqual(networkTask.priority, 0.3, "original network task priority")
+            networkTask.priority = 0.3
+            task.resume()
+            waitForExpectations(timeout: 5) { error in
+                guard error == nil else { return }
+                XCTAssert(networkTask !== task.networkTask, "network task didn't change")
+                XCTAssertEqual(task.networkTask.priority, 0.3, "network task priority")
+            }
+        }
+    }
 }
 
 private class KVOLog<T: AnyObject>: NSObject {

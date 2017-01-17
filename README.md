@@ -402,6 +402,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
+#### Development
+
+* Preserve network task priority when retrying tasks.
+
 #### v2.0.1 (2017-01-05)
 
 * Fix PMJSON dependency in CocoaPods podspec.

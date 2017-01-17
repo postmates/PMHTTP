@@ -1181,6 +1181,7 @@ extension HTTPManager {
             case nil:
                 networkTask = inner.session.dataTask(with: request)
             }
+            networkTask.priority = taskInfo.task.networkTask.priority
             let result = taskInfo.task.resetStateToRunning(with: networkTask)
             if !result.ok {
                 assert(result.oldState == .canceled, "internal HTTPManager error: could not reset non-canceled task back to Running state")
@@ -1198,9 +1199,6 @@ extension HTTPManager {
         if let networkTask = networkTask {
             if taskInfo.task.affectsNetworkActivityIndicator {
                 taskInfo.task.setTrackingNetworkActivity()
-            }
-            if taskInfo.task.userInitiated {
-                networkTask.priority = URLSessionTask.highPriority
             }
             networkTask.resume()
             return true
