@@ -405,6 +405,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 #### Development
 
 * Preserve network task priority when retrying tasks.
+* Add convenience Obj-C function `PMHTTPErrorIsFailedResponse` to test PMHTTP errors easily.
 
 #### v2.0.1 (2017-01-05)
 

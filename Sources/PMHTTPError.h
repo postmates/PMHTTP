@@ -63,3 +63,16 @@ extern NSString * const PMHTTPContentTypeErrorKey;
 /// The corresponding value is an \c NSURL with the Location of the response. May be \c nil.
 /// @see <tt>PMHTTPErrorUnexpectedRedirect</tt>.
 extern NSString * const PMHTTPLocationErrorKey;
+
+// Helper functions
+
+/// Tests whether an error is a PMHTTP error representing the given HTTP status code.
+///
+/// \param error The \c NSError to test.
+/// \param statusCode The HTTP status code to test against.
+/// \returns \c YES if the error represents a failed response with the given status code, otherwise \c NO.
+///
+/// \note If the \a statusCode is \c 401 the error will be tested against \c PMHTTPErrorUnauthorized in addition
+///       to \c PMHTTPErrorFailedResponse.
+NS_SWIFT_UNAVAILABLE("use pattern matching against HTTPManagerError")
+BOOL PMHTTPErrorIsFailedResponse(NSError * _Nullable error, NSInteger statusCode);
