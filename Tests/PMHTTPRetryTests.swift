@@ -187,8 +187,8 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
                 XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
                 XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "success")
                 let retryDelay_ms = Int((secondRetryTime - firstRetryTime) * 1000)
-                // the delay should be >= 100ms but not too much larger. Let's pick 150ms as the upper bound.
-                XCTAssert((100...150).contains(retryDelay_ms), "retry delay was \(retryDelay_ms), expected 100...150ms")
+                // the delay should be >= 100ms but not too much larger. Let's pick 200ms as the upper bound.
+                XCTAssert((100...200).contains(retryDelay_ms), "retry delay was \(retryDelay_ms), expected 100...200ms")
             }
             waitForExpectations(timeout: 5, handler: nil)
         }
