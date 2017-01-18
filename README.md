@@ -408,6 +408,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Add convenience Obj-C function `PMHTTPErrorIsFailedResponse` to test PMHTTP errors easily.
 * Add methods `.parseAsImage(scale:)` and `.parseAsImage(scale:using:)` to `HTTPManagerDataRequest` and `HTTPManagerActionRequest`.
 * When a session is reset, cancel any tasks that were created but never resumed.
+* Ensure that the completion block is always deallocated on either the completion queue or on the thread that created the task. Previously there was a very subtle race that meant the completion block could deallocate on the `URLSession`'s delegate queue instead. This only matters if your completion block captures values whose `deinit` cares about the current thread.
 
 #### v2.0.1 (2017-01-05)
 

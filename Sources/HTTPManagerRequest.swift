@@ -535,6 +535,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// - Returns: An `HTTPManagerTask` that represents the operation.
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>) -> Void) -> HTTPManagerTask {
+        let completion = completionThunk(for: completion)
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
             if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
@@ -653,6 +654,30 @@ extension HTTPManagerRequestPerformable {
         let task = createTask(withCompletionQueue: queue, completion: completion)
         task.resume()
         return task
+    }
+    
+    /// A workaround to ensure the completion block deinits on the queue where it's fired from.
+    ///
+    /// Ownership of blocks is not passed directly into the queue that runs them, which means they could get
+    /// deallocated from the calling thread if the queue runs the block before control returns back to that
+    /// calling thread. We guard against that here by forcing the completion block to be released immediately
+    /// after it's fired. This ensures that it can only be deallocated on the completion queue or the thread that
+    /// creates the task in the first place.
+    fileprivate func completionThunk(for block: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<ResultValue>) -> Void) -> (HTTPManagerTask, HTTPManagerTaskResult<ResultValue>) -> Void {
+        var unmanagedThunk: Unmanaged<Thunk<(HTTPManagerTask, HTTPManagerTaskResult<ResultValue>), Void>>? = Unmanaged.passRetained(Thunk(block))
+        return { (task, result) in
+            let thunk = unmanagedThunk.unsafelyUnwrapped.takeRetainedValue()
+            unmanagedThunk = nil // effectively a debug assertion that ensures we don't call the completion block twice
+            thunk.block(task, result)
+        }
+    }
+}
+
+/// A wrapper class that allows us to stuff the block into an `Unmanaged`.
+private class Thunk<Args,ReturnValue> {
+    let block: (Args) -> ReturnValue
+    init(_ block: @escaping (Args) -> ReturnValue) {
+        self.block = block
     }
 }
 
@@ -798,6 +823,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
             parseHandler = self.parseHandler
             expectedContentTypes = self.expectedContentTypes
         }
+        let completion = completionThunk(for: completion)
         return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
             let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
             if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
