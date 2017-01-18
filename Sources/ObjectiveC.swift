@@ -1023,7 +1023,7 @@ extension HTTPManagerActionRequest {
     @objc(parseAsJSONOmitNulls:)
     public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { result -> Any? in
-            return result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
+            return result.value.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
         }))
     }
     
@@ -1074,7 +1074,7 @@ extension HTTPManagerActionRequest {
     public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { result -> Any? in
             var error: NSError?
-            let jsonObject = result.json.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
+            let jsonObject = result.value.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
             if let object = handler(result.response, jsonObject, &error) {
                 return object
             } else if let error = error {

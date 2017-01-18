@@ -60,15 +60,41 @@ public extension HTTPManagerError {
     }
 }
 
-public extension HTTPManagerActionRequest.JSONResult {
+public extension HTTPManagerActionParseResult {
     @available(*, unavailable, renamed: "noContent")
-    static func NoContent(_ response: HTTPURLResponse) -> HTTPManagerActionRequest.JSONResult {
+    static func NoContent(_ response: HTTPURLResponse) -> HTTPManagerActionParseResult<T> {
         return .noContent(response)
     }
     
     @available(*, unavailable, renamed: "success")
-    static func Success(_ response: URLResponse, _ json: JSON) -> HTTPManagerActionRequest.JSONResult {
+    static func Success(_ response: URLResponse, _ json: JSON) -> HTTPManagerActionParseResult<JSON> {
         return .success(response, json)
+    }
+}
+
+// FIXME: Remove this hack when Swift gains support for equality constraints in extensions
+/// This protocol is an implementation detail of deprecation support for
+/// `HTTPManagerActionParseResult`. Do not use it directly.
+public protocol __HTTPManagerActionJSONParseResult {
+    var __HTTPManagerActionJSONParseResult_asJSON: JSON { get }
+}
+extension JSON: __HTTPManagerActionJSONParseResult {
+    /// This protocol is an implementation detail of deprecation support for
+    /// `HTTPManagerActionParseResult`. Do not use it directly.
+    public var __HTTPManagerActionJSONParseResult_asJSON: JSON { return self }
+}
+extension HTTPManagerActionParseResult where T: __HTTPManagerActionJSONParseResult {
+    /// The parsed JSON response, or `nil` if the server returned 204 No Content.
+    @available(*, deprecated, renamed: "value")
+    public var json: JSON? {
+        return value?.__HTTPManagerActionJSONParseResult_asJSON
+    }
+    
+    /// Returns the parsed JSON response, or throws `HTTPManagerError.unexpectedNoContent`
+    /// if the server returned 204 No Content.
+    @available(*, deprecated, renamed: "getValue")
+    public func getJSON() throws -> JSON {
+        return try getValue().__HTTPManagerActionJSONParseResult_asJSON
     }
 }
 
@@ -119,12 +145,12 @@ public extension HTTPManagerParseRequest {
 
 public extension HTTPManagerActionRequest {
     @available(*, unavailable, renamed: "parseAsJSON(using:)")
-    @nonobjc public func parseAsJSONWithHandler<T>(_ handler: @escaping (_ result: JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc public func parseAsJSONWithHandler<T>(_ handler: @escaping (_ result: ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
         return parseAsJSON(using: handler)
     }
     
     @available(*, unavailable, renamed: "parseAsJSON(options:using:)")
-    @nonobjc public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
         return parseAsJSON(options: options, using: handler)
     }
 }

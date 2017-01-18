@@ -985,38 +985,10 @@ private func acceptHeaderValueForContentTypes(_ contentTypes: [String]) -> Strin
 /// Similar to an `HTTPManagerDataRequest` except that it handles 204 No Content
 /// instead of throwing `HTTPManagerError.unexpectedNoContent`.
 public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
-    /// The results of JSON parsing for use in `parseAsJSON(with:)`.
-    public enum JSONResult {
-        /// The server returned 204 No Content.
-        case noContent(HTTPURLResponse)
-        /// The server returned a valid JSON response.
-        case success(URLResponse, JSON)
-        
-        /// The server response.
-        public var response: URLResponse {
-            switch self {
-            case .noContent(let response): return response
-            case .success(let response, _): return response
-            }
-        }
-        
-        /// The parsed JSON response, or `nil` if the server returned 204 No Content.
-        public var json: JSON? {
-            switch self {
-            case .noContent: return nil
-            case .success(_, let json): return json
-            }
-        }
-        
-        /// Returns the parsed JSON response, or throws `HTTPManagerError.unexpectedNoContent`
-        /// if the server returned 204 No Content.
-        public func getJSON() throws -> JSON {
-            switch self {
-            case .noContent(let response): throw HTTPManagerError.unexpectedNoContent(response: response)
-            case .success(_, let json): return json
-            }
-        }
-    }
+    /// The results of parsing for use in parse methods that take handlers.
+    public typealias ParseResult<T> = HTTPManagerActionParseResult<T>
+    @available(*, deprecated, renamed: "ParseResult")
+    public typealias JSONResult = ParseResult<JSON>
     
     /// Returns a new request that parses the data as JSON.
     /// - Note: The parse result is `nil` if and only if the server responded with
@@ -1050,7 +1022,7 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     ///   If the parse handler has side effects and can throw, you should either
     ///   ensure that it's safe to run the parse handler again or set `isIdempotent`
     ///   to `false`.
-    public func parseAsJSON<T>(options: JSONOptions = [], using handler: @escaping (JSONResult) throws -> T) -> HTTPManagerParseRequest<T> {
+    public func parseAsJSON<T>(options: JSONOptions = [], using handler: @escaping (ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
         return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { response, data in
             if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                 // No Content
@@ -1085,6 +1057,39 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
     
     public required init(__copyOfRequest request: HTTPManagerRequest) {
         super.init(__copyOfRequest: request)
+    }
+}
+
+/// The results of parsing for use in `HTTPManagerActionRequest` parse methods that take handlers.
+public enum HTTPManagerActionParseResult<T> {
+    /// The server returned 204 No Content.
+    case noContent(HTTPURLResponse)
+    /// The server returned a valid response.
+    case success(URLResponse, T)
+    
+    /// The server response.
+    public var response: URLResponse {
+        switch self {
+        case .noContent(let response): return response
+        case .success(let response, _): return response
+        }
+    }
+    
+    /// The parsed response, or `nil` if the server returned 204 No Content.
+    public var value: T? {
+        switch self {
+        case .noContent: return nil
+        case .success(_, let json): return json
+        }
+    }
+    
+    /// Returns the parsed response, or throws `HTTPManagerError.unexpectedNoContent` if the server
+    /// returned 204 No Content.
+    public func getValue() throws -> T {
+        switch self {
+        case .noContent(let response): throw HTTPManagerError.unexpectedNoContent(response: response)
+        case .success(_, let value): return value
+        }
     }
 }
 

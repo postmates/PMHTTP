@@ -1155,7 +1155,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{ \"ary\": [1,2,3] }"))
                 }
                 let req = request.parseAsJSON(using: { result -> Int in
-                    return Int(try result.getJSON().getArray("ary", { try $0.reduce(0, { try $0 + $1.getInt64() }) }))
+                    return Int(try result.getValue().getArray("ary", { try $0.reduce(0, { try $0 + $1.getInt64() }) }))
                 })
                 expectationForRequestSuccess(req) { task, response, value in
                     XCTAssertEqual(task.networkTask.currentRequest?.httpMethod, String(method), "current request method (\(method))")
@@ -1206,7 +1206,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 }
                 let req = request.parseAsJSON(using: { result -> Int in
                     XCTAssertEqual((result.response as? HTTPURLResponse)?.statusCode, 204, "parse handler response status code (\(method))")
-                    XCTAssertNil(result.json, "parse handler json value (\(method))")
+                    XCTAssertNil(result.value, "parse handler json value (\(method))")
                     return 42
                 })
                 expectationForRequestSuccess(req) { task, response, value in
@@ -1491,7 +1491,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             let req = HTTP.request(DELETE: "foo")!
             XCTAssert(req.defaultResponseCacheStoragePolicy == .allowed, "request cache storage policy")
             XCTAssert(req.parseAsJSON().defaultResponseCacheStoragePolicy == .notAllowed, "json parse request cache storage policy")
-            XCTAssert(req.parseAsJSON(using: { $0.json }).defaultResponseCacheStoragePolicy == .notAllowed, "json with handler parse request cache storage policy")
+            XCTAssert(req.parseAsJSON(using: { $0.value }).defaultResponseCacheStoragePolicy == .notAllowed, "json with handler parse request cache storage policy")
         }
     }
     
