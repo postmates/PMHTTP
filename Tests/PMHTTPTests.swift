@@ -1641,4 +1641,10 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         waitForExpectations(timeout: 5, handler: nil)
     }
+    
+    func testResetSessionWithStoppedTask() {
+        _ = expectationForRequestCanceled(HTTP.request(GET: "foo"), startAutomatically: false)
+        HTTP.resetSession()
+        waitForExpectations(timeout: 5, handler: nil)
+    }
 }

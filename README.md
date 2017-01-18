@@ -407,6 +407,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Preserve network task priority when retrying tasks.
 * Add convenience Obj-C function `PMHTTPErrorIsFailedResponse` to test PMHTTP errors easily.
 * Add methods `.parseAsImage(scale:)` and `.parseAsImage(scale:using:)` to `HTTPManagerDataRequest` and `HTTPManagerActionRequest`.
+* When a session is reset, cancel any tasks that were created but never resumed.
 
 #### v2.0.1 (2017-01-05)
 

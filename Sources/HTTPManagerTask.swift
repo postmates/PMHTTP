@@ -104,12 +104,23 @@ public final class HTTPManagerTask: NSObject {
     ///
     /// Calling this on a task that's already moved to `.completed` is a no-op.
     public func cancel() {
+        // NB: We don't call _cancel() because we want our KVO notifications to wrap the network
+        // task cancellation too.
         willChangeValue(forKey: "state")
         defer { didChangeValue(forKey: "state") }
         let result = _stateBox.transitionState(to: .canceled)
         if result.completed && result.oldState != .canceled {
             networkTask.cancel()
         }
+    }
+    
+    /// Cancels the HTTPManagerTask without canceling the underlying network task.
+    /// - Returns: `true` if the task could be canceled.
+    internal func _cancel() -> Bool {
+        willChangeValue(forKey: "state")
+        defer { didChangeValue(forKey: "state") }
+        let result = _stateBox.transitionState(to: .canceled)
+        return result.completed && result.oldState != .canceled
     }
     
     internal let userInitiated: Bool

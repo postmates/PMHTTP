@@ -1227,8 +1227,18 @@ extension SessionDelegate: URLSessionDataDelegate {
                 inner.oldSessions.remove(at: idx)
             }
         }
+        // Any tasks in our tasks array must have been created but not resumed.
         for taskInfo in tasks.values {
+            log("canceling zombie task \(taskInfo.task)")
             taskInfo.task.clearTrackingNetworkActivity()
+            if taskInfo.task._cancel() {
+                let queue = DispatchQueue.global(qos: taskInfo.task.userInitiated ? .userInitiated : .utility)
+                queue.async {
+                    autoreleasepool {
+                        taskInfo.processor(taskInfo.task, .canceled, taskInfo.attempt, { _ in return false })
+                    }
+                }
+            }
         }
         tasks.removeAll()
     }
