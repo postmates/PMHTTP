@@ -456,11 +456,19 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. All other values will use their string representation. For
+    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
+    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
     /// - Returns: An `HTTPManagerDataRequest`, or `nil` if the `path`  cannot be
     ///   parsed by `URL`.
     @objc(requestForGET:parameters:)
     public func request(GET path: String, parameters: [String: Any] = [:]) -> HTTPManagerDataRequest! {
-        return request(GET: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
+        return request(GET: path, parameters: expandParameters(parameters))
     }
     /// Creates a GET request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -479,11 +487,19 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the query
     ///   string. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. All other values will use their string representation. For
+    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
+    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
     /// - Returns: An `HTTPManagerActionRequest`, or `nil` if the `path` cannot be
     ///   parsed by `URL`.
     @objc(requestForDELETE:parameters:)
     public func request(DELETE path: String, parameters: [String: Any] = [:]) -> HTTPManagerActionRequest! {
-        return request(DELETE: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
+        return request(DELETE: path, parameters: expandParameters(parameters))
     }
     /// Creates a DELETE request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -502,11 +518,19 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. All other values will use their string representation. For
+    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
+    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `URL`.
     @objc(requestForPOST:parameters:)
     public func request(POST path: String, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest! {
-        return request(POST: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
+        return request(POST: path, parameters: expandParameters(parameters))
     }
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -545,11 +569,19 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. All other values will use their string representation. For
+    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
+    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `URL`.
     @objc(requestForPUT:parameters:)
     public func request(PUT path: String, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest! {
-        return request(PUT: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
+        return request(PUT: path, parameters: expandParameters(parameters))
     }
     /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -588,11 +620,19 @@ extension HTTPManager {
     ///   environment. May be an absolute URL.
     /// - Parameter parameters: The request parameters, passed in the body as
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. All other values will use their string representation. For
+    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
+    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
     /// - Returns: An `HTTPManagerUploadFormRequest`, or `nil` if the `path` cannot be
     ///   parsed by `URL`.
     @objc(requestForPATCH:parameters:)
     public func request(PATCH path: String, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest! {
-        return request(PATCH: path, parameters: parameters.map({ URLQueryItem(name: $0, value: String(describing: $1)) }))
+        return request(PATCH: path, parameters: expandParameters(parameters))
     }
     /// Creates a PATCH request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -642,6 +682,44 @@ extension HTTPManager {
         request.retryBehavior = defaultRetryBehavior
         request.assumeErrorsAreJSON = assumeErrorsAreJSON
         return request
+    }
+    
+    private func expandParameters(_ parameters: [String: Any]) -> [URLQueryItem] {
+        var queryItems: [URLQueryItem] = []
+        queryItems.reserveCapacity(parameters.count) // optimize for no expansion
+        func expand(key prefix: String, dict: [AnyHashable: Any], queryItems: inout [URLQueryItem]) {
+            for (key, value) in dict {
+                process(key: "\(prefix)[\(key)]", value: value, queryItems: &queryItems)
+            }
+        }
+        func expand(key prefix: String, array: [Any], queryItems: inout [URLQueryItem]) {
+            let key = "\(prefix)[]"
+            for elt in array {
+                process(key: key, value: elt, queryItems: &queryItems)
+            }
+        }
+        func expand(key prefix: String, set: Set<AnyHashable>, queryItems: inout [URLQueryItem]) {
+            let key = "\(prefix)[]"
+            for elt in set {
+                process(key: key, value: elt, queryItems: &queryItems)
+            }
+        }
+        func process(key: String, value: Any, queryItems: inout [URLQueryItem]) {
+            switch value {
+            case let dict as [AnyHashable: Any]:
+                expand(key: key, dict: dict, queryItems: &queryItems)
+            case let array as [Any]:
+                expand(key: key, array: array, queryItems: &queryItems)
+            case let set as Set<AnyHashable>:
+                expand(key: key, set: set, queryItems: &queryItems)
+            default:
+                queryItems.append(URLQueryItem(name: key, value: String(describing: value)))
+            }
+        }
+        for (key, value) in parameters {
+            process(key: key, value: value, queryItems: &queryItems)
+        }
+        return queryItems
     }
 }
 
