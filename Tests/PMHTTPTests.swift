@@ -1678,6 +1678,12 @@ final class PMHTTPTests: PMHTTPTestCase {
                 let expect2 = queryItems(["value[][names][]": "bar", "value[][names][]": "foo", "value[][dict][values][]": "1", "value[][dict][values][]": "2", "value[][dict][values][]": "3"])
                 XCTAssert(parameters == expect1 || parameters == expect2, "\(parameters) is not equal to \(expect1) - complicated nesting", file: file, line: line)
             }
+            do {
+                // nested query items
+                let parameters = f(["foo": URLQueryItem(name: "bar", value: "baz"), "qux": URLQueryItem(name: "quux", value: nil), "array": [URLQueryItem(name: "wat", value: "one"), URLQueryItem(name: "frob", value: "grably")]]).parameters
+                let sortedItems = parameters.sorted(by: { $0.name < $1.name })
+                XCTAssertEqual(sortedItems, queryItems(["array[][frob]": "grably", "array[][wat]": "one", "foo[bar]": "baz", "qux[quux]": nil]), "nested query items", file: file, line: line)
+            }
         }
         helper({ HTTP.request(GET: "foo", parameters: $0) })
         helper({ HTTP.request(POST: "foo", parameters: $0) })

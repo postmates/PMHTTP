@@ -458,9 +458,10 @@ extension HTTPManager {
     ///   string. Default is `[:]`.
     ///
     ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
-    ///   recursively expanded. All other values will use their string representation. For
-    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
-    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -489,9 +490,10 @@ extension HTTPManager {
     ///   string. Default is `[:]`.
     ///
     ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
-    ///   recursively expanded. All other values will use their string representation. For
-    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
-    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -520,9 +522,10 @@ extension HTTPManager {
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     ///
     ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
-    ///   recursively expanded. All other values will use their string representation. For
-    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
-    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -571,9 +574,10 @@ extension HTTPManager {
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     ///
     ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
-    ///   recursively expanded. All other values will use their string representation. For
-    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
-    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -622,9 +626,10 @@ extension HTTPManager {
     ///   `application/x-www-form-urlencoded`. Default is `[:]`.
     ///
     ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
-    ///   recursively expanded. All other values will use their string representation. For
-    ///   dictionaries, the recursive expansion will produce keys of the form `"foo[bar]"`. For arrays
-    ///   and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -712,6 +717,8 @@ extension HTTPManager {
                 expand(key: key, array: array, queryItems: &queryItems)
             case let set as Set<AnyHashable>:
                 expand(key: key, set: set, queryItems: &queryItems)
+            case let queryItem as URLQueryItem:
+                queryItems.append(URLQueryItem(name: "\(key)[\(queryItem.name)]", value: queryItem.value))
             default:
                 queryItems.append(URLQueryItem(name: key, value: String(describing: value)))
             }
