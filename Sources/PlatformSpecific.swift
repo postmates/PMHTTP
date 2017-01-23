@@ -179,7 +179,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithHandler:)
-        public func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        public func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return __objc_parseAsImage(scale: 1, handler: handler)
         }
         
@@ -203,7 +203,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithScale:handler:)
-        public func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        public func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(scale: scale, using: { (response, image) in
                 var error: NSError?
                 if let value = handler(response, image, &error) {
@@ -321,7 +321,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithHandler:)
-        public func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        public func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return __objc_parseAsImage(scale: 1, handler: handler)
         }
         
@@ -346,7 +346,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithScale:handler:)
-        public func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+        public func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(scale: scale, using: { (response, image) in
                 var error: NSError?
                 if let value = handler(response, image, &error) {

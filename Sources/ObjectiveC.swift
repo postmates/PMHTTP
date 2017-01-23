@@ -620,7 +620,7 @@ extension HTTPManagerNetworkRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseWithHandler:)
-    public func __objc_parseWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ data: Data, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ data: Data, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parse(using: { response, data -> Any? in
             var error: NSError?
             if let object = handler(response, data, &error) {
@@ -751,7 +751,7 @@ extension HTTPManagerDataRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
@@ -776,7 +776,7 @@ extension HTTPManagerDataRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { response, json -> Any? in
             var error: NSError?
             let jsonObject = omitNulls ? (json.nsNoNull ?? NSNull()) : json.ns
@@ -1045,7 +1045,7 @@ extension HTTPManagerActionRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONWithHandler:)
-    public func __objc_parseAsJSONWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONWithHandler(_ handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
         return __objc_parseAsJSONOmitNulls(false, withHandler: handler)
     }
     
@@ -1071,7 +1071,7 @@ extension HTTPManagerActionRequest {
     ///   discarded. Any side-effects performed by your handler must be safe in
     ///   the event of a cancelation.
     @objc(parseAsJSONOmitNulls:withHandler:)
-    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: NSErrorPointer) -> Any?) -> HTTPManagerObjectParseRequest {
+    public func __objc_parseAsJSONOmitNulls(_ omitNulls: Bool, withHandler handler: @escaping @convention(block) (_ response: URLResponse, _ json: Any?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: parseAsJSON(using: { result -> Any? in
             var error: NSError?
             let jsonObject = result.value.map({ omitNulls ? $0.nsNoNull ?? NSNull() : $0.ns })
