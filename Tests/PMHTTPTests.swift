@@ -1662,27 +1662,27 @@ final class PMHTTPTests: PMHTTPTestCase {
             do {
                 // nested array
                 let parameters = f(["array": ["one", 2, true]]).parameters
-                XCTAssertEqual(parameters, queryItems(["array[]": "one", "array[]": "2", "array[]": "true"]), "nested array", file: file, line: line)
+                XCTAssertEqual(parameters, queryItems(["array": "one", "array": "2", "array": "true"]), "nested array", file: file, line: line)
             }
             do {
                 // nested set
                 let parameters = f(["set": ["one", 2, true] as Set<AnyHashable>]).parameters
                 let sortedItems = parameters.sorted(by: { $0.value ?? "" < $1.value ?? "" })
-                XCTAssertEqual(sortedItems, queryItems(["set[]": "2", "set[]": "one", "set[]": "true"]), "nested set", file: file, line: line)
+                XCTAssertEqual(sortedItems, queryItems(["set": "2", "set": "one", "set": "true"]), "nested set", file: file, line: line)
             }
             do {
                 // more complicated setup
-                let parameters = f(["value": [["names": ["foo", "bar"] as Set<String>], ["dict": ["values": [1,2,3]]]]]).parameters
+                let parameters = f(["value[]": [["names": ["foo", "bar"] as Set<String>], ["dict": ["values[]": [1,2,3]]]]]).parameters
                 // We've got a set, so there's two possible values
-                let expect1 = queryItems(["value[][names][]": "foo", "value[][names][]": "bar", "value[][dict][values][]": "1", "value[][dict][values][]": "2", "value[][dict][values][]": "3"])
-                let expect2 = queryItems(["value[][names][]": "bar", "value[][names][]": "foo", "value[][dict][values][]": "1", "value[][dict][values][]": "2", "value[][dict][values][]": "3"])
+                let expect1 = queryItems(["value[][names]": "foo", "value[][names]": "bar", "value[][dict][values][]": "1", "value[][dict][values][]": "2", "value[][dict][values][]": "3"])
+                let expect2 = queryItems(["value[][names]": "bar", "value[][names]": "foo", "value[][dict][values][]": "1", "value[][dict][values][]": "2", "value[][dict][values][]": "3"])
                 XCTAssert(parameters == expect1 || parameters == expect2, "\(parameters) is not equal to \(expect1) - complicated nesting", file: file, line: line)
             }
             do {
                 // nested query items
-                let parameters = f(["foo": URLQueryItem(name: "bar", value: "baz"), "qux": URLQueryItem(name: "quux", value: nil), "array": [URLQueryItem(name: "wat", value: "one"), URLQueryItem(name: "frob", value: "grably")]]).parameters
+                let parameters = f(["foo": URLQueryItem(name: "bar", value: "baz"), "qux": URLQueryItem(name: "quux", value: nil), "array": [URLQueryItem(name: "wat[]", value: "one"), URLQueryItem(name: "frob", value: "grably")]]).parameters
                 let sortedItems = parameters.sorted(by: { $0.name < $1.name })
-                XCTAssertEqual(sortedItems, queryItems(["array[][frob]": "grably", "array[][wat]": "one", "foo[bar]": "baz", "qux[quux]": nil]), "nested query items", file: file, line: line)
+                XCTAssertEqual(sortedItems, queryItems(["array[frob]": "grably", "array[wat][]": "one", "foo[bar]": "baz", "qux[quux]": nil]), "nested query items", file: file, line: line)
             }
         }
         helper({ HTTP.request(GET: "foo", parameters: $0) })

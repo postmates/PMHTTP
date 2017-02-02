@@ -461,7 +461,13 @@ extension HTTPManager {
     ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
     ///   one element. All other values will use their string representation. For dictionaries and
     ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
-    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -493,7 +499,13 @@ extension HTTPManager {
     ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
     ///   one element. All other values will use their string representation. For dictionaries and
     ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
-    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -525,7 +537,13 @@ extension HTTPManager {
     ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
     ///   one element. All other values will use their string representation. For dictionaries and
     ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
-    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -577,7 +595,13 @@ extension HTTPManager {
     ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
     ///   one element. All other values will use their string representation. For dictionaries and
     ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
-    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -629,7 +653,13 @@ extension HTTPManager {
     ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
     ///   one element. All other values will use their string representation. For dictionaries and
     ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
-    ///   arrays and sets, the recursive expansion will produce keys of the form `"foo[]"`.
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
     ///
     ///   **Important**: For dictionary and set expansion, the order of the values is
     ///     implementation-defined. If the ordering is important, you must expand it yourself.
@@ -694,17 +724,22 @@ extension HTTPManager {
         queryItems.reserveCapacity(parameters.count) // optimize for no expansion
         func expand(key prefix: String, dict: [AnyHashable: Any], queryItems: inout [URLQueryItem]) {
             for (key, value) in dict {
-                process(key: "\(prefix)[\(key)]", value: value, queryItems: &queryItems)
+                let key_ = String(describing: key)
+                let dictKey: String
+                if key_.hasSuffix("[]") {
+                    dictKey = "\(prefix)[\(String(key_.unicodeScalars.dropLast(2)))][]"
+                } else {
+                    dictKey = "\(prefix)[\(key_)]"
+                }
+                process(key: dictKey, value: value, queryItems: &queryItems)
             }
         }
-        func expand(key prefix: String, array: [Any], queryItems: inout [URLQueryItem]) {
-            let key = "\(prefix)[]"
+        func expand(key: String, array: [Any], queryItems: inout [URLQueryItem]) {
             for elt in array {
                 process(key: key, value: elt, queryItems: &queryItems)
             }
         }
-        func expand(key prefix: String, set: Set<AnyHashable>, queryItems: inout [URLQueryItem]) {
-            let key = "\(prefix)[]"
+        func expand(key: String, set: Set<AnyHashable>, queryItems: inout [URLQueryItem]) {
             for elt in set {
                 process(key: key, value: elt, queryItems: &queryItems)
             }
@@ -718,7 +753,13 @@ extension HTTPManager {
             case let set as Set<AnyHashable>:
                 expand(key: key, set: set, queryItems: &queryItems)
             case let queryItem as URLQueryItem:
-                queryItems.append(URLQueryItem(name: "\(key)[\(queryItem.name)]", value: queryItem.value))
+                let dictKey: String
+                if queryItem.name.hasSuffix("[]") {
+                    dictKey = "\(key)[\(String(queryItem.name.unicodeScalars.dropLast(2)))][]"
+                } else {
+                    dictKey = "\(key)[\(queryItem.name)]"
+                }
+                queryItems.append(URLQueryItem(name: dictKey, value: queryItem.value))
             default:
                 queryItems.append(URLQueryItem(name: key, value: String(describing: value)))
             }
