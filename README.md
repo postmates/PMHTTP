@@ -404,6 +404,8 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 #### Development
 
+**Note:** Breaking changes. Next release will be 3.0.0.
+
 * Preserve network task priority when retrying tasks.
 * Add convenience Obj-C function `PMHTTPErrorIsFailedResponse` to test PMHTTP errors easily.
 * Add methods `.parseAsImage(scale:)` and `.parseAsImage(scale:using:)` to `HTTPManagerDataRequest` and `HTTPManagerActionRequest`.
@@ -411,8 +413,9 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Ensure that the completion block is always deallocated on either the completion queue or on the thread that created the task. Previously there was a very subtle race that meant the completion block could deallocate on the `URLSession`'s delegate queue instead. This only matters if your completion block captures values whose `deinit` cares about the current thread.
 * Expand dictionaries, arrays, and sets passed as parameters. Dictionaries produce keys of the form `"foo[bar]"` and arrays and sets just use the key multiple times (e.g. `"foo=bar&foo=qux"`). The expansion is recursive. The order of values from expanded dictionaries and sets is implementation-defined. If you want `"array[]"` syntax, then put the `"[]"` in the key itself. See the documentation comments for more details. Do note that this behavior is slightly different from what AFNetworking does.
 * Also expand nested `URLQueryItem`s in parameters. The resulting parameter uses dictionary syntax (`"foo[bar]"`).
-* Change the type signature of the Obj-C parse methods that take handlers to make the error parameter non-optional. This is technically a breaking change for Swift, but this API is intended for Obj-C and nobody should be calling it from Swift code, and in Obj-C it's not a breaking change.
+* Change the type signature of the Obj-C parse methods that take handlers to make the error parameter non-optional.
 * Provide a callback that can be used for session-level authentication challenges. This can be used to implement SSL pinning using something like [TrustKit](https://github.com/datatheorem/TrustKit).
+* Rework how authorization works. The `defaultCredential` and `credential` properties have been replaced with `defaultAuth` and `auth`, using a brand new protocol `HTTPAuth`. An implementation of Basic authentication is provided with the `HTTPBasicAuth` object. This new authentication mechanism has been designed to allow for OAuth2-style refreshes.
 
 #### v2.0.1 (2017-01-05)
 

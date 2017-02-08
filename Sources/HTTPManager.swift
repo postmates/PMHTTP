@@ -56,15 +56,14 @@ public final class HTTPManager: NSObject {
     /// Changes to this property affects any newly-created requests but do not
     /// affect any existing requests or any tasks that are in-progress.
     ///
-    /// Changing this property also resets the default credential if the
-    /// new value differs from the old one. Setting this property to the existing
-    /// value has no effect.
+    /// Changing this property also resets the default auth if the new value differs from the old
+    /// one. Setting this property to the existing value has no effect.
     ///
     /// - Important: If `environment` is `nil`, requests created with relative paths will fail,
     ///   but requests created with absolute URLs will continue to work. See `HTTPManagerConfigurable`
     ///   for how to configure the shared `HTTPManager` prior to first use.
     ///
-    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`, `defaultCredential`.
+    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`, `defaultAuth`.
     public var environment: Environment? {
         get {
             return inner.sync({ $0.environment })
@@ -73,7 +72,7 @@ public final class HTTPManager: NSObject {
             inner.asyncBarrier {
                 if $0.environment != newValue {
                     $0.environment = newValue
-                    $0.defaultCredential = nil
+                    $0.defaultAuth = nil
                 }
             }
         }
@@ -145,34 +144,26 @@ public final class HTTPManager: NSObject {
         }
     }
     
-    /// The credential to use for HTTP requests. The default value is `nil`.
+    /// The auth to use for HTTP requests. The default value is `nil`.
     ///
-    /// Individual requests may override this credential with their own credential.
+    /// Individual requests may override this auth with their own auth.
     ///
     /// Changes to this property affect any newly-created requests but do not affect any existing
     /// requests or any tasks that are in-progress.
     ///
-    /// - Note: This credential is only used for HTTP requests that are located within the current
+    /// - Note: This auth is only used for HTTP requests that are located within the current
     ///   environment's base URL. If a request is created with an absolute path or absolute URL, and
     ///   the resulting URL does not represent a resource found within the environment's base URL,
-    ///   the request will not be assigned the default credential.
+    ///   the request will not be assigned the default auth.
     ///
-    /// - Important: Only password-based credentials are supported. It is an error to assign any
-    ///   other type of credential.
-    ///
-    /// - SeeAlso: `environment`.
-    public var defaultCredential: URLCredential? {
+    /// - SeeAlso: `environment`, `HTTPBasicAuth`.
+    public var defaultAuth: HTTPAuth? {
         get {
-            return inner.sync({ $0.defaultCredential })
+            return inner.sync({ $0.defaultAuth })
         }
         set {
-            var newValue = newValue
-            if let credential = newValue, credential.user == nil || !credential.hasPassword {
-                NSLog("[HTTPManager] Warning: Attempting to set default credential with a non-password-based credential")
-                newValue = nil
-            }
             inner.asyncBarrier {
-                $0.defaultCredential = newValue
+                $0.defaultAuth = newValue
             }
         }
     }
@@ -252,7 +243,7 @@ public final class HTTPManager: NSObject {
         var environment: Environment?
         var sessionConfiguration: URLSessionConfiguration = .default
         var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)?
-        var defaultCredential: URLCredential?
+        var defaultAuth: HTTPAuth?
         var defaultRetryBehavior: HTTPManagerRetryBehavior?
         var defaultAssumeErrorsAreJSON: Bool = false
 
@@ -739,16 +730,16 @@ extension HTTPManager {
     }
     
     private func constructRequest<T: HTTPManagerRequest>(_ path: String, f: (URL) -> T) -> T? {
-        let (environment, credential, defaultRetryBehavior, assumeErrorsAreJSON) = inner.sync({ inner -> (Environment?, URLCredential?, HTTPManagerRetryBehavior?, Bool) in
-            return (inner.environment, inner.defaultCredential, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
+        let (environment, auth, defaultRetryBehavior, assumeErrorsAreJSON) = inner.sync({ inner -> (Environment?, HTTPAuth?, HTTPManagerRetryBehavior?, Bool) in
+            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
         })
         // FIXME: Get rid of NSURL when https://github.com/apple/swift/pull/3910 is fixed.
         guard let url = NSURL(string: path, relativeTo: environment?.baseURL) as URL? else { return nil }
         let request = f(url)
-        if let credential = credential, let environment = environment {
+        if let auth = auth, let environment = environment {
             // make sure the requested entity is within the space defined by baseURL
             if environment.isPrefix(of: url) {
-                request.credential = credential
+                request.auth = auth
             }
         }
         request.retryBehavior = defaultRetryBehavior
@@ -823,13 +814,13 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     ///   `FailedResponse`.
     case failedResponse(statusCode: Int, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// A 401 Unauthorized HTTP response was returned.
-    /// - Parameter credential: The `URLCredential` that was used in the request, if any.
+    /// - Parameter auth: The `HTTPAuth` that was used in the request, if any.
     /// - Parameter response: The `HTTPURLResponse` object.
     /// - Parameter body: The body of the response, if any.
     /// - Parameter bodyJson: If the response `Content-Type` is `application/json` or `text/json`, contains
     ///   the results of decoding the body as JSON. If the decode fails, or the `Content-Type` is not
     ///   `application/json` or `text/json`, `bodyJson` is `nil`.
-    case unauthorized(credential: URLCredential?, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
+    case unauthorized(auth: HTTPAuth?, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.
     /// - Note: Custom parse requests (using `parse(with:)`) do not throw this automatically, but
@@ -865,19 +856,12 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
                 s += "body: \(describeData(body)))"
             }
             return s
-        case let .unauthorized(credential, response, body, json):
+        case let .unauthorized(auth, response, body, json):
             var s = "Unauthorized("
-            if let credential = credential {
-                if let user = credential.user {
-                    s += "user: \(String(reflecting: user))"
-                    if !credential.hasPassword {
-                        s += " (no password)"
-                    }
-                } else {
-                    s += "invalid credential"
-                }
+            if let auth = auth {
+                s += String(reflecting: auth)
             } else {
-                s += "no credential"
+                s += "no auth"
             }
             s += ", \(response.url?.relativeString ?? "nil"), "
             if let json = json {
@@ -901,8 +885,8 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
         case let .failedResponse(statusCode, response, body, json):
             let statusText = HTTPURLResponse.localizedString(forStatusCode: statusCode)
             return "HTTPManagerError.failedResponse(statusCode: \(statusCode) \(statusText), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
-        case let .unauthorized(credential, response, body, json):
-            return "HTTPManagerError.unauthorized(credential: \(credential.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+        case let .unauthorized(auth, response, body, json):
+            return "HTTPManagerError.unauthorized(auth: \(auth.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unexpectedContentType(contentType, response, body):
             return "HTTPManagerError.unexpectedContentType(contentType: \(String(reflecting: contentType)), response: \(response), body: \(describeData(body)))"
         case let .unexpectedNoContent(response):
@@ -936,6 +920,13 @@ private func describeData(_ data: Data) -> String {
 /// `true` for GET, HEAD, PUT, DELETE, OPTIONS, and TRACE requests, and `false` otherwise.
 ///
 /// - Note: Retry behaviors are evaluated on an arbitrary dispatch queue.
+///
+/// - Note: If a task is retried after an authentication failure through the use of an `HTTPAuth`
+///   object, the attempt count for `HTTPManagerRetryBehavior` is reset to zero.
+///
+/// - Note: If the request fails due to a 401 Unauthorized, and the request's `auth` property was
+///   set, the `HTTPManagerRetryBehavior` is not consulted. When the `auth` property is set, the
+///   only way to retry a 401 Unauthorized is via the `HTTPAuth` object.
 public final class HTTPManagerRetryBehavior: NSObject {
     /// Returns a retry behavior that evaluates a block.
     ///
@@ -1262,13 +1253,18 @@ private class SessionDelegate: NSObject {
     struct TaskInfo {
         let task: HTTPManagerTask
         let uploadBody: UploadBody?
-        let processor: (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ attempt: Int, _ retry: @escaping (HTTPManager) -> Bool) -> Void
+        let originalRequest: URLRequest
+        let authToken: Any?
+        let processor: (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void
         var data: NSMutableData? = nil
         var attempt: Int = 0
+        var retriedAuth: Bool = false
         
-        init(task: HTTPManagerTask, uploadBody: UploadBody? = nil, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ attempt: Int, _ retry: @escaping (HTTPManager) -> Bool) -> Void) {
+        init(task: HTTPManagerTask, uploadBody: UploadBody?, originalRequest: URLRequest, authToken: Any?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void) {
             self.task = task
             self.uploadBody = uploadBody
+            self.originalRequest = originalRequest
+            self.authToken = authToken
             self.processor = processor
         }
     }
@@ -1284,19 +1280,25 @@ extension HTTPManager {
     ///   for the task to transition to `.completed` (unless it's already been canceled).
     /// - Returns: An `HTTPManagerTask`.
     /// - Important: After creating the task, you must start it by calling the `resume()` method.
-    internal func createNetworkTaskWithRequest(_ request: HTTPManagerRequest, uploadBody: UploadBody?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ attempt: Int, _ retry: @escaping (HTTPManager) -> Bool) -> Void) -> HTTPManagerTask {
+    internal func createNetworkTaskWithRequest(_ request: HTTPManagerRequest, uploadBody: UploadBody?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void) -> HTTPManagerTask {
         var urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
         if case .formUrlEncoded(let queryItems)? = uploadBody {
             uploadBody = .data(FormURLEncoded.data(for: queryItems))
         }
         uploadBody?.evaluatePending()
+        // NB: We are evaluating the mock before adding the auth headers. If we ever add the ability
+        // to conditionally mock a request depending on the evaluation of a block, we should
+        // explicitly document this behavior.
         if let mock = request.mock ?? mockManager.mockForRequest(urlRequest, environment: environment) {
             // we have to go through NSMutableURLRequest in order to set the protocol property
             let mutReq = unsafeDowncast((urlRequest as NSURLRequest).mutableCopy() as AnyObject, to: NSMutableURLRequest.self)
             URLProtocol.setProperty(mock, forKey: HTTPMockURLProtocol.requestProperty, in: mutReq)
             urlRequest = mutReq as URLRequest
         }
+        let originalUrlRequest = urlRequest
+        request.auth?.applyHeaders(to: &urlRequest)
+        let authToken = request.auth?.opaqueToken?(for: urlRequest)
         let apiTask = inner.sync { inner -> HTTPManagerTask in
             let networkTask: URLSessionTask
             switch uploadBody {
@@ -1308,7 +1310,7 @@ extension HTTPManager {
                 networkTask = inner.session.dataTask(with: urlRequest)
             }
             let apiTask = HTTPManagerTask(networkTask: networkTask, request: request, sessionDelegateQueue: inner.session.delegateQueue)
-            let taskInfo = SessionDelegate.TaskInfo(task: apiTask, uploadBody: uploadBody, processor: processor)
+            let taskInfo = SessionDelegate.TaskInfo(task: apiTask, uploadBody: uploadBody, originalRequest: originalUrlRequest, authToken: authToken, processor: processor)
             inner.session.delegateQueue.addOperation { [sessionDelegate=inner.sessionDelegate!] in
                 assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
                 sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
@@ -1330,12 +1332,12 @@ extension HTTPManager {
     /// The newly-created `URLSessionTask` is automatically resumed.
     ///
     /// - Parameter taskInfo: The `TaskInfo` object representing the task to retry.
+    /// - Parameter isAuthRetry: Whether this is a retry requested by an `HTTPAuth` object.
     /// - Returns: `true` if the task is retrying, or `false` if it could not be retried
     ///   (e.g. because it's already been canceled).
-    fileprivate func retryNetworkTask(_ taskInfo: SessionDelegate.TaskInfo) -> Bool {
-        guard let request = taskInfo.task.networkTask.originalRequest else {
-            preconditionFailure("internal HTTPManager error: networkTask.originalRequest is nil")
-        }
+    fileprivate func retryNetworkTask(_ taskInfo: SessionDelegate.TaskInfo, isAuthRetry: Bool) -> Bool {
+        var request = taskInfo.originalRequest
+        taskInfo.task.auth?.applyHeaders(to: &request)
         let networkTask = inner.sync { inner -> URLSessionTask? in
             let networkTask: URLSessionTask
             switch taskInfo.uploadBody {
@@ -1354,7 +1356,12 @@ extension HTTPManager {
                 return nil
             }
             var taskInfo = taskInfo
-            taskInfo.attempt += 1
+            if isAuthRetry {
+                taskInfo.attempt = 0
+                taskInfo.retriedAuth = true
+            } else {
+                taskInfo.attempt += 1
+            }
             inner.session.delegateQueue.addOperation { [sessionDelegate=inner.sessionDelegate!] in
                 assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
                 sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
@@ -1400,7 +1407,7 @@ extension SessionDelegate: URLSessionDataDelegate {
                 let queue = DispatchQueue.global(qos: taskInfo.task.userInitiated ? .userInitiated : .utility)
                 queue.async {
                     autoreleasepool {
-                        taskInfo.processor(taskInfo.task, .canceled, taskInfo.attempt, { _ in return false })
+                        taskInfo.processor(taskInfo.task, .canceled, nil, taskInfo.attempt, { _ in false })
                     }
                 }
             }
@@ -1483,26 +1490,27 @@ extension SessionDelegate: URLSessionDataDelegate {
             assert(result.ok, "internal HTTPManager error: tried to cancel task that's already completed")
             queue.async {
                 autoreleasepool {
-                    processor(apiTask, .canceled, taskInfo.attempt, { _ in return false })
+                    processor(apiTask, .canceled, nil, taskInfo.attempt, { _ in false })
                 }
             }
         } else {
             let result = apiTask.transitionState(to: .processing)
             if result.ok {
                 assert(result.oldState == .running, "internal HTTPManager error: tried to process task that's already processing")
-                queue.async {
-                    func retry(_ apiManager: HTTPManager) -> Bool {
-                        return apiManager.retryNetworkTask(taskInfo)
+                queue.async { [weak apiManager] in
+                    func retry(isAuthRetry: Bool) -> Bool {
+                        return apiManager?.retryNetworkTask(taskInfo, isAuthRetry: isAuthRetry) ?? false
                     }
                     autoreleasepool {
+                        let authToken: Any?? = taskInfo.retriedAuth ? .none : .some(taskInfo.authToken)
                         if let error = error {
-                            processor(apiTask, .error(task.response, error), taskInfo.attempt, retry)
+                            processor(apiTask, .error(task.response, error), authToken, taskInfo.attempt, retry)
                         } else if let response = task.response {
-                            processor(apiTask, .success(response, taskInfo.data as Data? ?? Data()), taskInfo.attempt, retry)
+                            processor(apiTask, .success(response, taskInfo.data as Data? ?? Data()), authToken, taskInfo.attempt, retry)
                         } else {
                             // this should be unreachable
                             let userInfo = [NSLocalizedDescriptionKey: "internal error: task response was nil with no error"]
-                            processor(apiTask, .error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)), taskInfo.attempt, retry)
+                            processor(apiTask, .error(nil, NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: userInfo)), authToken, taskInfo.attempt, retry)
                         }
                     }
                 }
@@ -1511,7 +1519,7 @@ extension SessionDelegate: URLSessionDataDelegate {
                 // We must have canceled concurrently with the networking portion finishing
                 queue.async {
                     autoreleasepool {
-                        processor(apiTask, .canceled, taskInfo.attempt, { _ in return false })
+                        processor(apiTask, .canceled, nil, taskInfo.attempt, { _ in return false })
                     }
                 }
             }

@@ -64,7 +64,7 @@ class PMHTTPTestCase: XCTestCase {
         httpServer.reset()
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)")!
         HTTP.sessionConfiguration.urlCache?.removeAllCachedResponses()
-        HTTP.defaultCredential = nil
+        HTTP.defaultAuth = nil
         HTTP.defaultRetryBehavior = nil
     }
     
