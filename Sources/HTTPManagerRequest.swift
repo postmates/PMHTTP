@@ -536,29 +536,11 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// - Important: After you create the task, you must start it by calling the `resume()` method.
     public func createTask(withCompletionQueue queue: OperationQueue? = nil, completion: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Data>) -> Void) -> HTTPManagerTask {
         let completion = completionThunk(for: completion)
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
-            let result = HTTPManagerNetworkRequest.taskProcessor(task, result)
-            if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
-                retryBehavior.handler(task, error, attempt, { shouldRetry in
-                    if shouldRetry, let apiManager = apiManager, retry(apiManager) {
-                        // The task is now retrying
-                        return
-                    } else if let queue = queue {
-                        queue.addOperation {
-                            HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
-                        }
-                    } else {
-                        HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
-                    }
-                })
-            } else if let queue = queue {
-                queue.addOperation {
-                    HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
-                }
-            } else {
-                HTTPManagerNetworkRequest.taskCompletion(task, result, completion)
-            }
-            })
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody,
+                                                       processor: networkTaskProcessor(apiManager: apiManager, queue: queue,
+                                                                                       processor: HTTPManagerNetworkRequest.taskProcessor,
+                                                                                       taskCompletion: HTTPManagerNetworkRequest.taskCompletion,
+                                                                                       completion: completion))
     }
     
     /// Executes a block with `self` as the argument, and then returns `self` again.
@@ -678,6 +660,32 @@ private class Thunk<Args,ReturnValue> {
     let block: (Args) -> ReturnValue
     init(_ block: @escaping (Args) -> ReturnValue) {
         self.block = block
+    }
+}
+
+private func networkTaskProcessor<T>(apiManager: HTTPManager, queue: OperationQueue?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>) -> HTTPManagerTaskResult<T>, taskCompletion: @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>, @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) -> Void, completion: @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) -> (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ attempt: Int, _ retry: @escaping (HTTPManager) -> Bool) -> Void {
+    return { [weak apiManager] (task, result, attempt, retry) in
+        let result = processor(task, result)
+        if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
+            retryBehavior.handler(task, error, attempt, { shouldRetry in
+                if shouldRetry, let apiManager = apiManager, retry(apiManager) {
+                    // The task is now retrying
+                    return
+                } else if let queue = queue {
+                    queue.addOperation {
+                        taskCompletion(task, result, completion)
+                    }
+                } else {
+                    taskCompletion(task, result, completion)
+                }
+            })
+        } else if let queue = queue {
+            queue.addOperation {
+                taskCompletion(task, result, completion)
+            }
+        } else {
+            taskCompletion(task, result, completion)
+        }
     }
 }
 
@@ -824,29 +832,11 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
             expectedContentTypes = self.expectedContentTypes
         }
         let completion = completionThunk(for: completion)
-        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody, processor: { [weak apiManager] task, result, attempt, retry in
-            let result = HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler)
-            if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
-                retryBehavior.handler(task, error, attempt, { shouldRetry in
-                    if shouldRetry, let apiManager = apiManager, retry(apiManager) {
-                        // The task is now retrying
-                        return
-                    } else if let queue = queue {
-                        queue.addOperation {
-                            HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
-                        }
-                    } else {
-                        HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
-                    }
-                })
-            } else if let queue = queue {
-                queue.addOperation {
-                    HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
-                }
-            } else {
-                HTTPManagerParseRequest<T>.taskCompletion(task, result, completion)
-            }
-            })
+        return apiManager.createNetworkTaskWithRequest(self, uploadBody: uploadBody,
+                                                       processor: networkTaskProcessor(apiManager: apiManager, queue: queue,
+                                                                                       processor: { (task, result) in HTTPManagerParseRequest<T>.taskProcessor(task, result, expectedContentTypes, parseHandler) },
+                                                                                       taskCompletion: HTTPManagerParseRequest<T>.taskCompletion,
+                                                                                       completion: completion))
     }
     
     /// Executes a block with `self` as the argument, and then returns `self` again.
