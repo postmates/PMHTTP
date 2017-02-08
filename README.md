@@ -318,7 +318,7 @@ responses for appropriate caching headers and explicitly prevents responses from
 if they do not include the appropriate cache directives. By default this behavior is only applied
 to requests created with `.parseAsJSON()` or `.parseAsJSON(with:)`, although it can be
 overridden on a per-request basis (see `HTTPManagerRequest.defaultResponseCacheStoragePolicy`).
-Notably, requests created with `.parse(with:)` do not use this cache strategy as it would
+Notably, requests created with `.parse(using:)` do not use this cache strategy as it would
 interfere with caching image requests.
 
 #### Mocking
