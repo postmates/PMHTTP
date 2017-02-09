@@ -109,6 +109,42 @@ public final class HTTPManager: NSObject {
         }
     }
     
+    /// The authentication handler for session-level authentication challenges.
+    ///
+    /// This handler is invoked for all session-level authentication challenges. At the time of this
+    /// writing, these challenges are `NSURLAuthenticationMethodNTLM`,
+    /// `NSURLAuthenticationMethodNegotiate`, `NSURLAuthenticationMethodClientCertificate`, and
+    /// `NSURLAuthenticationMethodServerTrust`.
+    ///
+    /// The default value of `nil` means to use the system-provided default behavior.
+    ///
+    /// This property is typically used to implement SSL Pinning using something like
+    /// [TrustKit](https://github.com/datatheorem/TrustKit).
+    ///
+    /// - Parameter httpManager: The `HTTPManager` that the session belongs to.
+    /// - Parameter challenge: the `URLAuthenticationChallenge` that contains the request for
+    ///   authentication.
+    /// - Parameter completionHandler: A completion block that must be invoked with the results.
+    ///
+    /// - Important: This handler must invoke its completion handler.
+    ///
+    /// - SeeAlso: `URLSessionDelegate.urlSession(_:didReceive:completionHandler:)`.
+    public var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)? {
+        get {
+            return inner.sync({ $0.sessionLevelAuthenticationHandler })
+        }
+        set {
+            inner.asyncBarrier {
+                $0.sessionLevelAuthenticationHandler = newValue
+                if let session = $0.session {
+                    session.delegateQueue.addOperation { [delegate=$0.sessionDelegate!] in
+                        delegate.sessionLevelAuthenticationHandler = newValue
+                    }
+                }
+            }
+        }
+    }
+    
     /// The credential to use for HTTP requests. The default value is `nil`.
     ///
     /// Individual requests may override this credential with their own credential.
@@ -215,6 +251,7 @@ public final class HTTPManager: NSObject {
     fileprivate class Inner {
         var environment: Environment?
         var sessionConfiguration: URLSessionConfiguration = .default
+        var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)?
         var defaultCredential: URLCredential?
         var defaultRetryBehavior: HTTPManagerRetryBehavior?
         var defaultAssumeErrorsAreJSON: Bool = false
@@ -1212,6 +1249,8 @@ private class SessionDelegate: NSObject {
     
     var tasks: [TaskIdentifier: TaskInfo] = [:]
     
+    var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)?
+    
     init(apiManager: HTTPManager) {
         self.apiManager = apiManager
         super.init()
@@ -1367,6 +1406,15 @@ extension SessionDelegate: URLSessionDataDelegate {
             }
         }
         tasks.removeAll()
+    }
+    
+    @objc func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        log("didReceiveChallenge: \(challenge)")
+        guard let apiManager = apiManager, let sessionLevelAuthenticationHandler = sessionLevelAuthenticationHandler else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        sessionLevelAuthenticationHandler(apiManager, challenge, completionHandler)
     }
     
     @objc func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
