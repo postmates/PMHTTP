@@ -13,6 +13,7 @@
 //
 
 import Foundation
+import Security
 import CocoaAsyncSocket
 @testable import PMHTTP
 
@@ -30,11 +31,30 @@ final class HTTPServer {
     ///   preferably occur when the HTTPServer is not running.
     static var enableDebugLogging: Bool = false
     
-    /// Returns the new `HTTPServer` instance.
+    /// Returns a new `HTTPServer` instance.
+    ///
+    /// The returned server handles unencrypted HTTP connections.
+    ///
     /// - Throws: Throws an error if the socket can't be configured.
-    init() throws {
+    convenience init() throws {
+        try self.init(sslItems: nil)
+    }
+    
+    /// Returns a new `HTTPServer` instance using SSL/TLS.
+    ///
+    /// The returned server handles encrypted HTTPS connections.
+    ///
+    /// - Parameter identity: The `SecIdentity` containing the private key and certificate.
+    /// - Parameter certificates: Zero or more certificates to use in the certificate chain.
+    ///
+    /// - Throws: Throws an error if the socket can't be configured.
+    convenience init(identity: SecIdentity, certificates: [SecCertificate]) throws {
+        try self.init(sslItems: (CollectionOfOne(identity as Any) + certificates.lazy.map({ $0 as Any })) as CFArray)
+    }
+    
+    private init(sslItems: CFArray?) throws {
         shared = QueueConfined(label: "HTTPServer internal queue", value: Shared())
-        listener = Listener(shared: shared)
+        listener = Listener(shared: shared, sslItems: sslItems)
         try listener.socket.accept(onInterface: "lo0", port: 0)
         listener.log("Listening")
     }
@@ -618,9 +638,11 @@ final class HTTPServer {
         let socket = GCDAsyncSocket()
         let queue = DispatchQueue(label: "HTTPServer listen queue")
         var connections: [Connection] = []
+        let sslItems: CFArray?
         
-        init(shared: QueueConfined<Shared>) {
+        init(shared: QueueConfined<Shared>, sslItems: CFArray?) {
             self.shared = shared
+            self.sslItems = sslItems
             super.init()
             socket.setDelegate(self, delegateQueue: queue)
         }
@@ -663,6 +685,9 @@ final class HTTPServer {
             let connection = Connection(shared: shared, listener: self, socket: newSocket)
             log("New connection (id: \(connection.connectionId)) from \(newSocket.connectedHost):\(newSocket.connectedPort)")
             connections.append(connection)
+            if let sslItems = sslItems {
+                connection.startTLS([kCFStreamSSLIsServer as String: kCFBooleanTrue, kCFStreamSSLCertificates as String: sslItems])
+            }
             connection.readRequestLine()
         }
         
@@ -696,7 +721,7 @@ final class HTTPServer {
         
         let connectionId: Int32 // DEBUG
         
-        static var lastConnectionId: Int32 = 0 // DEBUG
+        private static var lastConnectionId: Int32 = 0 // DEBUG
         
         init(shared: QueueConfined<Shared>, listener: Listener, socket: GCDAsyncSocket) {
             self.shared = shared
@@ -727,6 +752,11 @@ final class HTTPServer {
             }
             socket.delegate = nil
             socket.disconnect()
+        }
+        
+        func startTLS(_ tlsSettings: [String: NSObject]?) {
+            log("Starting TLS")
+            socket.startTLS(tlsSettings)
         }
         
         func readRequestLine() {
@@ -1084,6 +1114,10 @@ final class HTTPServer {
                     }
                 }
             }
+        }
+        
+        @objc func socketDidSecure(_ sock: GCDAsyncSocket) {
+            log("TLS established")
         }
     }
 }

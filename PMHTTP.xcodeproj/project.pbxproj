@@ -41,6 +41,8 @@
 		9ED4FA181CC072F2001A0693 /* MultipartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA171CC072F2001A0693 /* MultipartTests.swift */; };
 		9ED5D3621D936295007C2A65 /* Deprecations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED5D3611D936295007C2A65 /* Deprecations.swift */; };
 		9ED901301E2EDB4E00332D39 /* ImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED9012F1E2EDB4E00332D39 /* ImageTests.swift */; };
+		9EEF318F1E4D4F440086AAFF /* SSLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF318E1E4D4F440086AAFF /* SSLTests.swift */; };
+		9EEF31911E4D50A20086AAFF /* PMHTTP Certificates.p12 in Resources */ = {isa = PBXBuildFile; fileRef = 9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */; };
 		9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF69F51D2C343E00C6E603 /* KVOTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -97,6 +99,8 @@
 		9ED4FA171CC072F2001A0693 /* MultipartTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipartTests.swift; sourceTree = "<group>"; };
 		9ED5D3611D936295007C2A65 /* Deprecations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Deprecations.swift; sourceTree = "<group>"; };
 		9ED9012F1E2EDB4E00332D39 /* ImageTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageTests.swift; sourceTree = "<group>"; };
+		9EEF318E1E4D4F440086AAFF /* SSLTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SSLTests.swift; sourceTree = "<group>"; };
+		9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PMHTTP Certificates.p12"; sourceTree = "<group>"; };
 		9EEF69F51D2C343E00C6E603 /* KVOTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KVOTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -200,11 +204,13 @@
 				9ED4FA171CC072F2001A0693 /* MultipartTests.swift */,
 				9ED9012F1E2EDB4E00332D39 /* ImageTests.swift */,
 				9EA4EE361CBC197D00E4E531 /* MockingTests.swift */,
+				9EEF318E1E4D4F440086AAFF /* SSLTests.swift */,
 				9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */,
 				9EEF69F51D2C343E00C6E603 /* KVOTests.swift */,
 				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
 				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
+				9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */,
 			);
 			name = PMHTTPTests;
 			path = Tests;
@@ -324,6 +330,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EEF31911E4D50A20086AAFF /* PMHTTP Certificates.p12 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,6 +396,7 @@
 				9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */,
 				9E11A8DC1D1B4AC100D63318 /* NetworkActivityTests.swift in Sources */,
 				9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */,
+				9EEF318F1E4D4F440086AAFF /* SSLTests.swift in Sources */,
 				9E8C1E441CAF50A6000D7FA2 /* PMHTTPRetryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
