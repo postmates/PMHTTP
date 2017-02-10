@@ -412,6 +412,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Expand dictionaries, arrays, and sets passed as parameters. Dictionaries produce keys of the form `"foo[bar]"` and arrays and sets just use the key multiple times (e.g. `"foo=bar&foo=qux"`). The expansion is recursive. The order of values from expanded dictionaries and sets is implementation-defined. If you want `"array[]"` syntax, then put the `"[]"` in the key itself. See the documentation comments for more details. Do note that this behavior is slightly different from what AFNetworking does.
 * Also expand nested `URLQueryItem`s in parameters. The resulting parameter uses dictionary syntax (`"foo[bar]"`).
 * Change the type signature of the Obj-C parse methods that take handlers to make the error parameter non-optional. This is technically a breaking change for Swift, but this API is intended for Obj-C and nobody should be calling it from Swift code, and in Obj-C it's not a breaking change.
+* Provide a callback that can be used for session-level authentication challenges. This can be used to implement SSL pinning using something like [TrustKit](https://github.com/datatheorem/TrustKit).
 
 #### v2.0.1 (2017-01-05)
 
