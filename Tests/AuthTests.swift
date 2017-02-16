@@ -214,4 +214,147 @@ final class AuthTests: PMHTTPTestCase {
         expectationForRequestSuccess(HTTP.request(GET: "foo").with({ $0.auth = Auth(retry: true) }))
         waitForExpectations(timeout: 5, handler: nil)
     }
+    
+    func testRefreshableAuth() {
+        class TokenAuth: HTTPRefreshableAuth {
+            init(token: String, refreshToken: String) {
+                self.refreshToken = refreshToken
+                super.init(info: token, authenticationHeadersBlock: { (request, token) -> [String: String] in
+                    return ["Authorization": "Test \(token)"]
+                }) { (response, body, token, completion) -> HTTPManagerTask? in
+                    return HTTP.request(GET: "token/refresh", parameters: ["token": refreshToken])
+                        .with({ $0.userInitiated = true })
+                        .parseAsJSON(using: { try $1.getString("token") })
+                        .performRequest { (task, result) in
+                            completion(result.value, result.isSuccess)
+                    }
+                }
+            }
+            
+            let refreshToken: String
+        }
+        
+        // Successful refresh
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+            XCTAssertEqual(request.urlComponents.query, "token=refresh123", "request query")
+            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{\"token\": \"newToken\"}"))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test newToken", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo").with({ $0.auth = TokenAuth(token: "oldToken", refreshToken: "refresh123") }))
+        waitForExpectations(timeout: 5, handler: nil)
+        
+        // Refresh worked but new token isn't valid
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test splat", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+            XCTAssertEqual(request.urlComponents.query, "token=fribbit", "request query")
+            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{\"token\": \"kumquat\"}"))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test kumquat", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.auth = TokenAuth(token: "splat", refreshToken: "fribbit") })) { (task, response, error) in
+            switch error {
+            case HTTPManagerError.unauthorized: break
+            default:
+                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+        
+        // Refresh failed
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test one two!", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+            XCTAssertEqual(request.urlComponents.query, "token=frunk", "request query")
+            completionHandler(HTTPServer.Response(status: .badRequest))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.auth = TokenAuth(token: "one two!", refreshToken: "frunk") })) { (task, response, error) in
+            switch error {
+            case HTTPManagerError.unauthorized: break
+            default:
+                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+        
+        // Multiple failed requests while refresh is outstanding
+        do {
+            let group = DispatchGroup()
+            group.enter()
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+                group.leave()
+            }
+            group.enter()
+            expectationForHTTPRequest(httpServer, path: "/bar") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+                group.leave()
+            }
+            expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+                XCTAssertEqual(request.urlComponents.query, "token=refresh321", "request query")
+                _ = group.wait(timeout: .now() + 5)
+                completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{\"token\": \"newToken\"}"))
+            }
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Authorization"], "Test newToken", "request Authorization header")
+                completionHandler(HTTPServer.Response(status: .ok))
+            }
+            expectationForHTTPRequest(httpServer, path: "/bar") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Authorization"], "Test newToken", "request Authorization header")
+                completionHandler(HTTPServer.Response(status: .ok))
+            }
+            let auth = TokenAuth(token: "oldToken", refreshToken: "refresh321")
+            expectationForRequestSuccess(HTTP.request(GET: "foo").with({ $0.auth = auth }))
+            expectationForRequestSuccess(HTTP.request(GET: "bar").with({ $0.auth = auth }))
+            waitForExpectations(timeout: 5, handler: nil)
+        }
+        
+        // Same thing but refresh fails
+        do {
+            let group = DispatchGroup()
+            group.enter()
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+                group.leave()
+            }
+            group.enter()
+            expectationForHTTPRequest(httpServer, path: "/bar") { (request, completionHandler) in
+                XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+                group.leave()
+            }
+            expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+                XCTAssertEqual(request.urlComponents.query, "token=refresh321", "request query")
+                _ = group.wait(timeout: .now() + 5)
+                completionHandler(HTTPServer.Response(status: .badRequest))
+            }
+            let auth = TokenAuth(token: "oldToken", refreshToken: "refresh321")
+            for path in ["foo", "bar"] {
+                expectationForRequestFailure(HTTP.request(GET: path).with({ $0.auth = auth })) { (task, response, error) in
+                    switch error {
+                    case HTTPManagerError.unauthorized: break
+                    default:
+                        XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error (\(path))")
+                    }
+                }
+            }
+            waitForExpectations(timeout: 5, handler: nil)
+        }
+    }
 }

@@ -141,3 +141,179 @@ public final class HTTPBasicAuth: NSObject, HTTPAuth {
         return ["Authorization": "Basic \(encoded)"]
     }
 }
+
+/// The base class for `HTTPAuth` implementations that refresh their authentication automatically.
+///
+/// This class provides support for refreshing authentication information, e.g. for OAuth2 token
+/// refresh. It is recommended that you subclass this class in order to provide your own
+/// initializer.
+///
+/// - Note: This class assumes that each instance manages a single authentication realm, and makes
+///   no provision for refreshing authentication for multiple realms simultaneously.
+open class HTTPRefreshableAuth: NSObject, HTTPAuth {
+    /// Returns a new `HTTPRefreshableAuth`.
+    ///
+    /// - Parameter info: A value that is used to calculate authentication headers and refresh
+    ///   authentication information. This parameter may have any type, as long as it's thread-safe.
+    /// - Parameter authenticationHeadersBlock: A block that is used to return the authentication
+    ///   headers for a request. The `info` parameter is provided to this block.
+    ///
+    ///   This block may be called from any thread.
+    /// - Parameter authenticationRefreshBlock: A block that is invoked in response to a 401
+    ///   Unauthorized response in order to refresh the authentication information. This block will
+    ///   not be invoked multiple times concurrent with each other. Any requests that fail while
+    ///   refreshing will use the results of the outstanding refresh.
+    ///
+    ///   This block returns an optional `HTTPManagerTask`. If non-`nil`, the task will be tracked
+    ///   and will be canceled if the `HTTPRefreshableAuth` is deinited.
+    ///
+    ///   This block may be called from any thread.
+    ///
+    ///   The `completion` parameter to this block must be invoked with the results of the refresh.
+    ///   The first parameter to this block is the new `info` value that represents the new
+    ///   authentication information, or `nil` if there is no new info. The second parameter is a
+    ///   boolean that indicates whether the refresh succeeded. If this parameter is `true` all
+    ///   pending failed tasks are retried with the new info. If `false` all pending failed tasks
+    ///   will complete with the error `HTTPManagerError.unauthorized`. The `completion` block may
+    ///   be invoked from any thread, including being invoked synchronously from
+    ///   `authenticationRefreshBlock`.
+    public init<T>(info: T, authenticationHeadersBlock: @escaping (_ request: URLRequest, _ info: T) -> [String: String], authenticationRefreshBlock: @escaping (_ response: HTTPURLResponse, _ body: Data, _ info: T, _ completion: @escaping (_ info: T?, _ retry: Bool) -> Void) -> HTTPManagerTask?) {
+        self.authenticationHeadersBlock = { authenticationHeadersBlock($0, $1 as! T) }
+        self.authenticationRefreshBlock = { authenticationRefreshBlock($0, $1, $2 as! T, $3) }
+        self.inner = QueueConfined(label: "HTTPRefreshableAuth private queue", value: Inner(info: info))
+        super.init()
+    }
+    
+    /// Returns a new `HTTPRefreshableAuth`.
+    ///
+    /// - Parameter info: A value that is used to calculate authentication headers and refresh
+    ///   authentication information. This parameter may have any type, as long as it's thread-safe.
+    /// - Parameter authenticationHeadersBlock: A block that is used to return the authentication
+    ///   headers for a request. The `info` parameter is provided to this block.
+    ///
+    ///   This block may be called from any thread.
+    /// - Parameter authenticationRefreshBlock: A block that is invoked in response to a 401
+    ///   Unauthorized response in order to refresh the authentication information. This block will
+    ///   not be invoked multiple times concurrent with each other. Any requests that fail while
+    ///   refreshing will use the results of the outstanding refresh.
+    ///
+    ///   This block returns an optional `HTTPManagerTask`. If non-`nil`, the task will be tracked
+    ///   and will be canceled if the `HTTPRefreshableAuth` is deinited.
+    ///
+    ///   This block may be called from any thread.
+    ///
+    ///   The `completion` parameter to this block must be invoked with the results of the refresh.
+    ///   The first parameter to this block is the new `info` value that represents the new
+    ///   authentication information, or `nil` if there is no new info. The second parameter is a
+    ///   boolean that indicates whether the refresh succeeded. If this parameter is `true` all
+    ///   pending failed tasks are retried with the new info. If `false` all pending failed tasks
+    ///   will complete with the error `HTTPManagerError.unauthorized`. The `completion` block may
+    ///   be invoked from any thread, including being invoked synchronously from
+    ///   `authenticationRefreshBlock`.
+    @objc(initWithInfo:authenticationHeadersBlock:authenticationRefreshBlock:)
+    public convenience init(__info info: Any, authenticationHeadersBlock: @escaping (_ request: URLRequest, _ info: Any) -> [String: String], authenticationRefreshBlock: @escaping (_ response: HTTPURLResponse, _ body: Data, _ info: Any, _ completion: @escaping (_ info: Any?, _ retry: Bool) -> Void) -> HTTPManagerTask?) {
+        self.init(info: info, authenticationHeadersBlock: authenticationHeadersBlock, authenticationRefreshBlock: authenticationRefreshBlock)
+    }
+    
+    public final func headers(for request: URLRequest) -> [String: String] {
+        let info = inner.sync({ $0.info })
+        return authenticationHeadersBlock(request, info)
+    }
+    
+    public final func opaqueToken(for request: URLRequest) -> Any? {
+        return inner.sync({ $0.currentToken })
+    }
+    
+    /// Invoked when a 401 Unauthorized response is received.
+    ///
+    /// The default implementation refreshes the authentication information if necessary. If you
+    /// override this method, you should call `super` unless you want to skip refreshing
+    /// authentication information for any reason.
+    open func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void) {
+        guard let token = token as? Inner.Token else {
+            // This shouldn't be reachable, but if it is, don't retry
+            return completion(false)
+        }
+        
+        let queue = DispatchQueue.global(qos: .userInitiated)
+        inner.asyncBarrier { [weak self] inner in
+            guard token === inner.currentToken else {
+                // if the token is different, we already refreshed our credentials
+                queue.async {
+                    completion(true)
+                }
+                return
+            }
+            
+            inner.completions.append(completion)
+            guard inner.refreshToken === nil else { return }
+            let refreshToken = Inner.Token()
+            inner.refreshToken = refreshToken
+            let info = inner.info
+            queue.async {
+                guard let this = self else { return }
+                let task = this.authenticationRefreshBlock(response, body, info, { (info, retry) in
+                    guard let this = self else { return }
+                    this.inner.asyncBarrier { [selfType=type(of: this)] inner in
+                        guard inner.refreshToken === refreshToken else {
+                            NSLog("[HTTPManager] HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times (\(selfType))")
+                            assertionFailure("HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times")
+                            return
+                        }
+                        inner.refreshToken = nil
+                        inner.task = nil
+                        if let info = info {
+                            inner.info = info
+                            inner.currentToken = Inner.Token()
+                        }
+                        let completions = inner.completions
+                        inner.completions = []
+                        queue.async {
+                            DispatchQueue.concurrentPerform(iterations: completions.count, execute: { i in
+                                completions[i](retry)
+                            })
+                        }
+                    }
+                })
+                this.inner.asyncBarrier { inner in
+                    guard inner.refreshToken === refreshToken else { return }
+                    inner.task = task
+                }
+            }
+        }
+    }
+    
+    private let authenticationHeadersBlock: (_ request: URLRequest, _ info: Any) -> [String: String]
+    private let authenticationRefreshBlock: (_ response: HTTPURLResponse, _ body: Data, _ info: Any, _ completion: @escaping (_ info: Any?, _ retry: Bool) -> Void) -> HTTPManagerTask?
+    private let inner: QueueConfined<Inner>
+    
+    private class Inner {
+        init(info: Any) {
+            self.info = info
+        }
+        
+        var info: Any
+        
+        /// A class that exists only to be compared using `===`.
+        class Token {}
+        
+        /// A token that identifies the authentication information.
+        var currentToken = Token()
+        /// A token that identifies the refresh attempt.
+        var refreshToken: Token?
+        var task: HTTPManagerTask?
+        var completions: [(Bool) -> Void] = []
+        
+        
+        deinit {
+            task?.cancel()
+            if !completions.isEmpty {
+                DispatchQueue.global(qos: .userInitiated).async { [completions] in
+                    DispatchQueue.concurrentPerform(iterations: completions.count, execute: { i in
+                        completions[i](false)
+                    })
+                }
+            }
+        }
+    }
+}

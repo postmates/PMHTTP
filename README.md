@@ -415,7 +415,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Also expand nested `URLQueryItem`s in parameters. The resulting parameter uses dictionary syntax (`"foo[bar]"`).
 * Change the type signature of the Obj-C parse methods that take handlers to make the error parameter non-optional.
 * Provide a callback that can be used for session-level authentication challenges. This can be used to implement SSL pinning using something like [TrustKit](https://github.com/datatheorem/TrustKit).
-* Rework how authorization works. The `defaultCredential` and `credential` properties have been replaced with `defaultAuth` and `auth`, using a brand new protocol `HTTPAuth`. An implementation of Basic authentication is provided with the `HTTPBasicAuth` object. This new authentication mechanism has been designed to allow for OAuth2-style refreshes.
+* Rework how authorization works. The `defaultCredential` and `credential` properties have been replaced with `defaultAuth` and `auth`, using a brand new protocol `HTTPAuth`. An implementation of Basic authentication is provided with the `HTTPBasicAuth` object. This new authentication mechanism has been designed to allow for OAuth2-style refreshes, and a helper class `HTTPRefreshableAuth` is provided to make it easy to implement refreshable authentication.
 
 #### v2.0.1 (2017-01-05)
 
