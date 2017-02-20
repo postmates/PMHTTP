@@ -239,6 +239,56 @@ public final class HTTPManager: NSObject {
         self.init(shared: false)
     }
     
+    /// Invokes `body` and suppresses the inheritance of `defaultAuth` if its value is `auth`.
+    ///
+    /// Any `HTTPManagerRequest`s created from within `body` will have their `auth` property set to
+    /// `nil` instead of to `defaultAuth` if it would otherwise be set to `auth`.
+    ///
+    /// This method is intended to be used by `HTTPAuth` instances to avoid inheriting `defaultAuth`
+    /// on requests that are made in order to refresh authentication information. For example,
+    /// `HTTPRefreshableAuth` uses this method when invoking its `authenticationRefreshBlock`.
+    public static func withoutDefaultAuth<T>(_ auth: HTTPAuth, _ body: () throws -> T) rethrows -> T {
+        if var auths = Thread.current.threadDictionary[tlsSuppressedAuthKey] as? [HTTPAuth] {
+            Thread.current.threadDictionary[tlsSuppressedAuthKey] = nil
+            auths.append(auth)
+            Thread.current.threadDictionary[tlsSuppressedAuthKey] = auths
+        } else {
+            Thread.current.threadDictionary[tlsSuppressedAuthKey] = [auth]
+        }
+        defer {
+            if var auths = Thread.current.threadDictionary[tlsSuppressedAuthKey] as? [HTTPAuth] {
+                if let idx = auths.index(where: { $0 === auth }) {
+                    Thread.current.threadDictionary[tlsSuppressedAuthKey] = nil
+                    if idx > auths.startIndex {
+                        // We're effectively "popping" back to the previous state, so we remove the whole suffix.
+                        // The index should already be the last one in the array, but this is just in case something
+                        // weird goes on (such as using an exception to pop past Swift code, even though this isn't
+                        // supported by Swift).
+                        auths.removeSubrange(idx..<auths.endIndex)
+                        Thread.current.threadDictionary[tlsSuppressedAuthKey] = auths
+                    } // else leaving it as nil is fine
+                }
+            }
+        }
+        return try body()
+    }
+    
+    fileprivate static func isAuthSuppressed(_ auth: HTTPAuth) -> Bool {
+        if let auths = Thread.current.threadDictionary[tlsSuppressedAuthKey] as? [HTTPAuth] {
+            return auths.contains(where: { $0 === auth })
+        } else {
+            return false
+        }
+    }
+    
+    private static let tlsSuppressedAuthKey = TLSKey()
+    
+    private class TLSKey: NSObject, NSCopying {
+        func copy(with zone: NSZone? = nil) -> Any {
+            return self
+        }
+    }
+    
     fileprivate class Inner {
         var environment: Environment?
         var sessionConfiguration: URLSessionConfiguration = .default
@@ -736,11 +786,13 @@ extension HTTPManager {
         // FIXME: Get rid of NSURL when https://github.com/apple/swift/pull/3910 is fixed.
         guard let url = NSURL(string: path, relativeTo: environment?.baseURL) as URL? else { return nil }
         let request = f(url)
-        if let auth = auth, let environment = environment {
+        if let auth = auth, let environment = environment,
+            // make sure we aren't suppressing this auth
+            !HTTPManager.isAuthSuppressed(auth),
             // make sure the requested entity is within the space defined by baseURL
-            if environment.isPrefix(of: url) {
-                request.auth = auth
-            }
+            environment.isPrefix(of: url)
+        {
+            request.auth = auth
         }
         request.retryBehavior = defaultRetryBehavior
         request.assumeErrorsAreJSON = assumeErrorsAreJSON

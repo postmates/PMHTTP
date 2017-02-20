@@ -216,24 +216,6 @@ final class AuthTests: PMHTTPTestCase {
     }
     
     func testRefreshableAuth() {
-        class TokenAuth: HTTPRefreshableAuth {
-            init(token: String, refreshToken: String) {
-                self.refreshToken = refreshToken
-                super.init(info: token, authenticationHeadersBlock: { (request, token) -> [String: String] in
-                    return ["Authorization": "Test \(token)"]
-                }) { (response, body, token, completion) -> HTTPManagerTask? in
-                    return HTTP.request(GET: "token/refresh", parameters: ["token": refreshToken])
-                        .with({ $0.userInitiated = true })
-                        .parseAsJSON(using: { try $1.getString("token") })
-                        .performRequest { (task, result) in
-                            completion(result.value, result.isSuccess)
-                    }
-                }
-            }
-            
-            let refreshToken: String
-        }
-        
         // Successful refresh
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
             XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
@@ -356,5 +338,101 @@ final class AuthTests: PMHTTPTestCase {
             }
             waitForExpectations(timeout: 5, handler: nil)
         }
+    }
+    
+    func testRefreshableDefaultAuth() {
+        // If the refreshable auth is used for defaultAuth, we don't want the refresh request itself using that auth.
+        
+        HTTP.defaultAuth = TokenAuth(token: "oldToken", refreshToken: "refresh123")
+        
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+            XCTAssertEqual(request.urlComponents.query, "token=refresh123", "request query")
+            XCTAssertNil(request.headers["Authorization"], "refresh Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { (task, response, error) in
+            switch error {
+            case HTTPManagerError.unauthorized: break
+            default:
+                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+        
+        // If we fail the first refresh with a retryable reason, the second refresh should also avoid using the auth info
+        HTTP.defaultRetryBehavior = .retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            XCTAssertEqual(request.headers["Authorization"], "Test oldToken", "request Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+            XCTAssertEqual(request.urlComponents.query, "token=refresh123", "request query")
+            XCTAssertNil(request.headers["Authorization"], "refresh Authorization header")
+            completionHandler(HTTPServer.Response(status: .serviceUnavailable))
+        }
+        expectationForHTTPRequest(httpServer, path: "/token/refresh") { (request, completionHandler) in
+            XCTAssertEqual(request.urlComponents.query, "token=refresh123", "request query")
+            XCTAssertNil(request.headers["Authorization"], "refresh Authorization header")
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo")) { (task, response, error) in
+            switch error {
+            case HTTPManagerError.unauthorized: break
+            default:
+                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func testWithoutDefaultAuth() {
+        let auth = TokenAuth(token: "oldToken", refreshToken: "refresh123")
+        HTTP.defaultAuth = auth
+        XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
+        HTTPManager.withoutDefaultAuth(auth) {
+            XCTAssertNil(HTTP.request(GET: "foo").auth, "request auth")
+        }
+        XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
+        
+        HTTPManager.withoutDefaultAuth(TokenAuth(token: "newToken", refreshToken: "refresh123")) {
+            XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
+        }
+        
+        HTTPManager.withoutDefaultAuth(TokenAuth(token: "newToken", refreshToken: "refresh123")) {
+            HTTPManager.withoutDefaultAuth(auth) {
+                XCTAssertNil(HTTP.request(GET: "foo").auth, "request auth")
+            }
+            XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
+        }
+        
+        HTTPManager.withoutDefaultAuth(auth) {
+            HTTPManager.withoutDefaultAuth(TokenAuth(token: "newToken", refreshToken: "refresh123")) {
+                XCTAssertNil(HTTP.request(GET: "foo").auth, "request auth")
+            }
+            XCTAssertNil(HTTP.request(GET: "foo").auth, "request auth")
+        }
+        XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
+    }
+    
+    class TokenAuth: HTTPRefreshableAuth {
+        init(token: String, refreshToken: String) {
+            self.refreshToken = refreshToken
+            super.init(info: token, authenticationHeadersBlock: { (request, token) -> [String: String] in
+                return ["Authorization": "Test \(token)"]
+            }) { (response, body, token, completion) -> HTTPManagerTask? in
+                return HTTP.request(GET: "token/refresh", parameters: ["token": refreshToken])
+                    .with({ $0.userInitiated = true })
+                    .parseAsJSON(using: { try $1.getString("token") })
+                    .performRequest { (task, result) in
+                        completion(result.value, result.isSuccess)
+                }
+            }
+        }
+        
+        let refreshToken: String
     }
 }

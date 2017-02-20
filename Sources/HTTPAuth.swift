@@ -169,6 +169,17 @@ open class HTTPRefreshableAuth: NSObject, HTTPAuth {
     ///
     ///   This block may be called from any thread.
     ///
+    ///   **Important:** Any request you create for refreshing the token should not have its `auth`
+    ///   property set to this `HTTPRefreshableAuth` instance. Doing so will end up deadlocking the
+    ///   request forever if the server returns a 401 Unauthorized response. The only exception is
+    ///   if your subclass of `HTTPRefreshableAuth` detects this case and overrides
+    ///   `handleUnauthorized(_:body:for:token:completion:)` and avoids calling `super`.
+    ///
+    ///   **Note:** If this `HTTPRefreshableAuth` instance is the `defaultAuth` for the
+    ///   `HTTPManager`, any requests created from within the `authenticationRefreshBlock` will
+    ///   automatically have their `auth` properties set to `nil` instead of inheriting the
+    ///   `defaultAuth`.
+    ///
     ///   The `completion` parameter to this block must be invoked with the results of the refresh.
     ///   The first parameter to this block is the new `info` value that represents the new
     ///   authentication information, or `nil` if there is no new info. The second parameter is a
@@ -252,29 +263,31 @@ open class HTTPRefreshableAuth: NSObject, HTTPAuth {
             let info = inner.info
             queue.async {
                 guard let this = self else { return }
-                let task = this.authenticationRefreshBlock(response, body, info, { (info, retry) in
-                    guard let this = self else { return }
-                    this.inner.asyncBarrier { [selfType=type(of: this)] inner in
-                        guard inner.refreshToken === refreshToken else {
-                            NSLog("[HTTPManager] HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times (\(selfType))")
-                            assertionFailure("HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times")
-                            return
+                let task = HTTPManager.withoutDefaultAuth(this) {
+                    return this.authenticationRefreshBlock(response, body, info, { (info, retry) in
+                        guard let this = self else { return }
+                        this.inner.asyncBarrier { [selfType=type(of: this)] inner in
+                            guard inner.refreshToken === refreshToken else {
+                                NSLog("[HTTPManager] HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times (\(selfType))")
+                                assertionFailure("HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times")
+                                return
+                            }
+                            inner.refreshToken = nil
+                            inner.task = nil
+                            if let info = info {
+                                inner.info = info
+                                inner.currentToken = Inner.Token()
+                            }
+                            let completions = inner.completions
+                            inner.completions = []
+                            queue.async {
+                                DispatchQueue.concurrentPerform(iterations: completions.count, execute: { i in
+                                    completions[i](retry)
+                                })
+                            }
                         }
-                        inner.refreshToken = nil
-                        inner.task = nil
-                        if let info = info {
-                            inner.info = info
-                            inner.currentToken = Inner.Token()
-                        }
-                        let completions = inner.completions
-                        inner.completions = []
-                        queue.async {
-                            DispatchQueue.concurrentPerform(iterations: completions.count, execute: { i in
-                                completions[i](retry)
-                            })
-                        }
-                    }
-                })
+                    })
+                }
                 this.inner.asyncBarrier { inner in
                     guard inner.refreshToken === refreshToken else { return }
                     inner.task = task
