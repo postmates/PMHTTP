@@ -413,6 +413,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 * Also expand nested `URLQueryItem`s in parameters. The resulting parameter uses dictionary syntax (`"foo[bar]"`).
 * Change the type signature of the Obj-C parse methods that take handlers to make the error parameter non-optional. This is technically a breaking change for Swift, but this API is intended for Obj-C and nobody should be calling it from Swift code, and in Obj-C it's not a breaking change.
 * Provide a callback that can be used for session-level authentication challenges. This can be used to implement SSL pinning using something like [TrustKit](https://github.com/datatheorem/TrustKit).
+* Fix a small memory leak when retrying tasks.
 
 #### v2.0.1 (2017-01-05)
 
