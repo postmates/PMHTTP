@@ -43,7 +43,7 @@ __attribute__((objc_subclassing_restricted))
 __attribute__((visibility("hidden")))
 @interface _PMHTTPManagerTaskStateBox : NSObject
 @property (atomic, readonly) _PMHTTPManagerTaskStateBoxState state;
-@property (atomic, nonnull) NSURLSessionTask *networkTask;
+@property (atomic, nonnull, retain) NSURLSessionTask *networkTask;
 - (nonnull instancetype)initWithState:(_PMHTTPManagerTaskStateBoxState)state networkTask:(nonnull NSURLSessionTask *)task NS_DESIGNATED_INITIALIZER;
 - (nonnull instancetype)init NS_UNAVAILABLE;
 /// Transitions the state to \c newState if possible.
