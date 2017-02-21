@@ -61,7 +61,9 @@ typedef struct TaskList {
     TaskList *head = atomic_load_explicit(&_taskListHead, memory_order_acquire);
     while (head) {
         (void)(__bridge_transfer id)head->object;
+        TaskList *oldHead = head;
         head = head->next;
+        free(oldHead);
     }
 }
 
