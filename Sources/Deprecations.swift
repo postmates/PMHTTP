@@ -24,6 +24,16 @@ public extension HTTPManager {
     @nonobjc static func parsedDateHeaderFromString(_ string: String) -> Date? {
         return parsedDateHeader(from: string)
     }
+    
+    @available(*, deprecated, message: "use 'defaultAuth' with HTTPBasicAuth")
+    public var defaultCredential: URLCredential? {
+        get {
+            return (defaultAuth as? HTTPBasicAuth)?.credential
+        }
+        set {
+            defaultAuth = newValue.flatMap(HTTPBasicAuth.init(credential:))
+        }
+    }
 }
 
 public extension HTTPManagerEnvironment {
@@ -41,7 +51,7 @@ public extension HTTPManagerError {
     
     @available(*, unavailable, renamed: "unauthorized")
     static func Unauthorized(credential: URLCredential?, response: HTTPURLResponse, body: Data, bodyJson: JSON?) -> HTTPManagerError {
-        return .unauthorized(credential: credential, response: response, body: body, bodyJson: bodyJson)
+        return .unauthorized(auth: credential.flatMap(HTTPBasicAuth.init(credential:)), response: response, body: body, bodyJson: bodyJson)
     }
     
     @available(*, unavailable, renamed: "unexpectedContentType")
@@ -99,6 +109,18 @@ extension HTTPManagerActionParseResult where T: __HTTPManagerActionJSONParseResu
 }
 
 // NB: Can't move the HTTPManagerConfigurable deprecation here as it must be in the protocol declaration
+
+public extension HTTPManagerRequest {
+    @available(*, deprecated, message: "use 'auth' with HTTPBasicAuth")
+    public var credential: URLCredential? {
+        get {
+            return (auth as? HTTPBasicAuth)?.credential
+        }
+        set {
+            auth = newValue.flatMap(HTTPBasicAuth.init(credential:))
+        }
+    }
+}
 
 public extension HTTPManagerNetworkRequest {
     @available(*, unavailable, renamed: "parse(using:)")
@@ -189,6 +211,13 @@ public extension HTTPManagerUploadMultipart {
     }
 }
 
+public extension HTTPManagerTask {
+    @available(*, deprecated, message: "use 'auth' instead")
+    public var credential: URLCredential? {
+        return (auth as? HTTPBasicAuth)?.credential
+    }
+}
+
 public extension HTTPManagerTaskState {
     @available(*, unavailable, renamed: "running")
     static let Running = HTTPManagerTaskState.running
@@ -274,6 +303,12 @@ public extension HTTPMockSequence {
 }
 
 public extension HTTPManagerObjectParseRequest {
+    @available(*, deprecated, message: "use 'auth' with HTTPBasicAuth")
+    public override var credential: URLCredential? {
+        get { return (auth as? HTTPBasicAuth)?.credential }
+        set { auth = credential.flatMap(HTTPBasicAuth.init(credential:)) }
+    }
+    
     @available(*, unavailable, renamed: "createTask(withCompletionQueue:completion:)")
     @nonobjc public func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Any?>) -> Void) -> HTTPManagerTask {
         return createTask(withCompletionQueue: queue, completion: handler)

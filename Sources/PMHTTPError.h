@@ -23,7 +23,7 @@ typedef NS_ENUM(NSInteger, PMHTTPError) {
     /// @see <tt>PMHTTPStatusCodeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
     PMHTTPErrorFailedResponse = 1,
     /// A 401 Unauthorized HTTP response was returned.
-    /// @see <tt>PMHTTPCredentialErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
+    /// @see <tt>PMHTTPAuthErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
     PMHTTPErrorUnauthorized,
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// @see <tt>PMHTTPContentTypeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>
@@ -54,15 +54,18 @@ extern NSString * _Nonnull const PMHTTPBodyDataErrorKey;
 /// The dictionary does not include any \c NSNull values.
 /// @see <tt>PMHTTPErrorFailedResponse</tt>.
 extern NSString * _Nonnull const PMHTTPBodyJSONErrorKey;
-/// The corresponding value is the \c NSURLCredential that was used in the request, if any.
+/// The corresponding value is the \c HTTPAuth that was used in the request, if any.
 /// @see <tt>PMHTTPErrorUnauthorized</tt>.
-extern NSString * _Nonnull const PMHTTPCredentialErrorKey;
+extern NSString * _Nonnull const PMHTTPAuthErrorKey;
 /// The corresponding value is a \c NSString with the Content-Type of the response.
 /// @see <tt>PMHTTPErrorUnexpectedContentType</tt>.
 extern NSString * _Nonnull const PMHTTPContentTypeErrorKey;
 /// The corresponding value is an \c NSURL with the Location of the response. May be \c nil.
 /// @see <tt>PMHTTPErrorUnexpectedRedirect</tt>.
 extern NSString * _Nonnull const PMHTTPLocationErrorKey;
+
+/// This has been removed in favor of <tt>PMHTTPAuthErrorKey</tt>.
+extern NSString * _Nonnull const PMHTTPCredentialErrorKey NS_UNAVAILABLE;
 
 // Helper functions
 

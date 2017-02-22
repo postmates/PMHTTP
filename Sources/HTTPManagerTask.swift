@@ -44,8 +44,8 @@ public final class HTTPManagerTask: NSObject {
     /// error dialog.
     @nonobjc public let isIdempotent: Bool
     
-    /// The `URLCredential` used to authenticate the request, if any.
-    public let credential: URLCredential?
+    /// The `HTTPAuth` used to authenticate the request, if any.
+    public let auth: HTTPAuth?
     
     /// The current state of the task.
     /// - Note: This property is thread-safe and may be accessed concurrently.
@@ -134,7 +134,7 @@ public final class HTTPManagerTask: NSObject {
     internal init(networkTask: URLSessionTask, request: HTTPManagerRequest, sessionDelegateQueue: OperationQueue) {
         _stateBox = _PMHTTPManagerTaskStateBox(state: State.running.boxState, networkTask: networkTask)
         isIdempotent = request.isIdempotent
-        credential = request.credential
+        auth = request.auth
         userInitiated = request.userInitiated
         followRedirects = request.shouldFollowRedirects
         assumeErrorsAreJSON = request.assumeErrorsAreJSON
@@ -212,8 +212,9 @@ extension HTTPManagerTask {
         // FIXME: Use ObjectIdentifier.address or whatever it's called when it's available
         let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
         var s = "<HTTPManagerTask: 0x\(String(ptr, radix: 16)) (\(state))"
-        if let user = credential?.user {
-            s += " user=\(String(reflecting: user))"
+        if let auth = auth {
+            let desc = debug ? String(reflecting: auth) : String(describing: auth)
+            s += " auth=\(desc)"
         }
         if userInitiated {
             s += " userInitiated"

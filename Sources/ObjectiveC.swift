@@ -136,13 +136,13 @@ extension HTTPManagerError: CustomNSError {
             ]
             userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
             return userInfo
-        case let .unauthorized(credential, response, body, json):
+        case let .unauthorized(auth, response, body, json):
             var userInfo: [String: Any] = [
-                NSLocalizedDescriptionKey: "401 Unauthorized HTTP response",
+                NSLocalizedDescriptionKey: auth?.localizedDescription?(for: self) ?? "401 Unauthorized HTTP response",
                 PMHTTPURLResponseErrorKey: response,
                 PMHTTPBodyDataErrorKey: body
             ]
-            userInfo[PMHTTPCredentialErrorKey] = credential
+            userInfo[PMHTTPAuthErrorKey] = auth
             userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
             return userInfo
         case let .unexpectedContentType(contentType, response, body):
@@ -812,9 +812,9 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         return _request.parameters
     }
     
-    public override var credential: URLCredential? {
-        get { return _request.credential }
-        set { _request.credential = newValue }
+    public override var auth: HTTPAuth? {
+        get { return _request.auth }
+        set { _request.auth = newValue }
     }
     
     public override var timeoutInterval: TimeInterval? {
