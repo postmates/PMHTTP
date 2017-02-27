@@ -1,6 +1,6 @@
 # PMHTTP
 
-[![Version](https://img.shields.io/badge/version-v2.0.1-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
+[![Version](https://img.shields.io/badge/version-v3.0.0-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-ios%20%7C%20osx%20%7C%20watchos%20%7C%20tvos-lightgrey.svg)
 ![Languages](https://img.shields.io/badge/languages-swift%20%7C%20objc-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
@@ -366,7 +366,7 @@ After installation with any mechanism, you can use this by adding `import PMHTTP
 To install using [Carthage][], add the following to your Cartfile:
 
 ```
-github "postmates/PMHTTP" ~> 2.0
+github "postmates/PMHTTP" ~> 3.0
 ```
 
 This release supports Swift 3.0. For Swift 2.3 you can use
@@ -379,7 +379,7 @@ github "postmates/PMHTTP" ~> 0.9.3
 To install using [CocoaPods](https://cocoapods.org), add the following to your Podfile:
 
 ```
-pod "PMHTTP", "~> 2.0"
+pod "PMHTTP", "~> 3.0"
 ```
 
 This release supports Swift 3.0. For Swift 2.3 you can use:
@@ -402,9 +402,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
-#### Development
-
-**Note:** Breaking changes. Next release will be 3.0.0.
+#### v3.0.0 (2017-02-27)
 
 * Preserve network task priority when retrying tasks.
 * Add convenience Obj-C function `PMHTTPErrorIsFailedResponse` to test PMHTTP errors easily.
