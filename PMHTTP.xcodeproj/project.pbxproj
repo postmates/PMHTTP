@@ -59,7 +59,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		0A7677E61CFFD8DF005D160D /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		0A7677E61CFFD8DF005D160D /* pmhttp.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = pmhttp.modulemap; sourceTree = "<group>"; };
 		0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerBodyStream.h; sourceTree = "<group>"; };
 		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
 		0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
@@ -191,7 +191,7 @@
 				9E4C77821C2B792A000FF8AC /* QueueConfined.swift */,
 				9E681CB71C56EB1000422CE4 /* SipHash.swift */,
 				0A7677E71CFFE2B3005D160D /* Private */,
-				0A7677E61CFFD8DF005D160D /* module.modulemap */,
+				0A7677E61CFFD8DF005D160D /* pmhttp.modulemap */,
 				9E7DDF261C18F2B600EA43AD /* Info.plist */,
 				9E55BD701C5FE252001CC5D6 /* Frameworks */,
 			);
@@ -535,7 +535,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Sources/module.modulemap;
+				MODULEMAP_FILE = Sources/pmhttp.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMHTTP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -556,7 +556,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MODULEMAP_FILE = Sources/module.modulemap;
+				MODULEMAP_FILE = Sources/pmhttp.modulemap;
 				PRODUCT_BUNDLE_IDENTIFIER = com.postmates.PMHTTP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
