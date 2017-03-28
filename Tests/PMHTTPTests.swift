@@ -1541,7 +1541,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .ok))
             }
             let request = HTTP.request(POST: "foo", contentType: "text/xml", data: bodyData)!
-            XCTAssertEqual(request.preparedURLRequest.httpBody, bodyData, "request body data")
+
             expectationForRequestSuccess(request) { (task, response, value) in
                 XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             }
@@ -1579,7 +1579,7 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
         let json: JSON = ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil]
         let request = HTTP.request(POST: "foo", json: json)!
-        XCTAssertEqual(request.preparedURLRequest.httpBody, JSON.encodeAsData(json), "request json data")
+
         expectationForRequestSuccess(request.parseAsJSON()) { task, response, json in
             XCTAssertEqual(response.mimeType, "application/json", "response MIME type")
             XCTAssertEqual(json, ["ok": true, "msg": "upload complete"], "response body json")
