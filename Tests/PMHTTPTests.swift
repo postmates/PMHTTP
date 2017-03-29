@@ -570,7 +570,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTAssertEqual(response.statusCode, 200, "response status code")
                     XCTAssertEqual(response.allHeaderFields["Content-Type"] as? String, "application/json", "response Content-Type header")
                 } else {
-                    XCTFail("Non–HTTP Response found: \(response)")
+                    XCTFail("Non–HTTP Response found: \(response.map(String.init(describing:)) ?? "nil")")
                 }
                 XCTAssertEqual(response?.mimeType, "application/json", "response MIME type")
                 if case let HTTPManagerError.unexpectedContentType(contentType, response_, body) = error {

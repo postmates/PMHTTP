@@ -39,7 +39,7 @@ final class AuthTests: PMHTTPTestCase {
                 XCTAssertEqual(credential.user, "alice", "request object credential user")
                 XCTAssertEqual(credential.password, "secure", "request object credential password")
             } else {
-                XCTFail("expected HTTPBasicAuth, found \(req.auth) - request object auth")
+                XCTFail("expected HTTPBasicAuth, found \(String(describing: req.auth)) - request object auth")
             }
             expectationForRequestSuccess(req) { _ in }
             waitForExpectations(timeout: 5, handler: nil)
@@ -59,7 +59,7 @@ final class AuthTests: PMHTTPTestCase {
                         XCTAssertEqual(credential.user, "alice", "error credential user")
                         XCTAssertEqual(credential.password, "secure", "error credential password")
                     } else {
-                        XCTFail("expected HTTPBasicAuth, found \(auth) - error auth")
+                        XCTFail("expected HTTPBasicAuth, found \(String(describing: auth)) - error auth")
                     }
                     XCTAssertEqual(json, ["error": "unauthorized"], "error body json")
                 } else {
@@ -100,7 +100,7 @@ final class AuthTests: PMHTTPTestCase {
         }
         expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.retryBehavior = alwaysRetryOnce; $0.auth = basicAuth })) { (task, response, error) in
             if case HTTPManagerError.unauthorized(let auth, _, _, _) = error {
-                XCTAssert(auth === basicAuth, "expected \(basicAuth), found \(auth) - response auth")
+                XCTAssert(auth === basicAuth, "expected \(basicAuth), found \(String(describing: auth)) - response auth")
             } else {
                 XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
             }
@@ -123,7 +123,7 @@ final class AuthTests: PMHTTPTestCase {
                 return token
             }
             func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
-                XCTAssert((token as? Token) === self.token, "expected token, got \(token) - handleUnauthorized")
+                XCTAssert((token as? Token) === self.token, "expected token, got \(String(describing: token)) - handleUnauthorized")
                 completion(false)
                 expectation.fulfill()
             }

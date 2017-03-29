@@ -549,7 +549,7 @@ extension HTTPManagerRequest {
     /// timeout interval is used. Default is `nil`.
     @objc(timeoutInterval) public var __objc_timeoutInterval: NSNumber? {
         get { return timeoutInterval as NSNumber? }
-        set { timeoutInterval = newValue as TimeInterval? }
+        set { timeoutInterval = newValue as? TimeInterval }
     }
     
     /// The cache policy to use for the request. If `NSURLRequestUseProtocolCachePolicy`,

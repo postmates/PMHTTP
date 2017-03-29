@@ -210,7 +210,11 @@ extension HTTPManagerTask {
     
     private func getDescription(_ debug: Bool) -> String {
         // FIXME: Use ObjectIdentifier.address or whatever it's called when it's available
-        let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
+        #if swift(>=3.1)
+            let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
+        #else
+            let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
+        #endif
         var s = "<HTTPManagerTask: 0x\(String(ptr, radix: 16)) (\(state))"
         if let auth = auth {
             let desc = debug ? String(reflecting: auth) : String(describing: auth)
@@ -402,7 +406,7 @@ extension HTTPManagerTaskResult : CustomDebugStringConvertible {
         case let .success(response, value):
             return "success(\(response), \(String(reflecting: value)))"
         case let .error(response, error):
-            return "error(\(response), \(String(reflecting: error)))"
+            return "error(\(response.map(String.init(describing:)) ?? "nil"), \(String(reflecting: error)))"
         case .canceled:
             return "canceled"
         }

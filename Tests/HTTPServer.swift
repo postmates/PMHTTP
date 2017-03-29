@@ -381,7 +381,7 @@ final class HTTPServer {
         
         var debugDescription: String {
             return "HTTPServer.Request(method: \(method), path: \(String(reflecting: urlComponents.path)), httpVersion: \(httpVersion), "
-                + "headers: \(headers), trailerHeaders: \(trailerHeaders), body: \(body))"
+                + "headers: \(headers), trailerHeaders: \(trailerHeaders), body: \(body.map(String.init(describing:)) ?? "nil"))"
         }
         
         fileprivate init?(method: Method, requestTarget: String, httpVersion: HTTPVersion, headers: HTTPHeaders = [:], body: Data? = nil) {
@@ -434,7 +434,7 @@ final class HTTPServer {
         }
         
         var debugDescription: String {
-            return "HTTPServer.Response(status: \(status.rawValue) \(status), headers: \(headers), body: \(body))"
+            return "HTTPServer.Response(status: \(status.rawValue) \(status), headers: \(headers), body: \(body.map(String.init(describing:)) ?? "nil"))"
         }
     }
     
@@ -683,7 +683,7 @@ final class HTTPServer {
         
         @objc func socket(_ sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
             let connection = Connection(shared: shared, listener: self, socket: newSocket)
-            log("New connection (id: \(connection.connectionId)) from \(newSocket.connectedHost):\(newSocket.connectedPort)")
+            log("New connection (id: \(connection.connectionId)) from \(newSocket.connectedHost.map(String.init(describing:)) ?? "nil"):\(newSocket.connectedPort)")
             connections.append(connection)
             if let sslItems = sslItems {
                 connection.startTLS([kCFStreamSSLIsServer as String: kCFBooleanTrue, kCFStreamSSLCertificates as String: sslItems])

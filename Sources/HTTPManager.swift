@@ -497,7 +497,11 @@ public final class HTTPManagerEnvironment: NSObject {
     
     public override var description: String {
         // FIXME: Switch to ObjectIdentifier.address or whatever it's called when it's available
-        let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
+        #if swift(>=3.1)
+            let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
+        #else
+            let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
+        #endif
         return "<HTTPManagerEnvironment: 0x\(String(ptr, radix: 16)) \(baseURL.absoluteString))>"
     }
     
@@ -1445,7 +1449,7 @@ extension SessionDelegate: URLSessionDataDelegate {
     #endif
     
     @objc func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
-        log("didBecomeInvalidWithError: \(error)")
+        log("didBecomeInvalidWithError: \(error.map(String.init(describing:)) ?? "nil")")
         apiManager?.inner.asyncBarrier { inner in
             if let idx = inner.oldSessions.index(where: { $0 === self }) {
                 inner.oldSessions.remove(at: idx)
@@ -1528,7 +1532,7 @@ extension SessionDelegate: URLSessionDataDelegate {
         }
         let apiTask = taskInfo.task
         assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
-        log("task:didCompleteWithError for task \(task), error: \(error)")
+        log("task:didCompleteWithError for task \(task), error: \(error.map(String.init(describing:)) ?? "nil")")
         let processor = taskInfo.processor
         
         apiTask.clearTrackingNetworkActivity()
