@@ -672,6 +672,7 @@ extension HTTPManagerNetworkRequest {
     /// - Parameter completion: The handler to call when the request is done. This
     ///   handler is called on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @discardableResult
     @objc(performRequestWithCompletion:)
     public func __objc_performRequestWithCompletion(_ completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
         return performRequest { task, result in
@@ -685,6 +686,7 @@ extension HTTPManagerNetworkRequest {
     /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @discardableResult
     @objc(performRequestWithCompletionQueue:completion:)
     public func __objc_performRequestWithCompletionQueue(_ queue: OperationQueue?, completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPDataResult) -> Void) -> HTTPManagerTask {
         return performRequest(withCompletionQueue: queue) { task, result in
@@ -958,6 +960,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// - Parameter completion: The handler to call when the request is done. This
     ///   handler is called on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @discardableResult
     @objc(performRequestWithCompletion:)
     public func __objc_performRequestWithCompletion(_ completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPResult) -> Void) -> HTTPManagerTask {
         return performRequest { task, result in
@@ -971,6 +974,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// - Parameter completion: The handler to call when the request is done. This handler
     ///   will be invoked on *queue* if provided, otherwise on a global concurrent queue.
     /// - Returns: An `HTTPManagerTask` that represents the operation.
+    @discardableResult
     @objc(performRequestWithCompletionQueue:completion:)
     public func __objc_performRequestWithCompletionQueue(_ queue: OperationQueue?, completion: @escaping @convention(block) (_ task: HTTPManagerTask, _ result: PMHTTPResult) -> Void) -> HTTPManagerTask {
         return performRequest(withCompletionQueue: queue) { task, result in
