@@ -31,13 +31,13 @@ leaves the networking to `URLSession` and provides everything else. Features inc
 * Built-in request mocking support without using method swizzling.
 * Nothing uses the main thread, not even completion blocks, unless you explicitly ask it to.
 
-PMHTTP was designed specifically for the HTTP functionality that [Postmates][] needs. This means first-class REST
-support with a focus on JSON. But there's some functionality it doesn't handle (such as TLS pinning) which we
-may get around to doing at some point ([see issues](https://github.com/postmates/PMHTTP/labels/TODO)).
-Pull requests are welcome.
+PMHTTP was designed specifically for the HTTP functionality that [Postmates][] needs. This means
+first-class REST support with a focus on JSON. But there's some functionality it doesn't handle
+which we may get around to doing at some point ([see issues][]). Pull requests are welcome.
 
 [Postmates]: https://postmates.com
 [PMJSON]: https://github.com/postmates/PMJSON "postmates/PMJSON on GitHub"
+[see issues]: https://github.com/postmates/PMHTTP/labels/TODO
 
 ### Table of Contents
 
