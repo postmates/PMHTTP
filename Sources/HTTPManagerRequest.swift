@@ -683,6 +683,25 @@ private func networkTaskProcessor<T>(queue: OperationQueue?,
             } else {
                 runCompletion()
             }
+        } else if case .error(_, let HTTPManagerError.forbidden(auth?, response, body, _)) = result {
+            if let token = authToken, let handleForbidden = auth.handleForbidden {
+                var alreadyCalled = false // attempt to detect multiple invocations of the block. Not guaranteed to work.
+                handleForbidden(response, body, task, token) { shouldRetry in
+                    if alreadyCalled {
+                        NSLog("[HTTPManager] HTTPAuth completion block invoked multiple times (\(type(of: auth)))")
+                        assertionFailure("HTTPAuth completion block invoked multiple times")
+                        return
+                    }
+                    alreadyCalled = true
+                    autoreleasepool {
+                        if !(shouldRetry && retry(true)) {
+                            runCompletion()
+                        }
+                    }
+                }
+            } else {
+                runCompletion()
+            }
         } else if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
             retryBehavior.handler(task, error, attempt, { shouldRetry in
                 if !(shouldRetry && retry(false)) {

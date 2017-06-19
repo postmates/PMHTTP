@@ -867,7 +867,7 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     ///   the results of decoding the body as JSON. If the decode fails, or the `Content-Type` is not
     ///   `application/json` or `text/json`, `bodyJson` is `nil`.
     /// - Note: 401 Unauthorized errors are represented by `HTTPManagerError.unauthorized` instead of
-    ///   `FailedResponse`.
+    ///   `FailedResponse` 403 Forbidden erros are represented by `HTTPManagerError.forbidden` instead of `Failed.
     case failedResponse(statusCode: Int, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// A 401 Unauthorized HTTP response was returned.
     /// - Parameter auth: The `HTTPAuth` that was used in the request, if any.
@@ -877,6 +877,14 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     ///   the results of decoding the body as JSON. If the decode fails, or the `Content-Type` is not
     ///   `application/json` or `text/json`, `bodyJson` is `nil`.
     case unauthorized(auth: HTTPAuth?, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
+    /// A 403 Forbidden HTTP response was returned.
+    /// - Parameter auth: The `HTTPAuth` that was used in the request, if any.
+    /// - Parameter response: The `HTTPURLResponse` object.
+    /// - Parameter body: The body of the response, if any.
+    /// - Parameter bodyJson: If the response `Content-Type` is `application/json` or `text/json`, contains
+    ///   the results of decoding the body as JSON. If the decode fails, or the `Content-Type` is not
+    ///   `application/json` or `text/json`, `bodyJson` is `nil`.
+    case forbidden(auth: HTTPAuth?, response: HTTPURLResponse, body: Data, bodyJson: JSON?)
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// - Note: Missing Content-Type headers are not treated as errors.
     /// - Note: Custom parse requests (using `parse(with:)`) do not throw this automatically, but
@@ -912,7 +920,7 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
                 s += "body: \(describeData(body)))"
             }
             return s
-        case let .unauthorized(auth, response, body, json):
+        case let .unauthorized(auth, response, body, json), let .forbidden(auth, response, body, json):
             var s = "Unauthorized("
             if let auth = auth {
                 s += String(reflecting: auth)
@@ -943,6 +951,8 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
             return "HTTPManagerError.failedResponse(statusCode: \(statusCode) \(statusText), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unauthorized(auth, response, body, json):
             return "HTTPManagerError.unauthorized(auth: \(auth.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
+        case let .forbidden(auth, response, body, json):
+            return "HTTPManagerError.forbidden(auth: \(auth.map({String(reflecting: $0)}) ?? "nil"), response: \(response), body: \(describeData(body)), bodyJson: \(json.map({String(reflecting: $0)}) ?? "nil"))"
         case let .unexpectedContentType(contentType, response, body):
             return "HTTPManagerError.unexpectedContentType(contentType: \(String(reflecting: contentType)), response: \(response), body: \(describeData(body)))"
         case let .unexpectedNoContent(response):

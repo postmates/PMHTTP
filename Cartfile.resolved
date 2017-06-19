@@ -1,2 +1,2 @@
-github "robbiehanson/CocoaAsyncSocket" "8ce941d5d3df4b9c4e8034f50c1e0d49d786a221"
-github "postmates/PMJSON" "v2.0.0"
+github "postmates/PMJSON" "v2.0.2"
+github "robbiehanson/CocoaAsyncSocket" "d0adf58ca694e733c75a8a157635e3deb66c061e"
