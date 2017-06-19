@@ -326,6 +326,67 @@ open class HTTPRefreshableAuth: NSObject, HTTPAuth {
         }
     }
     
+    /// Invoked when a 404 Forbidden response is received.
+    ///
+    /// The default implementation refreshes the authentication information if necessary. If you
+    /// override this method, you should call `super` unless you want to skip refreshing
+    /// authentication information for any reason.
+    open func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void) {
+        guard let token = token as? Inner.Token else {
+            // This shouldn't be reachable, but if it is, don't retry
+            return completion(false)
+        }
+        
+        let queue = DispatchQueue.global(qos: .userInitiated)
+        inner.asyncBarrier { [weak self] inner in
+            guard token === inner.currentToken else {
+                // if the token is different, we already refreshed our credentials
+                queue.async {
+                    completion(true)
+                }
+                return
+            }
+            
+            inner.completions.append(completion)
+            guard inner.refreshToken === nil else { return }
+            let refreshToken = Inner.Token()
+            inner.refreshToken = refreshToken
+            let info = inner.info
+            queue.async {
+                guard let this = self else { return }
+                let task = HTTPManager.withoutDefaultAuth(this) {
+                    return this.authenticationRefreshBlock(response, body, info, { (info, retry) in
+                        guard let this = self else { return }
+                        this.inner.asyncBarrier { [selfType=type(of: this)] inner in
+                            guard inner.refreshToken === refreshToken else {
+                                NSLog("[HTTPManager] HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times (\(selfType))")
+                                assertionFailure("HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times")
+                                return
+                            }
+                            inner.refreshToken = nil
+                            inner.task = nil
+                            if let info = info {
+                                inner.info = info
+                                inner.currentToken = Inner.Token()
+                            }
+                            let completions = inner.completions
+                            inner.completions = []
+                            queue.async {
+                                DispatchQueue.concurrentPerform(iterations: completions.count, execute: { i in
+                                    completions[i](retry)
+                                })
+                            }
+                        }
+                    })
+                }
+                this.inner.asyncBarrier { inner in
+                    guard inner.refreshToken === refreshToken else { return }
+                    inner.task = task
+                }
+            }
+        }
+    }
+    
     private let authenticationHeadersBlock: (_ request: URLRequest, _ info: Any) -> [String: String]
     private let authenticationRefreshBlock: (_ response: HTTPURLResponse, _ body: Data, _ info: Any, _ completion: @escaping (_ info: Any?, _ retry: Bool) -> Void) -> HTTPManagerTask?
     private let inner: QueueConfined<Inner>
