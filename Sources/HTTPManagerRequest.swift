@@ -555,6 +555,8 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
                 }
                 if statusCode == 401 { // Unauthorized
                     throw HTTPManagerError.unauthorized(auth: task.auth, response: response, body: data, bodyJson: json)
+                } else if statusCode == 403 { // Forbidden
+                    throw HTTPManagerError.forbidden(auth: task.auth, response: response, body: data, bodyJson: json)
                 } else {
                     throw HTTPManagerError.failedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
                 }
@@ -903,6 +905,8 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
                     }
                     if statusCode == 401 { // Unauthorized
                         throw HTTPManagerError.unauthorized(auth: task.auth, response: response, body: data, bodyJson: json)
+                    } else if statusCode == 403 { // Forbidden
+                        throw HTTPManagerError.forbidden(auth: task.auth, response: response, body: data, bodyJson: json)
                     } else {
                         throw HTTPManagerError.failedResponse(statusCode: statusCode, response: response, body: data, bodyJson: json)
                     }
