@@ -24,6 +24,7 @@
 		9E4C77C91C3B568C000FF8AC /* HTTPManagerRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */; };
 		9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */; };
 		9E4C77CD1C3C696D000FF8AC /* UploadSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */; };
+		9E555D031F0199DD0007C7EE /* PMHTTPURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E555D021F0199DD0007C7EE /* PMHTTPURLTests.swift */; };
 		9E55BD721C5FE25F001CC5D6 /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E55BD711C5FE25F001CC5D6 /* CFNetwork.framework */; };
 		9E681CB81C56EB1000422CE4 /* SipHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E681CB71C56EB1000422CE4 /* SipHash.swift */; };
 		9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E681CB91C56FBF100422CE4 /* SipHashTests.swift */; };
@@ -78,6 +79,7 @@
 		9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManagerRequest.swift; sourceTree = "<group>"; };
 		9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPManagerTask.swift; sourceTree = "<group>"; };
 		9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UploadSupport.swift; sourceTree = "<group>"; };
+		9E555D021F0199DD0007C7EE /* PMHTTPURLTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PMHTTPURLTests.swift; sourceTree = "<group>"; };
 		9E55BD711C5FE25F001CC5D6 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
 		9E67E0BC1CC6DD7D007FE41F /* LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-APACHE"; sourceTree = "<group>"; };
 		9E67E0BD1CC6DD7D007FE41F /* LICENSE-MIT */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-MIT"; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 				9EC8F0D11C408F1400297FC5 /* HTTP Server */,
 				9E7FBAA81C52EFE7000D7A70 /* PMHTTPTestCase.swift */,
 				9E7DDF301C18F2B600EA43AD /* PMHTTPTests.swift */,
+				9E555D021F0199DD0007C7EE /* PMHTTPURLTests.swift */,
 				9E8C1E431CAF50A6000D7FA2 /* PMHTTPRetryTests.swift */,
 				9ED4FA171CC072F2001A0693 /* MultipartTests.swift */,
 				9ED9012F1E2EDB4E00332D39 /* ImageTests.swift */,
@@ -401,6 +404,7 @@
 				9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */,
 				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
 				9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */,
+				9E555D031F0199DD0007C7EE /* PMHTTPURLTests.swift in Sources */,
 				9E11A8DC1D1B4AC100D63318 /* NetworkActivityTests.swift in Sources */,
 				9EEF318D1E4ABF050086AAFF /* AuthTests.swift in Sources */,
 				9EC8F0D31C408F2200297FC5 /* XCTest+HTTPServerExpectation.swift in Sources */,

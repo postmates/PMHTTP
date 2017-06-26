@@ -402,6 +402,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
+#### Development
+
+* Add overloads to the request creation methods that take a `URL`. These overloads return a non-optional request.
+
 #### v3.0.2 (2017-05-01)
 
 * Add `@discardableResult` to Obj-C `-performRequest…` methods.

@@ -571,6 +571,42 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
     }
     
+    /// Creates a GET request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the query
+    ///   string. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
+    /// - Returns: An `HTTPManagerDataRequest`.
+    @objc(requestForGETWithURL:parameters:)
+    public func request(GET url: URL, parameters: [String: Any] = [:]) -> HTTPManagerDataRequest {
+        return request(GET: url, parameters: expandParameters(parameters))
+    }
+    /// Creates a GET request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the query
+    ///   string.
+    /// - Returns: An `HTTPManagerDataRequest`.
+    @objc(requestForGETWithURL:queryItems:)
+    public func request(GET url: URL, parameters: [URLQueryItem]) -> HTTPManagerDataRequest {
+        return constructRequest(url, f: { HTTPManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
+    }
+    
     /// Creates a DELETE request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -607,6 +643,42 @@ extension HTTPManager {
     @objc(requestForDELETE:queryItems:)
     public func request(DELETE path: String, parameters: [URLQueryItem]) -> HTTPManagerActionRequest! {
         return constructRequest(path, f: { HTTPManagerActionRequest(apiManager: self, URL: $0, method: .DELETE, parameters: parameters) })
+    }
+    
+    /// Creates a DELETE request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the query
+    ///   string. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
+    /// - Returns: An `HTTPManagerActionRequest`.
+    @objc(requestForDELETEWithURL:parameters:)
+    public func request(DELETE url: URL, parameters: [String: Any] = [:]) -> HTTPManagerActionRequest {
+        return request(DELETE: url, parameters: expandParameters(parameters))
+    }
+    /// Creates a DELETE request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the query
+    ///   string.
+    /// - Returns: An `HTTPManagerActionRequest`.
+    @objc(requestForDELETEWithURL:queryItems:)
+    public func request(DELETE url: URL, parameters: [URLQueryItem]) -> HTTPManagerActionRequest {
+        return constructRequest(url, f: { HTTPManagerActionRequest(apiManager: self, URL: $0, method: .DELETE, parameters: parameters) })
     }
     
     /// Creates a POST request.
@@ -667,6 +739,60 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
     }
     
+    /// Creates a POST request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPOSTWithURL:parameters:)
+    public func request(POST url: URL, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest {
+        return request(POST: url, parameters: expandParameters(parameters))
+    }
+    /// Creates a POST request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPOSTWithURL:queryItems:)
+    public func request(POST url: URL, parameters: [URLQueryItem]) -> HTTPManagerUploadFormRequest {
+        return constructRequest(url, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .POST, parameters: parameters) })
+    }
+    /// Creates a POST request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`.
+    @objc(requestForPOSTWithURL:contentType:data:)
+    public func request(POST url: URL, contentType: String = "application/octet-stream", data: Data) -> HTTPManagerUploadDataRequest {
+        return constructRequest(url, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .POST, contentType: contentType, data: data) })
+    }
+    /// Creates a POST request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter json: The JSON data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`.
+    @nonobjc public func request(POST url: URL, json: JSON) -> HTTPManagerUploadJSONRequest {
+        return constructRequest(url, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
+    }
+    
     /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -723,6 +849,60 @@ extension HTTPManager {
     ///   be parsed by `URL`.
     @nonobjc public func request(PUT path: String, json: JSON) -> HTTPManagerUploadJSONRequest! {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PUT, json: json) })
+    }
+    
+    /// Creates a PUT request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPUTWithURL:parameters:)
+    public func request(PUT url: URL, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest {
+        return request(PUT: url, parameters: expandParameters(parameters))
+    }
+    /// Creates a PUT request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPUTWithURL:queryItems:)
+    public func request(PUT url: URL, parameters: [URLQueryItem]) -> HTTPManagerUploadFormRequest {
+        return constructRequest(url, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PUT, parameters: parameters) })
+    }
+    /// Creates a PUT request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`.
+    @objc(requestForPUTWithURL:contentType:data:)
+    public func request(PUT url: URL, contentType: String = "application/octet-stream", data: Data) -> HTTPManagerUploadDataRequest {
+        return constructRequest(url, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .PUT, contentType: contentType, data: data) })
+    }
+    /// Creates a PUT request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter json: The JSON data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`.
+    @nonobjc public func request(PUT url: URL, json: JSON) -> HTTPManagerUploadJSONRequest {
+        return constructRequest(url, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PUT, json: json) })
     }
     
     /// Creates a PATCH request.
@@ -783,14 +963,95 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PATCH, json: json) })
     }
     
+    /// Creates a PATCH request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`. Default is `[:]`.
+    ///
+    ///   For every value in the dictionary, if it's a `Dictionary`, `Array`, or `Set`, it will be
+    ///   recursively expanded. If it's a `URLQueryItem` it will expand similarly to a dictionary of
+    ///   one element. All other values will use their string representation. For dictionaries and
+    ///   query items, the recursive expansion will produce keys of the form `"foo[bar]"`. For
+    ///   arrays and sets, the recursive expansion will just repeat the key. If you wish to use the
+    ///   `"foo[]"` key syntax, then you can use `"foo[]"` as the key.
+    ///
+    ///   **Note** If a dictionary entry or nested `URLQueryItem` has a key of the form `"foo[]"`,
+    ///     the trailing `"[]"` will be moved outside of the enclosing `"dict[key]"` brackets. For
+    ///     example, if the parameters are `["foo": ["bar[]": [1,2,3]]]`, the resulting query string
+    ///     will be `"foo[bar][]=1&foo[bar][]=2&foo[bar][]=3"`.
+    ///
+    ///   **Important**: For dictionary and set expansion, the order of the values is
+    ///     implementation-defined. If the ordering is important, you must expand it yourself.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPATCHWithURL:parameters:)
+    public func request(PATCH url: URL, parameters: [String: Any] = [:]) -> HTTPManagerUploadFormRequest {
+        return request(PATCH: url, parameters: expandParameters(parameters))
+    }
+    /// Creates a PATCH request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter parameters: The request parameters, passed in the body as
+    ///   `application/x-www-form-urlencoded`.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPATCHWithURL:queryItems:)
+    public func request(PATCH url: URL, parameters: [URLQueryItem]) -> HTTPManagerUploadFormRequest {
+        return constructRequest(url, f: { HTTPManagerUploadFormRequest(apiManager: self, URL: $0, method: .PATCH, parameters: parameters) })
+    }
+    /// Creates a PATCH request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter contentType: The MIME type of the data. Defaults to `"application/octet-stream"`.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`.
+    @objc(requestForPATCHWithURL:contentType:data:)
+    public func request(PATCH url: URL, contentType: String = "application/octet-stream", data: Data) -> HTTPManagerUploadDataRequest {
+        return constructRequest(url, f: { HTTPManagerUploadDataRequest(apiManager: self, URL: $0, method: .PATCH, contentType: contentType, data: data) })
+    }
+    /// Creates a PATCH request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter json: The JSON data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`.
+    @nonobjc public func request(PATCH url: URL, json: JSON) -> HTTPManagerUploadJSONRequest {
+        return constructRequest(url, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PATCH, json: json) })
+    }
+    
     private func constructRequest<T: HTTPManagerRequest>(_ path: String, f: (URL) -> T) -> T? {
-        let (environment, auth, defaultRetryBehavior, assumeErrorsAreJSON) = inner.sync({ inner -> (Environment?, HTTPAuth?, HTTPManagerRetryBehavior?, Bool) in
-            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
-        })
+        let info = _configureRequestInfo()
         // FIXME: Get rid of NSURL when https://github.com/apple/swift/pull/3910 is fixed.
         guard let url = NSURL(string: path, relativeTo: environment?.baseURL) as URL? else { return nil }
         let request = f(url)
-        if let auth = auth, let environment = environment,
+        _configureRequest(request, url: url, with: info)
+        return request
+    }
+    
+    private func constructRequest<T: HTTPManagerRequest>(_ url: URL, f: (URL) -> T) -> T {
+        let info = _configureRequestInfo()
+        let request: T
+        if url.scheme == nil {
+            // try to make it relative to the environment. This shouldn't fail, but in case it does
+            // for some reason, just fall back to using the relative URL, which should produce a URL
+            // loading error later. This allows us to preserve the non-optional return type.
+            let url_ = NSURL(string: url.absoluteString, relativeTo: environment?.baseURL) as URL? ?? url
+            request = f(url_)
+        } else {
+            request = f(url)
+        }
+        _configureRequest(request, url: url, with: info)
+        return request
+    }
+    
+    private typealias ConfigureRequestInfo = (environment: Environment?, auth: HTTPAuth?, defaultRetryBehavior: HTTPManagerRetryBehavior?, assumeErrorsAreJSON: Bool)
+    
+    private func _configureRequestInfo() -> ConfigureRequestInfo {
+        return inner.sync({ inner in
+            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
+        })
+    }
+    
+    private func _configureRequest<T: HTTPManagerRequest>(_ request: T, url: URL, with info: ConfigureRequestInfo) {
+        if let auth = info.auth, let environment = info.environment,
             // make sure we aren't suppressing this auth
             !HTTPManager.isAuthSuppressed(auth),
             // make sure the requested entity is within the space defined by baseURL
@@ -798,9 +1059,8 @@ extension HTTPManager {
         {
             request.auth = auth
         }
-        request.retryBehavior = defaultRetryBehavior
-        request.assumeErrorsAreJSON = assumeErrorsAreJSON
-        return request
+        request.retryBehavior = info.defaultRetryBehavior
+        request.assumeErrorsAreJSON = info.assumeErrorsAreJSON
     }
     
     private func expandParameters(_ parameters: [String: Any]) -> [URLQueryItem] {
