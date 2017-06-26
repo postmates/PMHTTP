@@ -32,6 +32,15 @@ extension HTTPManager {
         return request(GET: path)
     }
     
+    /// Creates a GET request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Returns: An `HTTPManagerDataRequest`.
+    @objc(requestForGETWithURL:)
+    public func __objc_requestForGETWithURL(_ url: URL) -> HTTPManagerDataRequest {
+        return request(GET: url)
+    }
+    
     /// Creates a DELETE request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -42,6 +51,15 @@ extension HTTPManager {
         return request(DELETE: path)
     }
     
+    /// Creates a DELETE request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Returns: An `HTTPManagerActionRequest`.
+    @objc(requestForDELETEWithURL:)
+    public func __objc_requestForDELETEWithURL(_ url: URL) -> HTTPManagerActionRequest {
+        return request(DELETE: url)
+    }
+    
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -50,6 +68,15 @@ extension HTTPManager {
     @objc(requestForPOST:)
     public func __objc_requestForPOST(_ path: String) -> HTTPManagerUploadFormRequest! {
         return request(POST: path)
+    }
+    
+    /// Creates a POST request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPOSTWithURL:)
+    public func __objc_requestForPOSTWithURL(_ url: URL) -> HTTPManagerUploadFormRequest {
+        return request(POST: url)
     }
     
     /// Creates a POST request.
@@ -64,6 +91,18 @@ extension HTTPManager {
         return request(POST: path, json: json)
     }
     
+    /// Creates a POST request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter json: The JSON-compatible object to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if `json` is not a JSON-compatible
+    ///   object.
+    @objc(requestForPOSTWithURL:json:)
+    public func __objc_requestForPOSTWithURL(_ url: URL, json object: Any) -> HTTPManagerUploadJSONRequest! {
+        guard let json = try? JSON(ns: object) else { return nil }
+        return request(POST: url, json: json)
+    }
+    
     /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -72,6 +111,15 @@ extension HTTPManager {
     @objc(requestForPUT:)
     public func __objc_requestForPUT(_ path: String) -> HTTPManagerUploadFormRequest! {
         return request(PUT: path)
+    }
+    
+    /// Creates a PUT request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPUTWithURL:)
+    public func __objc_requestForPUTWithURL(_ url: URL) -> HTTPManagerUploadFormRequest {
+        return request(PUT: url)
     }
     
     /// Creates a PUT request.
@@ -86,6 +134,18 @@ extension HTTPManager {
         return request(PUT: path, json: json)
     }
     
+    /// Creates a PUT request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter json: The JSON-compatible object to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if `json` is not a JSON-compatible
+    ///   object.
+    @objc(requestForPUTWithURL:json:)
+    public func __objc_requestForPUTWithURL(_ url: URL, json object: Any) -> HTTPManagerUploadJSONRequest! {
+        guard let json = try? JSON(ns: object) else { return nil }
+        return request(PUT: url, json: json)
+    }
+    
     /// Creates a PATCH request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -94,6 +154,15 @@ extension HTTPManager {
     @objc(requestForPATCH:)
     public func __objc_requestForPATCH(_ path: String) -> HTTPManagerUploadFormRequest! {
         return request(PATCH: path)
+    }
+    
+    /// Creates a PATCH request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Returns: An `HTTPManagerUploadFormRequest`.
+    @objc(requestForPATCHWithURL:)
+    public func __objc_requestForPATCHWithURL(_ url: URL) -> HTTPManagerUploadFormRequest {
+        return request(PATCH: url)
     }
     
     /// Creates a PATCH request.
@@ -106,6 +175,18 @@ extension HTTPManager {
     public func __objc_requestForPATCH(_ path: String, json object: Any) -> HTTPManagerUploadJSONRequest! {
         guard let json = try? JSON(ns: object) else { return nil }
         return request(PATCH: path, json: json)
+    }
+    
+    /// Creates a PATCH request.
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter json: The JSON-compatible object to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadJSONRequest`, or `nil` if `json` is not a JSON-compatible
+    ///   object.
+    @objc(requestForPATCHWithURL:json:)
+    public func __objc_requestForPATCHWithURL(_ url: URL, json object: Any) -> HTTPManagerUploadJSONRequest! {
+        guard let json = try? JSON(ns: object) else { return nil }
+        return request(PATCH: url, json: json)
     }
 }
 
