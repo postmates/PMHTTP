@@ -65,13 +65,16 @@ A typical GET request looks like:
 ```swift
 // https://api.example.com/v1/search?query=%s
 let task = HTTP.request(GET: "search", parameters: ["query": "cute cats"])
-    .parseAsJSON()
+    .parseAsJSON(using: { (response, json) in
+        return try JSON.map(json.getArray(), Cat.init(json:))
+    })
     .performRequest(withCompletionQueue: .main) { task, result in
         switch result {
-        case let .success(response, json):
-            // Do something with the parsed JSON.
+        case let .success(response, cats):
+            // Do something with the Cats.
         case let .error(response, error):
-            // Handle the error. This includes both network errors and JSON parse errors.
+            // Handle the error. This includes network errors, JSON parse errors,
+            // and any error thrown by Cat.init(json:).
         case .canceled:
             // The task was canceled. Ignore or handle as appropriate.
         }
@@ -85,19 +88,22 @@ A POST request might look like:
 ```swift
 // https://api.example.com/v1/submit_cat
 let task = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])
-    .parseAsJSON(using: { response, json in
-        return try SubmitCatResponse(json: json)
+    .parseAsJSON(using: { result in
+        // POST parse blocks take a single `result` argument because 204 No Content is a valid
+        // response. The `result` enum vends an optional `value` property, and has a
+        // `getValue()` method that throws an error if the response was 204 No Content.
+        return try SubmitCatResponse(json: result.getValue())
     })
     .performRequest(withCompletionQueue: .main) { task, result in
         switch result {
         case let .success(response, value):
-            // value is a SubmitCatResponse
+            // value is a SubmitCatResponse.
         case let .error(response, error):
             // Handle the error. This could be a network error, a JSON parse error, or
-            // any error thrown by SubmitCatResponse.init(json:)
+            // any error thrown by SubmitCatResponse.init(json:).
         case .canceled:
             // The task was canceled.
-        }    
+        }
 }
 ```
 
@@ -107,13 +113,14 @@ A `multipart/form-data` upload might look like:
 // https://api.example.com/v1/submit_cat with photo
 let req = HTTP.request(POST: "submit_cat", parameters: ["name": "Fluffles", "color": "tabby"])!
 // We could add the image synchronously, but it's better to be asynchronous.
+// Note: There is a convenience function to do this already, this is just an example.
 req.addMultipartBody { upload in
     // This block executes on a background queue.
     if let data = UIImageJPEGRepresentation(catPhoto, 0.9) {
         upload.addMultipart(data: data, withName: "photo", mimeType: "image/jpeg")
     }
 }
-let task = req.parseAsJSON(using: { try SubmitCatResponse(json: $1) })
+let task = req.parseAsJSON(using: { try SubmitCatResponse(json: $0.getValue()) })
     .performRequest(withCompletionQueue: .main) { task, result in
         // ...
 }
