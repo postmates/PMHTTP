@@ -412,6 +412,8 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 #### Development
 
 * Add overloads to the request creation methods that take a `URL`. These overloads return a non-optional request.
+* Add new property `HTTPManagerRequest.serverRequiresContentLength`. This disables streaming body support (for JSON and multipart/mixed) and instead encodes the body synchronously so it can provide a `"Content-Length"` header to the server. There is a corresponding `HTTPManager.defaultServerRequiresContentLength` property as well.
+* Add a method `HTTPManagerRequest.setDefaultEnvironmentalProperties()` that sets properties to the `HTTPManager`-defined defaults that otherwise are only set if the request's path matches the environment. This is primarily intended for requests constructed using absolute paths (e.g. `HTTP.request(GET: "/foo")`) that should still use the environment defaults. Right now this method only sets `auth` and `serverRequiresContentLength`.
 
 #### v3.0.2 (2017-05-01)
 

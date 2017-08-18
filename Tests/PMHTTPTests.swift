@@ -1537,6 +1537,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             let bodyData = "<?xml version=\"1.0\"?><root><node>wat</node></root>".data(using: String.Encoding.utf8)!
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 XCTAssertEqual(request.headers["Content-Type"], "text/xml", "request content-type header")
+                XCTAssertEqual(request.headers["Content-Length"].flatMap({ Int($0) }), bodyData.count, "content length")
                 XCTAssertEqual(request.body, bodyData, "request body")
                 completionHandler(HTTPServer.Response(status: .ok))
             }
@@ -1552,6 +1553,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             let bodyData = "foobar".data(using: String.Encoding.utf8)!
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 XCTAssertEqual(request.headers["Content-Type"], "application/octet-stream", "request content-type header")
+                XCTAssertEqual(request.headers["Content-Length"].flatMap({ Int($0) }), bodyData.count, "content length")
                 XCTAssertEqual(request.body, bodyData, "request body")
                 completionHandler(HTTPServer.Response(status: .ok))
             }
@@ -1563,28 +1565,59 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testJSONUpload() {
-        expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
-            XCTAssertEqual(request.headers["Content-Type"], "application/json", "request content-type header")
-            do {
-                let json = try request.body.map({try JSON.decode($0)})
-                XCTAssertEqual(json, ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil], "request json body")
-            } catch {
-                if let body = request.body, let str = String(data: body, encoding: String.Encoding.utf8) {
-                    XCTFail("couldn't decode JSON body: \(String(reflecting: str))")
+        for useContentLength in [false, true] {
+            expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
+                XCTAssertEqual(request.headers["Content-Type"], "application/json", "request content-type header")
+                if useContentLength {
+                    XCTAssertEqual(request.headers["Content-Length"].flatMap({ Int($0) }), request.body?.count ?? 0, "content length")
                 } else {
-                    XCTFail("couldn't decode JSON body: \(request.body.map({"\($0.count) bytes"}) ?? "nil")")
+                    XCTAssertNil(request.headers["Content-Length"], "content length")
                 }
+                do {
+                    let json = try request.body.map({try JSON.decode($0)})
+                    XCTAssertEqual(json, ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil], "request json body")
+                } catch {
+                    if let body = request.body, let str = String(data: body, encoding: String.Encoding.utf8) {
+                        XCTFail("couldn't decode JSON body: \(String(reflecting: str))")
+                    } else {
+                        XCTFail("couldn't decode JSON body: \(request.body.map({"\($0.count) bytes"}) ?? "nil")")
+                    }
+                }
+                completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{\"ok\": true, \"msg\": \"upload complete\"}"))
             }
-            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "application/json"], body: "{\"ok\": true, \"msg\": \"upload complete\"}"))
+            let json: JSON = ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil]
+            let request = HTTP.request(POST: "foo", json: json)!
+            if useContentLength {
+                request.serverRequiresContentLength = true
+            }
+            XCTAssertEqual(request.preparedURLRequest.httpBody, JSON.encodeAsData(json), "request json data")
+            expectationForRequestSuccess(request.parseAsJSON()) { task, response, json in
+                XCTAssertEqual(response.mimeType, "application/json", "response MIME type")
+                XCTAssertEqual(json, ["ok": true, "msg": "upload complete"], "response body json")
+            }
+            waitForExpectations(timeout: 5, handler: nil)
         }
-        let json: JSON = ["name": "stuff", "elts": [1,2,3], "ok": true, "error": nil]
-        let request = HTTP.request(POST: "foo", json: json)!
-        XCTAssertEqual(request.preparedURLRequest.httpBody, JSON.encodeAsData(json), "request json data")
-        expectationForRequestSuccess(request.parseAsJSON()) { task, response, json in
-            XCTAssertEqual(response.mimeType, "application/json", "response MIME type")
-            XCTAssertEqual(json, ["ok": true, "msg": "upload complete"], "response body json")
-        }
-        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func testServerRequiresContentLengthEnvironmentDefaults() {
+        HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
+        
+        HTTP.defaultServerRequiresContentLength = true
+        var req = HTTP.request(GET: "foo")!
+        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        req = HTTP.request(GET: "")!
+        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        req = HTTP.request(GET: "/foo")!
+        XCTAssertFalse(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        req = HTTP.request(GET: "/v1/foo")!
+        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        req = HTTP.request(GET: "http://\(httpServer.address)/v1/")!
+        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        req = HTTP.request(GET: "http://apple.com/v1")!
+        XCTAssertFalse(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        
+        req.setDefaultEnvironmentalProperties()
+        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
     }
     
     func testResetSessionWithStoppedTask() {

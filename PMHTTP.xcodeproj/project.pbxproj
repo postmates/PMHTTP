@@ -42,6 +42,8 @@
 		9ED4FA181CC072F2001A0693 /* MultipartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED4FA171CC072F2001A0693 /* MultipartTests.swift */; };
 		9ED5D3621D936295007C2A65 /* Deprecations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED5D3611D936295007C2A65 /* Deprecations.swift */; };
 		9ED901301E2EDB4E00332D39 /* ImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED9012F1E2EDB4E00332D39 /* ImageTests.swift */; };
+		9EDBA9B21F477360005EDC9F /* InputStream+ReadAll.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDBA9B11F47735F005EDC9F /* InputStream+ReadAll.swift */; };
+		9EDBA9B41F478BB9005EDC9F /* InputStreamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDBA9B31F478BB9005EDC9F /* InputStreamTests.swift */; };
 		9EEF318B1E4A74C40086AAFF /* HTTPAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF318A1E4A74C40086AAFF /* HTTPAuth.swift */; };
 		9EEF318D1E4ABF050086AAFF /* AuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF318C1E4ABF050086AAFF /* AuthTests.swift */; };
 		9EEF318F1E4D4F440086AAFF /* SSLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF318E1E4D4F440086AAFF /* SSLTests.swift */; };
@@ -103,6 +105,8 @@
 		9ED4FA171CC072F2001A0693 /* MultipartTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipartTests.swift; sourceTree = "<group>"; };
 		9ED5D3611D936295007C2A65 /* Deprecations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Deprecations.swift; sourceTree = "<group>"; };
 		9ED9012F1E2EDB4E00332D39 /* ImageTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageTests.swift; sourceTree = "<group>"; };
+		9EDBA9B11F47735F005EDC9F /* InputStream+ReadAll.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "InputStream+ReadAll.swift"; sourceTree = "<group>"; };
+		9EDBA9B31F478BB9005EDC9F /* InputStreamTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InputStreamTests.swift; sourceTree = "<group>"; };
 		9EEF318A1E4A74C40086AAFF /* HTTPAuth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPAuth.swift; sourceTree = "<group>"; };
 		9EEF318C1E4ABF050086AAFF /* AuthTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthTests.swift; sourceTree = "<group>"; };
 		9EEF318E1E4D4F440086AAFF /* SSLTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SSLTests.swift; sourceTree = "<group>"; };
@@ -185,6 +189,7 @@
 				9E4C77CC1C3C696D000FF8AC /* UploadSupport.swift */,
 				9ED4FA151CC01E54001A0693 /* HTTPBodyStream.swift */,
 				9E29514A1C4D95CB001D38AC /* Utilities.swift */,
+				9EDBA9B11F47735F005EDC9F /* InputStream+ReadAll.swift */,
 				9E39E9BF1C3E100D005F7A95 /* NetworkActivityManager.swift */,
 				9ED5D3611D936295007C2A65 /* Deprecations.swift */,
 				9E22DD291C88CEF200C49993 /* DateParsing.swift */,
@@ -216,6 +221,7 @@
 				9EEF318C1E4ABF050086AAFF /* AuthTests.swift */,
 				9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */,
 				9EEF69F51D2C343E00C6E603 /* KVOTests.swift */,
+				9EDBA9B31F478BB9005EDC9F /* InputStreamTests.swift */,
 				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
 				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
@@ -383,6 +389,7 @@
 				9E29514B1C4D95CB001D38AC /* Utilities.swift in Sources */,
 				9E4C77CB1C3B56D6000FF8AC /* HTTPManagerTask.swift in Sources */,
 				9E22DD2A1C88CEF200C49993 /* DateParsing.swift in Sources */,
+				9EDBA9B21F477360005EDC9F /* InputStream+ReadAll.swift in Sources */,
 				9E4C77A91C360714000FF8AC /* ObjectiveC.swift in Sources */,
 				9E14D4FF1DC81E4800BE34D5 /* PlatformSpecific.swift in Sources */,
 				9EEF318B1E4A74C40086AAFF /* HTTPAuth.swift in Sources */,
@@ -395,6 +402,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EDBA9B41F478BB9005EDC9F /* InputStreamTests.swift in Sources */,
 				9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */,
 				9ED901301E2EDB4E00332D39 /* ImageTests.swift in Sources */,
 				9EA4EE371CBC197D00E4E531 /* MockingTests.swift in Sources */,

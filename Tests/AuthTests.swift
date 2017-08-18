@@ -10,6 +10,10 @@ import XCTest
 import PMHTTP
 
 final class AuthTests: PMHTTPTestCase {
+    override func tearDown() {
+        HTTP.defaultAuth = nil
+    }
+    
     func testNoAuth() {
         expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
             XCTAssertNil(request.headers["Authorization"], "request authorization header")
@@ -72,6 +76,27 @@ final class AuthTests: PMHTTPTestCase {
             let req = HTTP.request(GET: "http://apple.com/foo")!
             XCTAssertNil(req.auth, "request object auth")
         }
+    }
+    
+    func testAuthEnvironmentDefaults() {
+        HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
+        
+        HTTP.defaultAuth = HTTPBasicAuth(username: "alice", password: "secure")
+        var req = HTTP.request(GET: "foo")!
+        XCTAssertNotNil(req.auth, "request auth")
+        req = HTTP.request(GET: "")!
+        XCTAssertNotNil(req.auth, "request auth")
+        req = HTTP.request(GET: "/foo")!
+        XCTAssertNil(req.auth, "request auth")
+        req = HTTP.request(GET: "/v1/foo")!
+        XCTAssertNotNil(req.auth, "request auth")
+        req = HTTP.request(GET: "http://\(httpServer.address)/v1/")!
+        XCTAssertNotNil(req.auth, "request auth")
+        req = HTTP.request(GET: "http://apple.com/v1")!
+        XCTAssertNil(req.auth, "request auth")
+        
+        req.setDefaultEnvironmentalProperties()
+        XCTAssertNotNil(req.auth, "request auth")
     }
     
     func testRetryAuthInteraction() {
@@ -395,6 +420,7 @@ final class AuthTests: PMHTTPTestCase {
         XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
         HTTPManager.withoutDefaultAuth(auth) {
             XCTAssertNil(HTTP.request(GET: "foo").auth, "request auth")
+            XCTAssertNil(HTTP.request(GET: "foo").with({ $0.setDefaultEnvironmentalProperties() }).auth, "request auth")
         }
         XCTAssert(HTTP.request(GET: "foo").auth === auth, "request auth")
         

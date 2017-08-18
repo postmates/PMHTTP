@@ -66,6 +66,8 @@ class PMHTTPTestCase: XCTestCase {
         HTTP.sessionConfiguration.urlCache?.removeAllCachedResponses()
         HTTP.defaultAuth = nil
         HTTP.defaultRetryBehavior = nil
+        HTTP.defaultServerRequiresContentLength = false
+        HTTP.defaultAssumeErrorsAreJSON = false
     }
     
     override func tearDown() {

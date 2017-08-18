@@ -63,7 +63,8 @@ public final class HTTPManager: NSObject {
     ///   but requests created with absolute URLs will continue to work. See `HTTPManagerConfigurable`
     ///   for how to configure the shared `HTTPManager` prior to first use.
     ///
-    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`, `defaultAuth`.
+    /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`, `defaultAuth`,
+    ///   `defaultServerRequiresContentLength`.
     public var environment: Environment? {
         get {
             return inner.sync({ $0.environment })
@@ -208,6 +209,32 @@ public final class HTTPManager: NSObject {
         }
     }
     
+    /// If `true`, assume the server requires the `Content-Length` header for uploads. The default
+    /// value is `false`.
+    ///
+    /// Setting this to `true` forces JSON and multipart/mixed uploads to be encoded synchronously
+    /// when the request is performed rather than happening in the background.
+    ///
+    /// - Note: This property is only used for HTTP requests that are located within the current
+    ///   environment's base URL. If a request is created with an absolute path or absolute URL, and
+    ///   the resulting URL does not represent a resource found within the environment's base URL,
+    ///   the request will not be assigned this value.
+    ///
+    /// Changes to this property affect any newly-created requests but do not affect any existing
+    /// requests or any tasks that are in-progress.
+    ///
+    /// - SeeAlso: `environment`, `HTTPManagerRequest.serverRequiresContentLength`.
+    public var defaultServerRequiresContentLength: Bool {
+        get {
+            return inner.sync({ $0.defaultServerRequiresContentLength })
+        }
+        set {
+            inner.asyncBarrier {
+                $0.defaultServerRequiresContentLength = newValue
+            }
+        }
+    }
+    
     /// The user agent that's passed to every request.
     public var userAgent: String {
         return inner.sync({
@@ -303,6 +330,7 @@ public final class HTTPManager: NSObject {
         var defaultAuth: HTTPAuth?
         var defaultRetryBehavior: HTTPManagerRetryBehavior?
         var defaultAssumeErrorsAreJSON: Bool = false
+        var defaultServerRequiresContentLength: Bool = false
 
         var session: URLSession!
         var sessionDelegate: SessionDelegate!
@@ -1049,25 +1077,38 @@ extension HTTPManager {
         return request
     }
     
-    private typealias ConfigureRequestInfo = (environment: Environment?, auth: HTTPAuth?, defaultRetryBehavior: HTTPManagerRetryBehavior?, assumeErrorsAreJSON: Bool)
+    private typealias ConfigureRequestInfo = (environment: Environment?, auth: HTTPAuth?, defaultRetryBehavior: HTTPManagerRetryBehavior?, assumeErrorsAreJSON: Bool, serverRequiresContentLength: Bool)
     
     private func _configureRequestInfo() -> ConfigureRequestInfo {
         return inner.sync({ inner in
-            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON)
+            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON, inner.defaultServerRequiresContentLength)
         })
     }
     
     private func _configureRequest<T: HTTPManagerRequest>(_ request: T, url: URL, with info: ConfigureRequestInfo) {
-        if let auth = info.auth, let environment = info.environment,
-            // make sure we aren't suppressing this auth
-            !HTTPManager.isAuthSuppressed(auth),
+        if let environment = info.environment,
             // make sure the requested entity is within the space defined by baseURL
             environment.isPrefix(of: url)
         {
-            request.auth = auth
+            // NB: If you add more properties here, also update
+            // `applyEnvironmentDefaultValues(to:)`.
+            if let auth = info.auth, !HTTPManager.isAuthSuppressed(auth) {
+                request.auth = auth
+            }
+            request.serverRequiresContentLength = info.serverRequiresContentLength
         }
         request.retryBehavior = info.defaultRetryBehavior
         request.assumeErrorsAreJSON = info.assumeErrorsAreJSON
+    }
+    
+    internal func applyEnvironmentDefaultValues(to request: HTTPManagerRequest) {
+        inner.sync { inner in
+            let auth = inner.defaultAuth
+            if auth.map({ !HTTPManager.isAuthSuppressed($0) }) ?? true {
+                request.auth = auth
+            }
+            request.serverRequiresContentLength = inner.defaultServerRequiresContentLength
+        }
     }
     
     private func expandParameters(_ parameters: [String: Any]) -> [URLQueryItem] {
@@ -1606,8 +1647,24 @@ extension HTTPManager {
     internal func createNetworkTaskWithRequest(_ request: HTTPManagerRequest, uploadBody: UploadBody?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void) -> HTTPManagerTask {
         var urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
-        if case .formUrlEncoded(let queryItems)? = uploadBody {
+        switch uploadBody {
+        case nil, .data?: break
+        case .formUrlEncoded(let queryItems)?:
             uploadBody = .data(FormURLEncoded.data(for: queryItems))
+        case .json(let json)? where request.serverRequiresContentLength:
+            uploadBody = .data(JSON.encodeAsData(json))
+        case .json?: break
+        case let .multipartMixed(boundary, parameters, bodyParts)? where request.serverRequiresContentLength:
+            let stream = HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts)
+            stream.open()
+            do {
+                uploadBody = try .data(stream.readAll())
+            } catch {
+                // If we can't read it now (and it really shouldn't be able to fail anyway), just
+                // leave it as a streaming body, where it will presumably fail again and produce a
+                // URL error.
+            }
+        case .multipartMixed?: break
         }
         uploadBody?.evaluatePending()
         // NB: We are evaluating the mock before adding the auth headers. If we ever add the ability

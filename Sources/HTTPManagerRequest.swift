@@ -156,6 +156,17 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// - SeeAlso: `HTTPManager.defaultAssumeErrorsAreJSON`.
     public var assumeErrorsAreJSON: Bool = false
     
+    /// If `true`, assume the server requires the `Content-Length` header for uploads. The default
+    /// value is `false`.
+    ///
+    /// Setting this to `true` forces JSON and multipart/mixed uploads to be encoded synchronously
+    /// when the request is performed rather than happening in the background.
+    ///
+    /// The default value is provided by `HTTPManager.defaultServerRequiresContentLength`.
+    ///
+    /// - SeeAlso: `HTTPManager.defaultServerRequiresContentLength`.
+    public var serverRequiresContentLength: Bool = false
+    
     /// Whether tasks created from this request should affect the visiblity of the
     /// network activity indicator. Default is `true`.
     ///
@@ -189,6 +200,29 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     @nonobjc public func with(_ f: (HTTPManagerRequest) throws -> Void) rethrows -> Self {
         try f(self)
         return self
+    }
+    
+    /// Sets properties whose default values depend on the environment.
+    ///
+    /// This will set all properties whose default value depends on the environment to the value
+    /// they would have if the request was located within the environment. For example, this will
+    /// set the `auth` property to `HTTP.defaultAuth`.
+    ///
+    /// This is intended for use with requests that are constructed using an absolute path (and
+    /// therefore are still at the same domain), but want to be treated as though they're within the
+    /// environment path.
+    ///
+    /// **Example:**
+    ///
+    /// ```
+    /// HTTP.request(GET: "/foo")
+    ///     .with({ $0.setDefaultEnvironmentalProperties() })
+    ///     .performRequest { task, result in
+    ///         // ....
+    /// }
+    /// ```
+    public func setDefaultEnvironmentalProperties() {
+        apiManager.applyEnvironmentDefaultValues(to: self)
     }
     
     public func copy(with _: NSZone? = nil) -> Any {
@@ -227,6 +261,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
         assumeErrorsAreJSON = request.assumeErrorsAreJSON
+        serverRequiresContentLength = request.serverRequiresContentLength
         mock = request.mock
         affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         headerFields = request.headerFields
@@ -955,6 +990,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
         assumeErrorsAreJSON = request.assumeErrorsAreJSON
+        serverRequiresContentLength = request.serverRequiresContentLength
         mock = request.mock
         affectsNetworkActivityIndicator = request.affectsNetworkActivityIndicator
         headerFields = request.headerFields
