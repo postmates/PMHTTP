@@ -99,7 +99,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// The `HTTPAuth` value to use for the request. Default is the value of
     /// `HTTPManager.defaultAuth`.
     ///
-    /// - SeeAlso: `HTTPBasicAuth`.
+    /// - SeeAlso: `HTTPBasicAuth`, `HTTPManager.defaultAuth`.
     public var auth: HTTPAuth?
     
     /// The timeout interval of the request, in seconds. If `nil`, the session's default
@@ -141,6 +141,8 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     
     /// The retry behavior to use for the request. Default is the value of
     /// `HTTPManager.defaultRetryBehavior`.
+    ///
+    /// - SeeAlso: `HTTPManager.defaultRetryBehavior`.
     public var retryBehavior: HTTPManagerRetryBehavior?
     
     /// Whether errors should be assumed to be JSON.
@@ -150,6 +152,8 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// don't declare their Content-Types properly.
     ///
     /// The default value is provided by `HTTPManager.defaultAssumeErrorsAreJSON`.
+    ///
+    /// - SeeAlso: `HTTPManager.defaultAssumeErrorsAreJSON`.
     public var assumeErrorsAreJSON: Bool = false
     
     /// Whether tasks created from this request should affect the visiblity of the

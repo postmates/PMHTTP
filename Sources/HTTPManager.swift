@@ -156,7 +156,7 @@ public final class HTTPManager: NSObject {
     ///   the resulting URL does not represent a resource found within the environment's base URL,
     ///   the request will not be assigned the default auth.
     ///
-    /// - SeeAlso: `environment`, `HTTPBasicAuth`.
+    /// - SeeAlso: `environment`, `HTTPBasicAuth`, `HTTPManagerRequest.auth`.
     public var defaultAuth: HTTPAuth? {
         get {
             return inner.sync({ $0.defaultAuth })
@@ -174,6 +174,8 @@ public final class HTTPManager: NSObject {
     ///
     /// Changes to this property affect any newly-created requests but do not affect
     /// any existing requests or any tasks that are in-progress.
+    ///
+    /// - SeeAlso: `HTTPManagerRequest.retryBehavior`.
     public var defaultRetryBehavior: HTTPManagerRetryBehavior? {
         get {
             return inner.sync({ $0.defaultRetryBehavior })
@@ -190,6 +192,11 @@ public final class HTTPManager: NSObject {
     /// If `true`, all error bodies are parsed as JSON regardless of their declared
     /// Content-Type. This setting is intended to work around bad servers that
     /// don't declare their Content-Types properly.
+    ///
+    /// Changes to this property affect any newly-created requests but do not affect
+    /// any existing requests or any tasks that are in-progress.
+    ///
+    /// - SeeAlso: `HTTPManagerRequest.assumeErrorsAreJSON`.
     public var defaultAssumeErrorsAreJSON: Bool {
         get {
             return inner.sync({ $0.defaultAssumeErrorsAreJSON })
