@@ -1684,6 +1684,10 @@ extension HTTPManager {
             switch uploadBody {
             case .data(let data)?:
                 networkTask = inner.session.uploadTask(with: urlRequest, from: data)
+            case .formUrlEncoded(let queryItems)?:
+                networkTask = inner.session.uploadTask(with: urlRequest, from: FormURLEncoded.data(for: queryItems))
+            case .json(let json)?:
+                networkTask = inner.session.uploadTask(with: urlRequest, from: JSON.encodeAsData(json))
             case _?:
                 networkTask = inner.session.uploadTask(withStreamedRequest: urlRequest)
             case nil:
