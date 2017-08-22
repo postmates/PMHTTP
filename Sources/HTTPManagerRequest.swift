@@ -517,8 +517,8 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
             stream.open()
             request.httpBody = try? stream.readAll()
         case let .multipartMixed(boundary, parameters, bodyParts)?:
-            // We have at least one Pending value, we need to wait for them to evaluate (otherwise we can't
-            // accurately implement the `canRead` stream callback).
+            // We have at least one Pending value, we need to wait for them to evaluate (otherwise
+            // we might block the network thread).
             for case .pending(let deferred) in bodyParts {
                 deferred.wait()
             }

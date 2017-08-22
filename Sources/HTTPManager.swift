@@ -1995,8 +1995,8 @@ extension SessionDelegate: URLSessionDataDelegate {
             }
         case let .multipartMixed(boundary, parameters, bodyParts)?:
             if bodyParts.contains(where: { if case .pending = $0 { return true } else { return false } }) {
-                // We have at least one Pending value, we need to wait for them to evaluate (otherwise we can't
-                // accurately implement the `canRead` stream callback) so we'll do it asynchronously.
+                // We have at least one Pending value, we need to wait for them to evaluate
+                // (otherwise we might block the network thread) so we'll do it asynchronously.
                 let group = DispatchGroup()
                 let qos: DispatchQoS = taskInfo.task.userInitiated ? .userInitiated : .utility
                 for case .pending(let deferred) in bodyParts {
