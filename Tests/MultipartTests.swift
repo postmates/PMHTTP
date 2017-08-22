@@ -454,4 +454,14 @@ class MultipartTests: PMHTTPTestCase {
             waitForExpectations(timeout: 5, handler: nil)
         }
     }
+    
+    func testPreparedURLRequest() {
+        let req = HTTP.request(POST: "foo")!
+        req.addMultipart(text: "Hello world", withName: "message")
+        XCTAssertNil(req.preparedURLRequest.httpBody, "request HTTP body")
+        XCTAssertNotNil(req.preparedURLRequest.httpBodyStream, "request HTTP body stream")
+        req.serverRequiresContentLength = true
+        XCTAssertNotNil(req.preparedURLRequest.httpBody, "request HTTP body")
+        XCTAssertNil(req.preparedURLRequest.httpBodyStream, "request HTTP body stream")
+    }
 }

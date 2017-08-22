@@ -512,6 +512,10 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
             request.httpBody = FormURLEncoded.data(for: queryItems)
         case .json(let json)?:
             request.httpBody = JSON.encodeAsData(json)
+        case let .multipartMixed(boundary, parameters, bodyParts)? where serverRequiresContentLength:
+            let stream = HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts)
+            stream.open()
+            request.httpBody = try? stream.readAll()
         case let .multipartMixed(boundary, parameters, bodyParts)?:
             // We have at least one Pending value, we need to wait for them to evaluate (otherwise we can't
             // accurately implement the `canRead` stream callback).

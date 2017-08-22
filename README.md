@@ -409,6 +409,9 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
+#### Development
+
+* Handle `serverRequiresContentLength` correctly in `preparedURLRequest`.
 
 #### v3.0.3 (2017-08-18)
 
