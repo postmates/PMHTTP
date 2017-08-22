@@ -22,6 +22,7 @@ internal extension InputStream {
     /// - Throws: An error if the stream returns an error while reading.
     @nonobjc
     func readAll() throws -> Data {
+        defer { close() }
         let cap = 64 * 1024
         var len = 0
         var buf = UnsafeMutablePointer<UInt8>.allocate(capacity: cap)
