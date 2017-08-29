@@ -69,6 +69,36 @@ import Foundation
     @objc(handleUnauthorizedResponse:body:forTask:token:completion:)
     optional func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void)
     
+    /// Invoked when a 403 Forbidden response is received.
+    ///
+    /// This method is only called once per request. If this method is invoked and requests a retry,
+    /// and the subsequent retry fails due to 403 Forbidden, this is considered a permanent
+    /// failure.
+    ///
+    /// - Note: This method will be called on an arbitrary background thread.
+    ///
+    /// - Note: Special care must be taken when implementing this method. Multiple tasks may be
+    ///   created with the same authorization headers in parallel and may all fail even after you've
+    ///   refreshed your authorization information (e.g. with OAuth2). You can use
+    ///   `opaqueToken(for:)` in order to keep track of whether a given request was created with old
+    ///   authorization information or whether you need to refresh your authorization information.
+    ///
+    /// - Important: The completion block **MUST** be called once and only once. Failing to call the
+    ///   completion block will leave the task stuck in the processing state forever. Calling the
+    ///   completion block multiple times may cause bad behavior.
+    ///
+    /// - Note: When the completion block is invoked, if the task is not retried, the task's own
+    ///   completion block may run synchronously on the current queue.
+    ///
+    /// - Parameter response: The `HTTPURLResponse` that was received.
+    /// - Parameter body: The body that was received.
+    /// - Parameter task: The `HTTPManagerTask` that received the response.
+    /// - Parameter token: The opaque token returned from `opaqueToken(for:)`, otherwise `nil`.
+    /// - Parameter completion: A completion block that must be called when the `HTTPAuth` object
+    ///   has finished handling the response. This block may be called synchronously, or it may be called from any thread.
+    @objc(handleForbiddenResponse:body:forTask:token:completion:)
+    optional func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void)
+    
     /// Returns the localized description for an unauthorized error.
     ///
     /// - Parameter error: The unauthorized error. This will always be an instance of
@@ -241,6 +271,67 @@ open class HTTPRefreshableAuth: NSObject, HTTPAuth {
     /// override this method, you should call `super` unless you want to skip refreshing
     /// authentication information for any reason.
     open func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void) {
+        guard let token = token as? Inner.Token else {
+            // This shouldn't be reachable, but if it is, don't retry
+            return completion(false)
+        }
+        
+        let queue = DispatchQueue.global(qos: .userInitiated)
+        inner.asyncBarrier { [weak self] inner in
+            guard token === inner.currentToken else {
+                // if the token is different, we already refreshed our credentials
+                queue.async {
+                    completion(true)
+                }
+                return
+            }
+            
+            inner.completions.append(completion)
+            guard inner.refreshToken === nil else { return }
+            let refreshToken = Inner.Token()
+            inner.refreshToken = refreshToken
+            let info = inner.info
+            queue.async {
+                guard let this = self else { return }
+                let task = HTTPManager.withoutDefaultAuth(this) {
+                    return this.authenticationRefreshBlock(response, body, info, { (info, retry) in
+                        guard let this = self else { return }
+                        this.inner.asyncBarrier { [selfType=type(of: this)] inner in
+                            guard inner.refreshToken === refreshToken else {
+                                NSLog("[HTTPManager] HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times (\(selfType))")
+                                assertionFailure("HTTPRefreshableAuth authenticationRefreshBlock invoked multiple times")
+                                return
+                            }
+                            inner.refreshToken = nil
+                            inner.task = nil
+                            if let info = info {
+                                inner.info = info
+                                inner.currentToken = Inner.Token()
+                            }
+                            let completions = inner.completions
+                            inner.completions = []
+                            queue.async {
+                                DispatchQueue.concurrentPerform(iterations: completions.count, execute: { i in
+                                    completions[i](retry)
+                                })
+                            }
+                        }
+                    })
+                }
+                this.inner.asyncBarrier { inner in
+                    guard inner.refreshToken === refreshToken else { return }
+                    inner.task = task
+                }
+            }
+        }
+    }
+    
+    /// Invoked when a 404 Forbidden response is received.
+    ///
+    /// The default implementation refreshes the authentication information if necessary. If you
+    /// override this method, you should call `super` unless you want to skip refreshing
+    /// authentication information for any reason.
+    open func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void) {
         guard let token = token as? Inner.Token else {
             // This shouldn't be reachable, but if it is, don't retry
             return completion(false)

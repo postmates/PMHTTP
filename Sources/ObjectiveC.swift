@@ -199,6 +199,7 @@ extension HTTPManagerError: CustomNSError {
         switch self {
         case .failedResponse: return PMHTTPError.failedResponse.rawValue
         case .unauthorized: return PMHTTPError.unauthorized.rawValue
+        case .forbidden: return PMHTTPError.forbidden.rawValue
         case .unexpectedContentType: return PMHTTPError.unexpectedContentType.rawValue
         case .unexpectedNoContent: return PMHTTPError.unexpectedNoContent.rawValue
         case .unexpectedRedirect: return PMHTTPError.unexpectedRedirect.rawValue
@@ -220,6 +221,15 @@ extension HTTPManagerError: CustomNSError {
         case let .unauthorized(auth, response, body, json):
             var userInfo: [String: Any] = [
                 NSLocalizedDescriptionKey: auth?.localizedDescription?(for: self) ?? "401 Unauthorized HTTP response",
+                PMHTTPURLResponseErrorKey: response,
+                PMHTTPBodyDataErrorKey: body
+            ]
+            userInfo[PMHTTPAuthErrorKey] = auth
+            userInfo[PMHTTPBodyJSONErrorKey] = json?.object?.nsNoNull
+            return userInfo
+        case let .forbidden(auth, response, body, json):
+            var userInfo: [String: Any] = [
+                NSLocalizedDescriptionKey: auth?.localizedDescription?(for: self) ?? "403 Forbidden HTTP response",
                 PMHTTPURLResponseErrorKey: response,
                 PMHTTPBodyDataErrorKey: body
             ]

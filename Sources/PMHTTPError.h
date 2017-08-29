@@ -25,6 +25,9 @@ typedef NS_ENUM(NSInteger, PMHTTPError) {
     /// A 401 Unauthorized HTTP response was returned.
     /// @see <tt>PMHTTPAuthErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
     PMHTTPErrorUnauthorized,
+    /// A 403 Forbidden HTTP response was returned.
+    /// @see <tt>PMHTTPAuthErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>, <tt>PMHTTPBodyJSONErrorKey</tt>.
+    PMHTTPErrorForbidden,
     /// An HTTP response was returned that had an incorrect Content-Type header.
     /// @see <tt>PMHTTPContentTypeErrorKey</tt>, <tt>PMHTTPURLResponseErrorKey</tt>, <tt>PMHTTPBodyDataErrorKey</tt>
     PMHTTPErrorUnexpectedContentType,
