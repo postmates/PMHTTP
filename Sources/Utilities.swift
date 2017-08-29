@@ -14,6 +14,12 @@
 
 import Darwin
 
+#if swift(>=3.2)
+    // nop
+#else
+    internal typealias Substring = String
+#endif
+
 /// Returns `true` iff the unicode scalar is a Linear White Space character
 /// (as defined by RFC 2616).
 internal func isLWS(_ us: UnicodeScalar) -> Bool {
@@ -145,7 +151,7 @@ struct DelimitedParameters : Sequence, CustomStringConvertible {
     }
     
     func makeIterator() -> Iterator {
-        return Iterator(scalars: rawValue.unicodeScalars, delimiter: delimiter)
+        return Iterator(scalars: rawValue, delimiter: delimiter)
     }
     
     /// Constructs a `DelimitedParameters` from a given string.
@@ -164,16 +170,16 @@ struct DelimitedParameters : Sequence, CustomStringConvertible {
     }
     
     struct Iterator : IteratorProtocol {
-        private var scalars: String.UnicodeScalarView
+        private var scalars: Substring.UnicodeScalarView
         private let delimiter: UnicodeScalar
         
-        init(scalars: String.UnicodeScalarView, delimiter: UnicodeScalar) {
-            self.scalars = scalars
+        init(scalars: String, delimiter: UnicodeScalar) {
+            self.scalars = Substring(scalars).unicodeScalars
             self.delimiter = delimiter
         }
         
         mutating func next() -> (String,String?)? {
-            func indexSequence(scalars: String.UnicodeScalarView, start: String.UnicodeScalarIndex, end: String.UnicodeScalarIndex) -> UnfoldSequence<String.UnicodeScalarIndex, (String.UnicodeScalarIndex, Bool)> {
+            func indexSequence(scalars: Substring.UnicodeScalarView, start: Substring.UnicodeScalarView.Index, end: Substring.UnicodeScalarView.Index) -> UnfoldSequence<Substring.UnicodeScalarView.Index, (Substring.UnicodeScalarView.Index, Bool)> {
                 return sequence(state: (start, true), next: { (state: inout (String.UnicodeScalarIndex, Bool)) -> String.UnicodeScalarIndex? in
                     if !state.1 {
                         scalars.formIndex(after: &state.0)
@@ -190,7 +196,7 @@ struct DelimitedParameters : Sequence, CustomStringConvertible {
             
             /// Skips a quoted-string that starts at `start`. Returns the index of the first scalar
             /// past the end of the quoted-string, or `scalars.endIndex` if the string never ends.
-            func skipQuotedStringAt(_ start: String.UnicodeScalarIndex, scalars: String.UnicodeScalarView) -> String.UnicodeScalarIndex {
+            func skipQuotedStringAt(_ start: Substring.UnicodeScalarView.Index, scalars: Substring.UnicodeScalarView) -> Substring.UnicodeScalarView.Index {
                 var iter = indexSequence(scalars: scalars, start: start, end: scalars.endIndex).makeIterator()
                 _ = iter.next() // we already know start contains a dquote, don't bother looking at it.
                 while let idx = iter.next() {
@@ -225,7 +231,7 @@ struct DelimitedParameters : Sequence, CustomStringConvertible {
                 }
                 guard let equalIdx = equalIdx_ else {
                     // final parameter has no value
-                    defer { scalars = String.UnicodeScalarView() }
+                    defer { scalars = Substring.UnicodeScalarView() }
                     return (String(scalars.suffix(from: startIdx)), nil)
                 }
                 let valueIdx = scalars.index(after: equalIdx)
@@ -250,7 +256,7 @@ struct DelimitedParameters : Sequence, CustomStringConvertible {
                         trailingLWSIdx = nil
                     }
                 }
-                defer { scalars = String.UnicodeScalarView() }
+                defer { scalars = Substring.UnicodeScalarView() }
                 return (String(scalars[startIdx..<equalIdx]), String(scalars[valueIdx..<(trailingLWSIdx ?? scalars.endIndex)]))
             }
         }

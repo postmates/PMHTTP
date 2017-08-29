@@ -411,6 +411,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 #### Development
 
+* Support Swift 3.2.
 * Handle `serverRequiresContentLength` correctly in `preparedURLRequest`.
 
 #### v3.0.3 (2017-08-18)

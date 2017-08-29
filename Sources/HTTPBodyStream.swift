@@ -38,15 +38,15 @@ internal final class HTTPBody {
         /// Header includes the boundary and all header fields and the empty line
         /// terminator. The body part data should be able to be concatenated on the
         /// header in order to form a complete valid body part.
-        case header(String.UTF8View, Content)
+        case header(Substring.UTF8View, Content)
         case data(Content)
-        case terminator(String.UTF8View)
+        case terminator(Substring.UTF8View)
         case eof
     }
     
     private enum Content {
         case data(Data, offset: Int)
-        case text(String.UTF8View)
+        case text(Substring.UTF8View)
     }
     
     private init(boundary: String, parameters: [URLQueryItem], bodyParts: [MultipartBodyPart]) {
@@ -58,7 +58,7 @@ internal final class HTTPBody {
     
     private func readIntoBuffer(_ bufferPtr: UnsafeMutablePointer<UInt8>, _ bufferLength: Int) -> Int {
         var buffer = UnsafeMutableBufferPointer(start: bufferPtr, count: bufferLength)
-        func copyUTF8(_ buffer: inout UnsafeMutableBufferPointer<UInt8>, utf8: String.UTF8View) -> String.UTF8View.Index? {
+        func copyUTF8(_ buffer: inout UnsafeMutableBufferPointer<UInt8>, utf8: Substring.UTF8View) -> Substring.UTF8View.Index? {
             var count = 0
             var ptr = buffer.baseAddress!
             defer { buffer = UnsafeMutableBufferPointer(start: ptr, count: buffer.count - count) }
@@ -143,7 +143,7 @@ internal final class HTTPBody {
                     + "Content-Disposition: form-data; name=\"\(quotedString(queryItem.name))\"\r\n"
                     + "Content-Type: text/plain; charset=utf-8\r\n"
                     + "\r\n"
-                state = .header(header.utf8, .text((queryItem.value ?? "").utf8))
+                state = .header(Substring(header).utf8, .text(Substring(queryItem.value ?? "").utf8))
             } else {
                 queryItemGenerator = nil
                 loop: while true {
@@ -164,7 +164,7 @@ internal final class HTTPBody {
                                 continue loop
                             }
                         case nil:
-                            state = .terminator("\(prefix)--\(boundary)--\r\n".utf8)
+                            state = .terminator(Substring("\(prefix)--\(boundary)--\r\n").utf8)
                             break loop
                         }
                     }
@@ -176,7 +176,7 @@ internal final class HTTPBody {
                         content = .data(data_, offset: 0)
                         mimeType = data.mimeType ?? "application/octet-stream"
                     case .text(let text):
-                        content = .text(text.utf8)
+                        content = .text(Substring(text).utf8)
                         mimeType = data.mimeType ?? "text/plain; charset=utf-8"
                     }
                     let header = prefix
@@ -184,7 +184,7 @@ internal final class HTTPBody {
                         + "Content-Disposition: form-data; name=\"\(quotedString(data.name))\"\(filename)\r\n"
                         + "Content-Type: \(mimeType)\r\n"
                         + "\r\n"
-                    state = .header(header.utf8, content)
+                    state = .header(Substring(header).utf8, content)
                     break
                 }
             }
