@@ -1619,12 +1619,12 @@ private class SessionDelegate: NSObject {
         let uploadBody: UploadBody?
         let originalRequest: URLRequest
         let authToken: Any?
-        let processor: (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void
+        let processor: (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ reason: HTTPManager.RetryReason) -> Bool) -> Void
         var data: NSMutableData? = nil
         var attempt: Int = 0
-        var retriedAuth: Bool = false
+        var highestRetryReason: HTTPManager.RetryReason?
         
-        init(task: HTTPManagerTask, uploadBody: UploadBody?, originalRequest: URLRequest, authToken: Any?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void) {
+        init(task: HTTPManagerTask, uploadBody: UploadBody?, originalRequest: URLRequest, authToken: Any?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ reason: HTTPManager.RetryReason) -> Bool) -> Void) {
             self.task = task
             self.uploadBody = uploadBody
             self.originalRequest = originalRequest
@@ -1644,7 +1644,7 @@ extension HTTPManager {
     ///   for the task to transition to `.completed` (unless it's already been canceled).
     /// - Returns: An `HTTPManagerTask`.
     /// - Important: After creating the task, you must start it by calling the `resume()` method.
-    internal func createNetworkTaskWithRequest(_ request: HTTPManagerRequest, uploadBody: UploadBody?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void) -> HTTPManagerTask {
+    internal func createNetworkTaskWithRequest(_ request: HTTPManagerRequest, uploadBody: UploadBody?, processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ reason: RetryReason) -> Bool) -> Void) -> HTTPManagerTask {
         var urlRequest = request._preparedURLRequest
         var uploadBody = uploadBody
         switch uploadBody {
@@ -1703,6 +1703,28 @@ extension HTTPManager {
         return apiTask
     }
     
+    /// The reason for retrying a task.
+    internal enum RetryReason: Comparable {
+        /// The retry was requested by the configured retry behavior.
+        case normal
+        /// The retry was requested by an `HTTPAuth` object after receiving a 401 Unauthorized.
+        case unauthorized
+        /// The retry was requested by an `HTTPAuth` object after receiving a 403 Forbidden.
+        case forbidden
+        
+        static func <(lhs: RetryReason, rhs: RetryReason) -> Bool {
+            return lhs.sortOrder < rhs.sortOrder
+        }
+        
+        private var sortOrder: Int {
+            switch self {
+            case .normal: return 0
+            case .unauthorized: return 1
+            case .forbidden: return 2
+            }
+        }
+    }
+    
     /// Transitions the given task back into `.running` with a new network task.
     ///
     /// This method updates the `SessionDelegate`'s `tasks` dictionary for the new
@@ -1712,10 +1734,10 @@ extension HTTPManager {
     /// The newly-created `URLSessionTask` is automatically resumed.
     ///
     /// - Parameter taskInfo: The `TaskInfo` object representing the task to retry.
-    /// - Parameter isAuthRetry: Whether this is a retry requested by an `HTTPAuth` object.
+    /// - Parameter reason: The reason for retrying the task.
     /// - Returns: `true` if the task is retrying, or `false` if it could not be retried
     ///   (e.g. because it's already been canceled).
-    fileprivate func retryNetworkTask(_ taskInfo: SessionDelegate.TaskInfo, isAuthRetry: Bool) -> Bool {
+    fileprivate func retryNetworkTask(_ taskInfo: SessionDelegate.TaskInfo, reason: RetryReason) -> Bool {
         var request = taskInfo.originalRequest
         taskInfo.task.auth?.applyHeaders(to: &request)
         let networkTask = inner.sync { inner -> URLSessionTask? in
@@ -1736,12 +1758,13 @@ extension HTTPManager {
                 return nil
             }
             var taskInfo = taskInfo
-            if isAuthRetry {
-                taskInfo.attempt = 0
-                taskInfo.retriedAuth = true
-            } else {
+            switch reason {
+            case .normal:
                 taskInfo.attempt += 1
+            case .unauthorized, .forbidden:
+                taskInfo.attempt = 0
             }
+            taskInfo.highestRetryReason = max(taskInfo.highestRetryReason ?? .normal, reason)
             inner.session.delegateQueue.addOperation { [sessionDelegate=inner.sessionDelegate!] in
                 assert(sessionDelegate.tasks[networkTask.taskIdentifier] == nil, "internal HTTPManager error: tasks contains unknown taskInfo")
                 sessionDelegate.tasks[networkTask.taskIdentifier] = taskInfo
@@ -1878,11 +1901,20 @@ extension SessionDelegate: URLSessionDataDelegate {
             if result.ok {
                 assert(result.oldState == .running, "internal HTTPManager error: tried to process task that's already processing")
                 queue.async { [weak apiManager] in
-                    func retry(isAuthRetry: Bool) -> Bool {
-                        return apiManager?.retryNetworkTask(taskInfo, isAuthRetry: isAuthRetry) ?? false
+                    func retry(reason: HTTPManager.RetryReason) -> Bool {
+                        return apiManager?.retryNetworkTask(taskInfo, reason: reason) ?? false
                     }
                     autoreleasepool {
-                        let authToken: Any?? = taskInfo.retriedAuth ? .none : .some(taskInfo.authToken)
+                        let authToken: Any??
+                        switch taskInfo.highestRetryReason {
+                        case .unauthorized? where (task.response as? HTTPURLResponse)?.statusCode == 403:
+                            // Allow retrying 403 Forbidden after 401 Unauthorized
+                            authToken = .some(taskInfo.authToken)
+                        case .unauthorized?, .forbidden?:
+                            authToken = .none
+                        case .normal?, nil:
+                            authToken = .some(taskInfo.authToken)
+                        }
                         if let error = error {
                             processor(apiTask, .error(task.response, error), authToken, taskInfo.attempt, retry)
                         } else if let response = task.response {
