@@ -694,7 +694,7 @@ private func networkTaskProcessor<T>(queue: OperationQueue?,
                                   processor: @escaping (HTTPManagerTask, HTTPManagerTaskResult<Data>) -> HTTPManagerTaskResult<T>,
                                   taskCompletion: @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>, @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void) -> Void,
                                   completion: @escaping (HTTPManagerTask, HTTPManagerTaskResult<T>) -> Void)
-    -> (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ isAuthRetry: Bool) -> Bool) -> Void
+    -> (HTTPManagerTask, HTTPManagerTaskResult<Data>, _ authToken: Any??, _ attempt: Int, _ retry: @escaping (_ reason: HTTPManager.RetryReason) -> Bool) -> Void
 {
     return { (task, result, authToken, attempt, retry) in
         let result = processor(task, result)
@@ -718,7 +718,7 @@ private func networkTaskProcessor<T>(queue: OperationQueue?,
                     }
                     alreadyCalled = true
                     autoreleasepool {
-                        if !(shouldRetry && retry(true)) {
+                        if !(shouldRetry && retry(.unauthorized)) {
                             runCompletion()
                         }
                     }
@@ -726,9 +726,31 @@ private func networkTaskProcessor<T>(queue: OperationQueue?,
             } else {
                 runCompletion()
             }
+        } else if case .error(_, let HTTPManagerError.failedResponse(403, response, body, _)) = result,
+            // NB: If any of the following fail we want to fall back to retry behavior. This is in
+            // contrast with 401 Unauthorized handling, where we explicitly disable retries if an
+            // `auth` is set.
+            let auth = task.auth,
+            let token = authToken,
+            let handleForbidden = auth.handleForbidden
+        {
+            var alreadyCalled = false // attempt to detect multiple invocations of the block. Not guaranteed to work.
+            handleForbidden(response, body, task, token) { shouldRetry in
+                if alreadyCalled {
+                    NSLog("[HTTPManager] HTTPAuth completion block invoked multiple times (\(type(of: auth)))")
+                    assertionFailure("HTTPAuth completion block invoked multiple times")
+                    return
+                }
+                alreadyCalled = true
+                autoreleasepool {
+                    if !(shouldRetry && retry(.forbidden)) {
+                        runCompletion()
+                    }
+                }
+            }
         } else if case .error(_, let error) = result, let retryBehavior = task.retryBehavior {
             retryBehavior.handler(task, error, attempt, { shouldRetry in
-                if !(shouldRetry && retry(false)) {
+                if !(shouldRetry && retry(.normal)) {
                     runCompletion()
                 }
             })

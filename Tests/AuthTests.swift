@@ -131,6 +131,39 @@ final class AuthTests: PMHTTPTestCase {
             }
         }
         waitForExpectations(timeout: 5, handler: nil)
+        
+        // Retrying for 401 Unauthorized should work both before and after retrying for other reasons
+        class Auth: HTTPAuth {
+            let expectation: XCTestExpectation
+            init(expectation: XCTestExpectation) {
+                self.expectation = expectation
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation.fulfill()
+            }
+        }
+        let auth = Auth(expectation: expectation(description: "handleUnauthorized"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .serviceUnavailable))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .serviceUnavailable))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        let request = HTTP.request(GET: "foo")!
+        request.auth = auth
+        request.retryBehavior = HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
+        expectationForRequestSuccess(request)
+        waitForExpectations(timeout: 5, handler: nil)
     }
     
     func testOpaqueToken() {
@@ -189,19 +222,44 @@ final class AuthTests: PMHTTPTestCase {
             }
         }
         
-        let auth = Auth(expectation: expectation(description: "handleUnauthorized"))
-        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .unauthorized))
-        }
-        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            completionHandler(HTTPServer.Response(status: .unauthorized))
-        }
-        expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.auth = auth })) { (task, response, error) in
-            if case HTTPManagerError.unauthorized = error {} else {
-                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+        do {
+            let auth = Auth(expectation: expectation(description: "handleUnauthorized"))
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .unauthorized))
             }
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+            }
+            expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.auth = auth })) { (task, response, error) in
+                if case HTTPManagerError.unauthorized = error {} else {
+                    XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+                }
+            }
+            waitForExpectations(timeout: 5, handler: nil)
         }
-        waitForExpectations(timeout: 5, handler: nil)
+        
+        // Ensure this holds true even if there's a regular retry in between
+        do {
+            let auth = Auth(expectation: expectation(description: "handleUnauthorized"))
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+            }
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .serviceUnavailable))
+            }
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .unauthorized))
+            }
+            let request = HTTP.request(GET: "foo")!
+            request.auth = auth
+            request.retryBehavior = HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
+            expectationForRequestFailure(request) { (task, response, error) in
+                if case HTTPManagerError.unauthorized = error {} else {
+                    XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+                }
+            }
+            waitForExpectations(timeout: 5, handler: nil)
+        }
     }
     
     func testAuthAsyncCompletion() {
@@ -460,5 +518,212 @@ final class AuthTests: PMHTTPTestCase {
         }
         
         let refreshToken: String
+    }
+    
+    func test403Forbidden() {
+        class Auth: HTTPAuth {
+            let expectation: XCTestExpectation
+            init(expectation: XCTestExpectation) {
+                self.expectation = expectation
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation.fulfill()
+            }
+        }
+        let auth = Auth(expectation: expectation(description: "handleForbidden"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo").with({ $0.auth = auth }))
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func test403ForbiddenRetryOnce() {
+        class Auth: HTTPAuth {
+            // NB: This is safe to access without synchronization because the instance of this class
+            // is only used with a single request, so therefore there can't be concurrent access.
+            var attempts: Int = 0
+            let expectation: XCTestExpectation
+            init(expectation: XCTestExpectation) {
+                self.expectation = expectation
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                XCTAssertEqual(attempts, 0)
+                attempts += 1
+                completion(true)
+                if attempts == 1 {
+                    expectation.fulfill()
+                }
+            }
+        }
+        let auth = Auth(expectation: expectation(description: "handleForbidden"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.auth = auth })) { (task, response, error) in
+            if case HTTPManagerError.failedResponse(403, _, _, _) = error {} else {
+                XCTFail("expected HTTPManagerError.failedResponse(403, …), found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func test401Then403() {
+        class Auth: HTTPAuth {
+            let expectation401: XCTestExpectation
+            let expectation403: XCTestExpectation
+            init(expectation401: XCTestExpectation, expectation403: XCTestExpectation) {
+                self.expectation401 = expectation401
+                self.expectation403 = expectation403
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation401.fulfill()
+            }
+            func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation403.fulfill()
+            }
+        }
+        let auth = Auth(expectation401: expectation(description: "handleUnauthorized"), expectation403: expectation(description: "handleForbidden"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo").with({ $0.auth = auth }))
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func test403Then401() {
+        class Auth: HTTPAuth {
+            let expectation: XCTestExpectation
+            init(expectation: XCTestExpectation) {
+                self.expectation = expectation
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                XCTFail("HTTPAuth.handleUnauthorized invoked again after handling 403 Forbidden")
+                completion(false)
+            }
+            func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation.fulfill()
+            }
+        }
+        let auth = Auth(expectation: expectation(description: "handleForbidden"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForRequestFailure(HTTP.request(GET: "foo").with({ $0.auth = auth })) { (task, response, error) in
+            if case HTTPManagerError.unauthorized = error {} else {
+                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func test401Then503Then403() {
+        class Auth: HTTPAuth {
+            let expectation401: XCTestExpectation
+            let expectation403: XCTestExpectation
+            init(expectation401: XCTestExpectation, expectation403: XCTestExpectation) {
+                self.expectation401 = expectation401
+                self.expectation403 = expectation403
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation401.fulfill()
+            }
+            func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation403.fulfill()
+            }
+        }
+        let auth = Auth(expectation401: expectation(description: "handleUnauthorized"), expectation403: expectation(description: "handleForbidden"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .serviceUnavailable))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        let request = HTTP.request(GET: "foo")!
+        request.auth = auth
+        request.retryBehavior = HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
+        expectationForRequestSuccess(request)
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func test403Then503Then401() {
+        class Auth: HTTPAuth {
+            let expectation: XCTestExpectation
+            init(expectation: XCTestExpectation) {
+                self.expectation = expectation
+            }
+            func headers(for request: URLRequest) -> [String : String] {
+                return [:]
+            }
+            func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                XCTFail("HTTPAuth.handleUnauthorized invoked again after handling 403 Forbidden")
+                completion(false)
+            }
+            func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (Bool) -> Void) {
+                completion(true)
+                expectation.fulfill()
+            }
+        }
+        let auth = Auth(expectation: expectation(description: "handleForbidden"))
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .forbidden))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .serviceUnavailable))
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .unauthorized))
+        }
+        let request = HTTP.request(GET: "foo")!
+        request.auth = auth
+        request.retryBehavior = HTTPManagerRetryBehavior.retryNetworkFailureOrServiceUnavailable(withStrategy: .retryOnce)
+        expectationForRequestFailure(request) { (task, response, error) in
+            if case HTTPManagerError.unauthorized = error {} else {
+                XCTFail("expected HTTPManagerError.unauthorized, found \(error) - response error")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
     }
 }

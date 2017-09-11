@@ -43,7 +43,7 @@ import Foundation
     ///
     /// This method is only called once per request. If this method is invoked and requests a retry,
     /// and the subsequent retry fails due to 401 Unauthorized, this is considered a permanent
-    /// failure.
+    /// failure. Note that a 403 Forbidden after a 401 Unauthorized may trigger a second retry.
     ///
     /// - Note: This method will be called on an arbitrary background thread.
     ///
@@ -65,9 +65,44 @@ import Foundation
     /// - Parameter task: The `HTTPManagerTask` that received the response.
     /// - Parameter token: The opaque token returned from `opaqueToken(for:)`, otherwise `nil`.
     /// - Parameter completion: A completion block that must be called when the `HTTPAuth` object
-    ///   has finished handling the response. This block may be called synchronously, or it may be called from any thread.
+    ///   has finished handling the response. This block may be called synchronously, or it may be
+    ///   called from any thread.
     @objc(handleUnauthorizedResponse:body:forTask:token:completion:)
     optional func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void)
+    
+    /// Invoked when a 403 Forbidden response is received.
+    ///
+    /// This is intended for situations where you can't access a resource with your existing
+    /// credentials but you can request new credentials that have greater access.
+    ///
+    /// This method is only called once per request. If this method is invoked and requests a retry,
+    /// and the subsequent retry fails due to 403 Forbidden or 401 Unauthorized, this is considered
+    /// a permanent failure.
+    ///
+    /// - Note: This method will be called on an arbitrary background thread.
+    ///
+    /// - Note: Special care must be taken when implementing this method. Multiple tasks may be
+    ///   created with the same authorization headers in parallel and may all fail even after you've
+    ///   refreshed your authorization information (e.g. with OAuth2). You can use
+    ///   `opaqueToken(for:)` in order to keep track of whether a given request was created with old
+    ///   authorization information or whether you need to refresh your authorization information.
+    ///
+    /// - Important: The completion block **MUST** be called once and only once. Failing to call the
+    ///   completion block will leave the task stuck in the processing state forever. Calling the
+    ///   completion block multiple times may cause bad behavior.
+    ///
+    /// - Note: When the completion block is invoked, if the task is not retried, the task's own
+    ///   completion block may run synchronously on the current queue.
+    ///
+    /// - Parameter response: The `HTTPURLResponse` that was received.
+    /// - Parameter body: The body that was received.
+    /// - Parameter task: The `HTTPManagerTask` that received the response.
+    /// - Parameter token: The opaque token returned from `opaqueToken(for:)`, otherwise `nil`.
+    /// - Parameter completion: A completion block that must be called when the `HTTPAuth` object
+    ///   has finished handling the response. This block may be called synchronously, or it may be
+    ///   called from any thread.
+    @objc(handleForbiddenResponse:body:forTask:token:completion:)
+    optional func handleForbidden(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void)
     
     /// Returns the localized description for an unauthorized error.
     ///
