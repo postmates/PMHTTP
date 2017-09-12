@@ -82,29 +82,18 @@ public extension HTTPManagerActionParseResult {
     }
 }
 
-// FIXME: Remove this hack when Swift gains support for equality constraints in extensions
-/// This protocol is an implementation detail of deprecation support for
-/// `HTTPManagerActionParseResult`. Do not use it directly.
-public protocol __HTTPManagerActionJSONParseResult {
-    var __HTTPManagerActionJSONParseResult_asJSON: JSON { get }
-}
-extension JSON: __HTTPManagerActionJSONParseResult {
-    /// This protocol is an implementation detail of deprecation support for
-    /// `HTTPManagerActionParseResult`. Do not use it directly.
-    public var __HTTPManagerActionJSONParseResult_asJSON: JSON { return self }
-}
-extension HTTPManagerActionParseResult where T: __HTTPManagerActionJSONParseResult {
+extension HTTPManagerActionParseResult where T == JSON {
     /// The parsed JSON response, or `nil` if the server returned 204 No Content.
     @available(*, deprecated, renamed: "value")
     public var json: JSON? {
-        return value?.__HTTPManagerActionJSONParseResult_asJSON
+        return value
     }
     
     /// Returns the parsed JSON response, or throws `HTTPManagerError.unexpectedNoContent`
     /// if the server returned 204 No Content.
     @available(*, deprecated, renamed: "getValue")
     public func getJSON() throws -> JSON {
-        return try getValue().__HTTPManagerActionJSONParseResult_asJSON
+        return try getValue()
     }
 }
 
