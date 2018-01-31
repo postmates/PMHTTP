@@ -196,8 +196,8 @@ internal final class HTTPBody {
     }
     
     #if enableDebugLogging
-    func log(msg: String) {
-        let ptr = unsafeBitCast(unsafeAddressOf(self), UInt.self)
+    func log(_ msg: String) {
+        let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
         NSLog("<HTTPBody: 0x%@> %@", String(ptr, radix: 16), msg)
     }
     #else

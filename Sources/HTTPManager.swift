@@ -1785,8 +1785,8 @@ extension HTTPManager {
 
 extension SessionDelegate: URLSessionDataDelegate {
     #if enableDebugLogging
-    func log(msg: String) {
-        let ptr = unsafeBitCast(unsafeAddressOf(self), UInt.self)
+    func log(_ msg: String) {
+        let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
         NSLog("<SessionDelegate: 0x%zx> %@", ptr, msg)
     }
     #else
