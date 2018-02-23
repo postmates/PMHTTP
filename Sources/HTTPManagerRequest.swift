@@ -881,6 +881,28 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     ///   request incorrectly.
     public var expectedContentTypes: [String]
     
+    /// Returns a new request that maps the parsed data through the specified handler.
+    /// - Note: In most cases you should do any mapping of the desired value inside the original
+    ///   parse handler. This method exists as a convenience for when a method applies a canned
+    ///   parse handler to the request and you want to process it further before running the task
+    ///   completion block.
+    /// - Parameter transform: A block to call as part of the request processing. The block is not
+    ///   guaranteed to be called on any particular thread. The block returns the new value for the
+    ///   request.
+    /// - Parameter response: The `URLResponse` returned by the network task.
+    /// - Parameter value: The return value of the previous parse handler.
+    /// - Returns: An `HTTPManagerParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main thread, you should
+    ///   use `performRequest(withCompletionQueue:completion:)` instead.
+    /// - Warning: If the request is canceled, the results of the handler may be discarded. Any
+    ///   side-effects performed by your handler must be safe in the event of a cancelation.
+    /// - Warning: The parse request inherits the `isIdempotent` value of `self`. If the parse
+    ///   handler has side effects and can throw, you should either ensure that it's safe to run the
+    ///   parse handler again or set `isIdempotent` to `false`.
+    public func map<U>(_ transform: @escaping (_ response: URLResponse, _ value: T) throws -> U) -> HTTPManagerParseRequest<U> {
+        return HTTPManagerParseRequest<U>(mapping: self, parseHandler: transform)
+    }
+    
     /// Creates a suspended `HTTPManagerTask` for the request with the given completion handler.
     ///
     /// This method is intended for cases where you need access to the `URLSessionTask` prior to
@@ -999,9 +1021,9 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
     // This is a closure instead of just `T?` to avoid bloating the request object if `T` is large.
     internal var dataMock: (() -> T)?
     
-    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentTypes: [String] = [], defaultResponseCacheStoragePolicy: URLCache.StoragePolicy? = nil, parseHandler: @escaping (URLResponse, Data) throws -> T) {
+    internal init(request: HTTPManagerRequest, uploadBody: UploadBody?, expectedContentTypes: [String] = [], defaultResponseCacheStoragePolicy: URLCache.StoragePolicy? = nil, prepareRequestHandler: ((inout URLRequest) -> Void)? = nil, parseHandler: @escaping (URLResponse, Data) throws -> T) {
         self.parseHandler = parseHandler
-        prepareRequestHandler = request.prepareURLRequest()
+        self.prepareRequestHandler = prepareRequestHandler ?? request.prepareURLRequest()
         _contentType = request.contentType
         self.uploadBody = uploadBody
         self.expectedContentTypes = expectedContentTypes
@@ -1030,6 +1052,24 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         uploadBody = request.uploadBody
         expectedContentTypes = request.expectedContentTypes
         dataMock = request.dataMock
+        super.init(__copyOfRequest: request)
+    }
+    
+    private init<U>(mapping request: HTTPManagerParseRequest<U>, parseHandler: @escaping (URLResponse, U) throws -> T) {
+        let oldHandler: (URLResponse, Data) throws -> U
+        if let dataMock = request.dataMock {
+            oldHandler = { _,_ in dataMock() }
+        } else {
+            oldHandler = request.parseHandler
+        }
+        self.parseHandler = { (response, data) in
+            let value = try oldHandler(response, data)
+            return try parseHandler(response, value)
+        }
+        prepareRequestHandler = request.prepareRequestHandler
+        _contentType = request._contentType
+        uploadBody = request.uploadBody
+        expectedContentTypes = request.expectedContentTypes
         super.init(__copyOfRequest: request)
     }
     

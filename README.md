@@ -412,6 +412,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 #### Development
 
 * Convert to Swift 4.
+* Add a method `HTTPManagerParseRequest.map(_:)`.
 
 #### v3.0.5 (2017-09-11)
 
