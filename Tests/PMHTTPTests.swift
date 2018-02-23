@@ -485,7 +485,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 guard let str = String(data: data, encoding: String.Encoding.utf8) else {
                     throw InvalidUTF8Error()
                 }
-                return String(str.characters.reversed())
+                return String(str.reversed())
             })
             expectationForRequestSuccess(req) { task, response, value in
                 if let response = response as? HTTPURLResponse {
@@ -632,14 +632,14 @@ final class PMHTTPTests: PMHTTPTestCase {
             default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON(using: { _ in 42 })) { task, response, error in
+        expectationForRequestFailure(HTTP.request(GET: "foo").parseAsJSON(using: { _,_ in 42 })) { task, response, error in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
             switch error {
             case HTTPManagerError.unexpectedNoContent: break
             default: XCTFail("expected error .unexpectedNoContent, found \(error)")
             }
         }
-        expectationForRequestSuccess(HTTP.request(GET: "foo").parse(using: { _ in 42 })) { task, response, value in
+        expectationForRequestSuccess(HTTP.request(GET: "foo").parse(using: { _,_ in 42 })) { task, response, value in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 204, "response status code")
             XCTAssertEqual(value, 42, "response body parse value")
         }
@@ -697,7 +697,7 @@ final class PMHTTPTests: PMHTTPTestCase {
                 XCTAssertEqual(request.headers["Accept"], "text/plain", "request accept header")
                 completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Type": "text/html"], body: "Hello world"))
             }
-            let req = HTTP.request(GET: "foo").parse(using: { _ -> Int in
+            let req = HTTP.request(GET: "foo").parse(using: { _,_  -> Int in
                 XCTFail("parse handler unexpectedly called")
                 return 42
             })
@@ -1430,7 +1430,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             let req = HTTP.request(GET: "foo")!
             XCTAssert(req.defaultResponseCacheStoragePolicy == .allowed, "request cache storage policy")
-            expectationForRequestSuccess(req) { _ in }
+            expectationForRequestSuccess(req) { _,_,_ in }
             waitForExpectations(timeout: 5, handler: nil)
             if let response = cache.cachedResponse(for: req.preparedURLRequest) {
                 XCTAssert(response.storagePolicy == .allowed, "cached response storage policy")
@@ -1445,7 +1445,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             let req = HTTP.request(GET: "foo")!
             req.defaultResponseCacheStoragePolicy = .allowedInMemoryOnly
-            expectationForRequestSuccess(req) { _ in }
+            expectationForRequestSuccess(req) { _,_,_ in }
             waitForExpectations(timeout: 5, handler: nil)
             if let response = cache.cachedResponse(for: req.preparedURLRequest) {
                 XCTAssert(response.storagePolicy == .allowedInMemoryOnly, "cached response storage policy")
@@ -1460,7 +1460,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             let req = HTTP.request(GET: "foo")!
             req.defaultResponseCacheStoragePolicy = .notAllowed
-            expectationForRequestSuccess(req) { _ in }
+            expectationForRequestSuccess(req) { _,_,_ in }
             waitForExpectations(timeout: 5, handler: nil)
             XCTAssert(cache.cachedResponse(for: req.preparedURLRequest) == nil, "cached response")
         }
@@ -1472,7 +1472,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             }
             let req = HTTP.request(GET: "foo")!
             req.defaultResponseCacheStoragePolicy = policy
-            expectationForRequestSuccess(req) { _ in }
+            expectationForRequestSuccess(req) { _,_,_ in }
             waitForExpectations(timeout: 5, handler: nil)
             if let response = cache.cachedResponse(for: req.preparedURLRequest) {
                 XCTAssert(response.storagePolicy == .allowed, "cached response storage policy")

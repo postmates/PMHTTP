@@ -136,7 +136,7 @@ public final class HTTPBasicAuth: NSObject, HTTPAuth {
     /// The `URLCredential` that the `HTTPBasicAuth` was initialized with.
     ///
     /// This is guaranteed to be a password-based credential.
-    public let credential: URLCredential
+    @objc public let credential: URLCredential
     
     public override var description: String {
         return "<HTTPBasicAuth: user=\(credential.user ?? "")\(credential.hasPassword ? "" : " (no password)")>"
@@ -151,7 +151,7 @@ public final class HTTPBasicAuth: NSObject, HTTPAuth {
     /// - Parameter credential: A `URLCredential`. This must be a password-based credential.
     /// - Returns: An `HTTPBasicAuth` instance, or `nil` if `credential` isn't a password-based
     ///   credential.
-    public init?(credential: URLCredential) {
+    @objc public init?(credential: URLCredential) {
         guard credential.user != nil && credential.hasPassword else {
             NSLog("[HTTPManager] Warning: Attempting to create an HTTPBasicAuth with a non-password-based credential")
             return nil
@@ -167,12 +167,12 @@ public final class HTTPBasicAuth: NSObject, HTTPAuth {
     /// - Parameter username: The username to use.
     /// - Parameter password: The password to use.
     /// - Returns: An `HTTPBasicAuth` instance.
-    public init(username: String, password: String) {
+    @objc public init(username: String, password: String) {
         credential = URLCredential(user: username, password: password, persistence: .none)
         super.init()
     }
     
-    public func headers(for request: URLRequest) -> [String : String] {
+    @objc public func headers(for request: URLRequest) -> [String : String] {
         let phrase = "\(credential.user ?? ""):\(credential.password ?? "")"
         guard let data = phrase.data(using: String.Encoding.utf8) else {
             assertionFailure("unexpected failure converting basic auth phrase to utf-8")
@@ -267,12 +267,12 @@ open class HTTPRefreshableAuth: NSObject, HTTPAuth {
         self.init(info: info, authenticationHeadersBlock: authenticationHeadersBlock, authenticationRefreshBlock: authenticationRefreshBlock)
     }
     
-    public final func headers(for request: URLRequest) -> [String: String] {
+    @objc public final func headers(for request: URLRequest) -> [String: String] {
         let info = inner.sync({ $0.info })
         return authenticationHeadersBlock(request, info)
     }
     
-    public final func opaqueToken(for request: URLRequest) -> Any? {
+    @objc public final func opaqueToken(for request: URLRequest) -> Any? {
         return inner.sync({ $0.currentToken })
     }
     
@@ -281,7 +281,7 @@ open class HTTPRefreshableAuth: NSObject, HTTPAuth {
     /// The default implementation refreshes the authentication information if necessary. If you
     /// override this method, you should call `super` unless you want to skip refreshing
     /// authentication information for any reason.
-    open func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void) {
+    @objc open func handleUnauthorized(_ response: HTTPURLResponse, body: Data, for task: HTTPManagerTask, token: Any?, completion: @escaping (_ retry: Bool) -> Void) {
         guard let token = token as? Inner.Token else {
             // This shouldn't be reachable, but if it is, don't retry
             return completion(false)

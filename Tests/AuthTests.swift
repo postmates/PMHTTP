@@ -27,7 +27,7 @@ final class AuthTests: PMHTTPTestCase {
         }
         let req = HTTP.request(GET: "foo")!
         XCTAssertNil(req.auth, "request object auth")
-        expectationForRequestSuccess(req) { _ in }
+        expectationForRequestSuccess(req) { _,_,_ in }
         waitForExpectations(timeout: 5, handler: nil)
     }
     
@@ -51,7 +51,7 @@ final class AuthTests: PMHTTPTestCase {
             } else {
                 XCTFail("expected HTTPBasicAuth, found \(String(describing: req.auth)) - request object auth")
             }
-            expectationForRequestSuccess(req) { _ in }
+            expectationForRequestSuccess(req) { _,_,_ in }
             waitForExpectations(timeout: 5, handler: nil)
         }
         do {

@@ -409,6 +409,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## Version History
 
+#### Development
+
+* Convert to Swift 4.
+
 #### v3.0.5 (2017-09-11)
 
 * Extend `HTTPAuth` to support handling 403 Forbidden errors as well.

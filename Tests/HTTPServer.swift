@@ -875,7 +875,7 @@ final class HTTPServer {
         /// The given closure is invoked for each header, with the old value (if one exists).
         /// The `field` parameter to the closure always contains the normalized name of the header.
         /// If the closure returns a `Response`, that response is sent to the server and the socket closed.
-        private func parseHeadersFromData(_ data: Data, _ f: (_ field: String, _ value: String, _ oldValue: String?) -> Response? = { _ in nil }) -> HTTPHeaders? {
+        private func parseHeadersFromData(_ data: Data, _ f: (_ field: String, _ value: String, _ oldValue: String?) -> Response? = { _,_,_  in nil }) -> HTTPHeaders? {
             guard let line = String(data: data, encoding: String.Encoding.ascii)?.chomped() else {
                 writeResponseAndClose(Response(status: .badRequest, text: "Non-ASCII headers are not supported"))
                 return nil
