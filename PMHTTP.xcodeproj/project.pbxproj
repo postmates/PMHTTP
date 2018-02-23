@@ -67,6 +67,7 @@
 		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
 		0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
 		0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPManagerTaskStateBox.m; sourceTree = "<group>"; };
+		0A9E5B7B203FFDF600792BF8 /* PMHTTP.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; path = PMHTTP.podspec; sourceTree = "<group>"; };
 		9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityTests.swift; sourceTree = "<group>"; };
 		9E139FA31C4EC82F00A764BD /* PMHTTPError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPError.m; sourceTree = "<group>"; };
 		9E139FA51C4EC83800A764BD /* PMHTTPError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PMHTTPError.h; sourceTree = "<group>"; };
@@ -159,6 +160,7 @@
 				9E67E0BE1CC6DD81007FE41F /* README.md */,
 				9E67E0BC1CC6DD7D007FE41F /* LICENSE-APACHE */,
 				9E67E0BD1CC6DD7D007FE41F /* LICENSE-MIT */,
+				0A9E5B7B203FFDF600792BF8 /* PMHTTP.podspec */,
 				9E49DF0A1C1FA7EB004FDCAD /* Carthage.xcconfig */,
 				9E7DDF231C18F2B600EA43AD /* PMHTTP */,
 				9E7DDF2F1C18F2B600EA43AD /* PMHTTPTests */,
