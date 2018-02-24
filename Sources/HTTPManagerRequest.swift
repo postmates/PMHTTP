@@ -812,6 +812,30 @@ public class HTTPManagerDataRequest: HTTPManagerNetworkRequest {
         })
     }
     
+    /// Returns a new request that parses the data as JSON and decodes it as a `Decodable` type.
+    /// - Note: If the server responds with 204 No Content, the parse is skipped and
+    ///   `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
+    /// - Parameter type: The type to decode. Must conform to `Decodable`.
+    /// - Parameter decoder: The `JSON.Decoder` to use for decoding. Defaults to `JSON.Decoder()`.
+    /// - Parameter options: Options to use for JSON parsing. Defaults to `[]`.
+    /// - Returns: An `HTTPManagerParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main thread, you should
+    ///   use `performRequest(withCompletionQueue:completion:)` instead.
+    /// - Warning: If the request is canceled, the results of the decoder may be discarded. Any
+    ///   side-effects performed by your `Decodable` implementation must be safe in the event of a
+    ///   cancelation.
+    /// - Warning: The parse request inherits the `isIdempotent` value of `self`. If the `Decodable`
+    ///   implementation has side effects and can throw, you should either ensure that it's safe to
+    ///   run the `Decodable` implementation again or set `isIdempotent` to `false`.
+    @nonobjc public func decodeAsJSON<T: Decodable>(_ type: T.Type, with decoder: JSON.Decoder = JSON.Decoder(), options: JSONOptions = []) -> HTTPManagerParseRequest<T> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { (response, data) in
+            if let response = response as? HTTPURLResponse, response.statusCode == 204 {
+                throw HTTPManagerError.unexpectedNoContent(response: response)
+            }
+            return try decoder.decode(type, from: data, options: options)
+        })
+    }
+    
     /// Executes a block with `self` as the argument, and then returns `self` again.
     /// - Parameter f: A block to execute, with `self` as the argument.
     /// - Returns: `self`.
@@ -1157,6 +1181,31 @@ public class HTTPManagerActionRequest: HTTPManagerNetworkRequest {
                 return try handler(.noContent(response))
             } else {
                 return try handler(.success(response, JSON.decode(data, options: options)))
+            }
+        })
+    }
+    
+    /// Returns a new request that parses the data as JSON and decodes it as a `Decodable` type.
+    /// - Note: The parse result is `nil` if and only if the server responded with 204 No Content.
+    /// - Parameter type: The type to decode. Must conform to `Decodable`.
+    /// - Parameter decoder: The `JSON.Decoder` to use for decoding. Defaults to `JSON.Decoder()`.
+    /// - Parameter options: Options to use for JSON parsing. Defaults to `[]`.
+    /// - Returns: An `HTTPManagerParseRequest`.
+    /// - Note: If you need to parse on a particular thread, such as on the main thread, you should
+    ///   use `performRequest(withCompletionQueue:completion:)` instead.
+    /// - Warning: If the request is canceled, the results of the decoder may be discarded. Any
+    ///   side-effects performed by your `Decodable` implementation must be safe in the event of a
+    ///   cancelation.
+    /// - Warning: The parse request inherits the `isIdempotent` value of `self`. If the `Decodable`
+    ///   implementation has side effects and can throw, you should either ensure that it's safe to
+    ///   run the `Decodable` implementation again or set `isIdempotent` to `false`.
+    @nonobjc public func decodeAsJSON<T: Decodable>(_ type: T.Type, with decoder: JSON.Decoder = JSON.Decoder(), options: JSONOptions = []) -> HTTPManagerParseRequest<T?> {
+        return HTTPManagerParseRequest(request: self, uploadBody: uploadBody, expectedContentTypes: ["application/json"], defaultResponseCacheStoragePolicy: .notAllowed, parseHandler: { (response, data) in
+            if (response as? HTTPURLResponse)?.statusCode == 204 {
+                // No Content
+                return nil
+            } else {
+                return try decoder.decode(type, from: data, options: options)
             }
         })
     }
