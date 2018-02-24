@@ -36,7 +36,7 @@ class PMHTTPTestCase: XCTestCase {
                 _workaroundXCTestTimeoutTimer = timer
                 timer.setEventHandler {}
                 let interval = DispatchTimeInterval.milliseconds(50)
-                timer.scheduleRepeating(deadline: .now() + interval, interval: interval)
+                timer.schedule(deadline: .now() + interval, repeating: interval)
                 timer.resume()
             }
         #endif
@@ -121,7 +121,7 @@ class PMHTTPTestCase: XCTestCase {
     @discardableResult
     func expectationForRequestSuccess<Request: HTTPManagerRequest>(
         _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse, _ value: Request.ResultValue) -> Void = { _ in () }
+        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse, _ value: Request.ResultValue) -> Void = { _,_,_  in () }
         ) -> HTTPManagerTask
         where Request: HTTPManagerRequestPerformable
     {
@@ -158,7 +158,7 @@ class PMHTTPTestCase: XCTestCase {
     @discardableResult
     func expectationForRequestFailure<Request: HTTPManagerRequest>(
         _ request: Request, queue: OperationQueue? = nil, startAutomatically: Bool = true, file: StaticString = #file, line: UInt = #line,
-        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse?, _ error: Error) -> Void = { _ in () }
+        completion: @escaping (_ task: HTTPManagerTask, _ response: URLResponse?, _ error: Error) -> Void = { _,_,_  in () }
         ) -> HTTPManagerTask
         where Request: HTTPManagerRequestPerformable
     {

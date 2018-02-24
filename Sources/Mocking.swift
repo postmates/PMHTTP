@@ -31,7 +31,7 @@ public final class HTTPMockManager: NSObject {
     /// If `true`, any URL that is part of the current environment but not handled by any mocks
     /// will return a 500 Internal Server Error. The default value is `false`.
     /// - SeeAlso: interceptUnhandledExternalURLs
-    public var interceptUnhandledEnvironmentURLs: Bool {
+    @objc public var interceptUnhandledEnvironmentURLs: Bool {
         get {
             return inner.sync({ $0.interceptUnhandledEnvironmentURLs })
         }
@@ -44,7 +44,7 @@ public final class HTTPMockManager: NSObject {
     /// If `true`, any URL that is not part of the current environment but not handled by any mocks
     /// will return a 500 Internal Server Error. The default value is `false`.
     /// - SeeAlso: interceptUnhandledEnvironmentURLs
-    public var interceptUnhandledExternalURLs: Bool {
+    @objc public var interceptUnhandledExternalURLs: Bool {
         get {
             return inner.sync({ $0.interceptUnhandledExternalURLs })
         }
@@ -72,7 +72,7 @@ public final class HTTPMockManager: NSObject {
     ///   response. The default value is 30ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @objc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) -> HTTPMockToken {
         var headers = headers
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.count)
@@ -109,7 +109,7 @@ public final class HTTPMockManager: NSObject {
     ///   response. The default value is 30ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @objc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) -> HTTPMockToken {
         let data = text.data(using: String.Encoding.utf8) ?? Data()
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -136,7 +136,7 @@ public final class HTTPMockManager: NSObject {
     ///   response. The default value is 30ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @nonobjc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> HTTPMockToken {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -157,7 +157,7 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter sequence: an `HTTPMockSequence` with the sequence of responses to provide.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock(for url: String, httpMethod: String? = nil, sequence: HTTPMockSequence) -> HTTPMockToken {
+    @objc public func addMock(for url: String, httpMethod: String? = nil, sequence: HTTPMockSequence) -> HTTPMockToken {
         var mockGen = Optional.some(sequence.mocks.makeIterator())
         var nextMock = mockGen?.next()
         let repeatsLastResponse = sequence.repeatsLastResponse
@@ -223,7 +223,7 @@ public final class HTTPMockManager: NSObject {
     ///   from any queue, but it is an error to not invoke it at all or to invoke it twice.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock(for url: String, httpMethod: String? = nil, queue: DispatchQueue? = nil, handler: @escaping (_ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
+    @objc public func addMock(for url: String, httpMethod: String? = nil, queue: DispatchQueue? = nil, handler: @escaping (_ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
         let mock = HTTPMock(url: url, httpMethod: httpMethod, queue: queue ?? DispatchQueue(label: "HTTPMock queue"), handler: handler)
         inner.asyncBarrier { inner in
             inner.mocks.append(mock)
@@ -253,7 +253,7 @@ public final class HTTPMockManager: NSObject {
     ///   all or to invoke it twice.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    public func addMock<T>(for url: String, httpMethod: String? = nil, state: T, handler: @escaping (_ state: inout T, _ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
+    @nonobjc public func addMock<T>(for url: String, httpMethod: String? = nil, state: T, handler: @escaping (_ state: inout T, _ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
         var state = state
         return addMock(for: url, httpMethod: httpMethod, handler: { (request, parameters, completion) in
             handler(&state, request, parameters, completion)
@@ -266,7 +266,7 @@ public final class HTTPMockManager: NSObject {
     /// manager, is a no-op.
     ///
     /// - Parameter token: An `HTTPMockToken` returned by a previous call to `addMock`.
-    public func removeMock(_ token: HTTPMockToken) {
+    @objc public func removeMock(_ token: HTTPMockToken) {
         inner.asyncBarrier { inner in
             if let idx = inner.mocks.index(where: { $0 === token }) {
                 inner.mocks.remove(at: idx)
@@ -275,7 +275,7 @@ public final class HTTPMockManager: NSObject {
     }
     
     /// Removes all mocks from the mock manager.
-    public func removeAllMocks() {
+    @objc public func removeAllMocks() {
         inner.asyncBarrier { inner in
             inner.mocks.removeAll()
         }
@@ -284,7 +284,7 @@ public final class HTTPMockManager: NSObject {
     /// Resets the mock manager back to the defaults.
     ///
     /// This removes all mocks and resets all properties back to their default values.
-    public func reset() {
+    @objc public func reset() {
         inner.asyncBarrier({ $0.reset() })
     }
     
@@ -323,7 +323,7 @@ public final class HTTPMockManager: NSObject {
     }
 }
 
-public extension HTTPMockManager {
+@objc public extension HTTPMockManager {
     /// A convenience function for reading the body data from a `URLRequest`.
     ///
     /// If the request has `HTTPBody` set, it is returned, otherwise if it has `HTTPBodyStream`,
@@ -392,7 +392,7 @@ public final class HTTPMockSequence: NSObject {
     /// If `true`, the last response in the sequence is repeated for all future requests.
     /// Otherwise, once the sequence has been exhausted, future requests will serve up a
     /// 500 Internal Server Error response. The default value is `false`.
-    public var repeatsLastResponse: Bool = false
+    @objc public var repeatsLastResponse: Bool = false
     
     /// Adds a mock to the sequence that returns a given response.
     ///
@@ -402,7 +402,7 @@ public final class HTTPMockSequence: NSObject {
     ///   `"Content-Length"` header, one is synthesized from the data.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func addMock(statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) {
+    @objc public func addMock(statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) {
         mocks.append((statusCode: statusCode, headers: headers, payload: .data(data), delay: delay))
     }
     /// Adds a mock to the sequence that returns a given plain text response.
@@ -414,7 +414,7 @@ public final class HTTPMockSequence: NSObject {
     ///   `"Content-Length"` header, one is synthesized from the text.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func addMock(statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) {
+    @objc public func addMock(statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) {
         mocks.append((statusCode: statusCode, headers: headers, payload: .text(text), delay: delay))
     }
     /// Adds a mock to the sequence that returns a given JSON response.
@@ -426,7 +426,7 @@ public final class HTTPMockSequence: NSObject {
     ///   `"Content-Length"` header, one is synthesized from the encoded JSON.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
-    public func addMock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) {
+    @nonobjc public func addMock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) {
         mocks.append((statusCode: statusCode, headers: headers, payload: .json(json), delay: delay))
     }
     
@@ -439,7 +439,7 @@ public final class HTTPMockSequence: NSObject {
     fileprivate var mocks: [(statusCode: Int, headers: [String: String], payload: Payload, delay: TimeInterval)] = []
 }
 
-public extension HTTPManagerNetworkRequest {
+@objc public extension HTTPManagerNetworkRequest {
     /// Returns a new request that returns a mock response.
     ///
     /// - Parameter statusCode: The HTTP status code to return.
@@ -499,7 +499,7 @@ public extension HTTPManagerNetworkRequest {
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
     /// - Returns: A copy of `self` that returns a mock JSON response.
-    public func mock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> Self {
+    @nonobjc public func mock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> Self {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -552,7 +552,7 @@ public extension HTTPManagerParseRequest {
     }
 }
 
-public extension HTTPManagerObjectParseRequest {
+@objc public extension HTTPManagerObjectParseRequest {
     /// Returns a new request that returns a mock response.
     ///
     /// Requests with a mock response will not hit the network and will not invoke the
@@ -565,7 +565,7 @@ public extension HTTPManagerObjectParseRequest {
     /// - Returns: A copy of `self` that returns a mock response.
     ///
     /// - SeeAlso: `mock(headers:value:delay:)`.
-    @objc public func mock(_ value: Any?) -> HTTPManagerObjectParseRequest {
+    public func mock(_ value: Any?) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: _request.mock(value: value))
     }
     
@@ -582,7 +582,7 @@ public extension HTTPManagerObjectParseRequest {
     /// - Parameter delay: The amount of time in seconds to wait before returning the
     ///   response. The default value is 30ms.
     /// - Returns: A copy of `self` that returns a mock response.
-    @objc public func mock(headers: [String: String], value: Any?, delay: TimeInterval) -> HTTPManagerObjectParseRequest {
+    public func mock(headers: [String: String], value: Any?, delay: TimeInterval) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: _request.mock(headers: headers, value: value, delay: delay))
     }
 }
@@ -613,7 +613,7 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
         // NB: URLComponents parses ":foo/bar" as a path but URL does not.
         guard var comps = URLComponents(string: url) else {
             NSLog("[HTTPManager] Warning: Mock was added with the URL \(String(reflecting: url)) but the URL could not be parsed, so the mock will never match.")
-            handleURL = { _ in .noMatch}
+            handleURL = { _,_,_  in .noMatch}
             return
         }
         // Don't convert comps into absolute yet as environment changes should affect relative mocks.

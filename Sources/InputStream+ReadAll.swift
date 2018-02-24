@@ -37,7 +37,7 @@ internal extension InputStream {
             switch read(buf, maxLength: cap - len) {
             case 0: // EOF
                 if len > 0 {
-                    data.append(DispatchData(bytesNoCopy: UnsafeBufferPointer(start: buf, count: len), deallocator: DispatchData.Deallocator.custom(nil, { [buf] in
+                    data.append(DispatchData(bytesNoCopy: UnsafeRawBufferPointer(start: buf, count: len), deallocator: DispatchData.Deallocator.custom(nil, { [buf] in
                         buf.deallocate(capacity: cap)
                     })))
                 } else {
@@ -49,7 +49,7 @@ internal extension InputStream {
                 return Data(referencing: nsdata)
             case let n where n > 0:
                 let overflow: Bool
-                (len, overflow) = Int.addWithOverflow(len, n)
+                (len, overflow) = len.addingReportingOverflow(n)
                 guard len <= cap && !overflow else {
                     // The stream claims to have written more bytes than is available. We don't know
                     // how to handle this.
@@ -57,7 +57,7 @@ internal extension InputStream {
                     throw UnknownError()
                 }
                 if len == cap {
-                    data.append(DispatchData(bytesNoCopy: UnsafeBufferPointer(start: buf, count: len), deallocator: DispatchData.Deallocator.custom(nil, { [buf] in
+                    data.append(DispatchData(bytesNoCopy: UnsafeRawBufferPointer(start: buf, count: len), deallocator: DispatchData.Deallocator.custom(nil, { [buf] in
                         buf.deallocate(capacity: cap)
                     })))
                     buf = UnsafeMutablePointer<UInt8>.allocate(capacity: cap)

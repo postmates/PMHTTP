@@ -288,7 +288,7 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .ok))
             }
-            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false, completion: { _ in })
+            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false, completion: { _,_,_ in })
             let stateLog = KVOLog<NSNumber>(object: task, keyPath: "state")
             let taskLog = KVOLog<URLSessionTask>(object: task, keyPath: "networkTask")
             task.resume()
@@ -305,7 +305,7 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { request, completionHandler in
                 completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
             }
-            let task = expectationForRequestFailure(HTTP.request(GET: "foo"), startAutomatically: false, completion: { _ in })
+            let task = expectationForRequestFailure(HTTP.request(GET: "foo"), startAutomatically: false, completion: { _,_,_ in })
             let stateLog = KVOLog<NSNumber>(object: task, keyPath: "state")
             let taskLog = KVOLog<URLSessionTask>(object: task, keyPath: "networkTask")
             task.resume()
@@ -327,7 +327,7 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             }
             let req = HTTP.request(GET: "foo")!
             req.retryBehavior = .retryNetworkFailure(withStrategy: .retryOnce)
-            let task = expectationForRequestSuccess(req, startAutomatically: false, completion: { _ in })
+            let task = expectationForRequestSuccess(req, startAutomatically: false, completion: { _,_,_ in })
             let stateLog = KVOLog<NSNumber>(object: task, keyPath: "state")
             let taskLog = KVOLog<URLSessionTask>(object: task, keyPath: "networkTask")
             let initialNetworkTask = task.networkTask
@@ -352,7 +352,7 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
             }
             let req = HTTP.request(GET: "foo")!
             req.retryBehavior = .retryNetworkFailure(withStrategy: .retryTwiceWithDelay(0.05))
-            let task = expectationForRequestSuccess(req, startAutomatically: false, completion: { _ in })
+            let task = expectationForRequestSuccess(req, startAutomatically: false, completion: { _,_,_ in })
             let stateLog = KVOLog<NSNumber>(object: task, keyPath: "state")
             let taskLog = KVOLog<URLSessionTask>(object: task, keyPath: "networkTask")
             let initialNetworkTask = task.networkTask

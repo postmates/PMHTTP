@@ -42,7 +42,7 @@ public final class HTTPManager: NSObject {
     /// number of tasks. If there are no outstanding tasks the new value will not be invoked.
     ///
     /// - Note: This block is always invoked on the main thread.
-    public static var networkActivityHandler: ((_ numberOfActiveTasks: Int) -> Void)? {
+    @objc public static var networkActivityHandler: ((_ numberOfActiveTasks: Int) -> Void)? {
         get {
             return NetworkActivityManager.shared.networkActivityHandler
         }
@@ -65,7 +65,7 @@ public final class HTTPManager: NSObject {
     ///
     /// - SeeAlso: `resetSession()`, `HTTPManagerConfigurable`, `defaultAuth`,
     ///   `defaultServerRequiresContentLength`.
-    public var environment: Environment? {
+    @objc public var environment: Environment? {
         get {
             return inner.sync({ $0.environment })
         }
@@ -90,7 +90,7 @@ public final class HTTPManager: NSObject {
     /// cancel any in-flight tasks.
     ///
     /// - SeeAlso: `resetSession()`
-    public var sessionConfiguration: URLSessionConfiguration {
+    @objc public var sessionConfiguration: URLSessionConfiguration {
         get {
             let config = inner.sync({ $0.sessionConfiguration })
             return unsafeDowncast(config.copy() as AnyObject, to: URLSessionConfiguration.self)
@@ -129,7 +129,7 @@ public final class HTTPManager: NSObject {
     /// - Important: This handler must invoke its completion handler.
     ///
     /// - SeeAlso: `URLSessionDelegate.urlSession(_:didReceive:completionHandler:)`.
-    public var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)? {
+    @objc public var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)? {
         get {
             return inner.sync({ $0.sessionLevelAuthenticationHandler })
         }
@@ -158,7 +158,7 @@ public final class HTTPManager: NSObject {
     ///   the request will not be assigned the default auth.
     ///
     /// - SeeAlso: `environment`, `HTTPBasicAuth`, `HTTPManagerRequest.auth`.
-    public var defaultAuth: HTTPAuth? {
+    @objc public var defaultAuth: HTTPAuth? {
         get {
             return inner.sync({ $0.defaultAuth })
         }
@@ -177,7 +177,7 @@ public final class HTTPManager: NSObject {
     /// any existing requests or any tasks that are in-progress.
     ///
     /// - SeeAlso: `HTTPManagerRequest.retryBehavior`.
-    public var defaultRetryBehavior: HTTPManagerRetryBehavior? {
+    @objc public var defaultRetryBehavior: HTTPManagerRetryBehavior? {
         get {
             return inner.sync({ $0.defaultRetryBehavior })
         }
@@ -198,7 +198,7 @@ public final class HTTPManager: NSObject {
     /// any existing requests or any tasks that are in-progress.
     ///
     /// - SeeAlso: `HTTPManagerRequest.assumeErrorsAreJSON`.
-    public var defaultAssumeErrorsAreJSON: Bool {
+    @objc public var defaultAssumeErrorsAreJSON: Bool {
         get {
             return inner.sync({ $0.defaultAssumeErrorsAreJSON })
         }
@@ -224,7 +224,7 @@ public final class HTTPManager: NSObject {
     /// requests or any tasks that are in-progress.
     ///
     /// - SeeAlso: `environment`, `HTTPManagerRequest.serverRequiresContentLength`.
-    public var defaultServerRequiresContentLength: Bool {
+    @objc public var defaultServerRequiresContentLength: Bool {
         get {
             return inner.sync({ $0.defaultServerRequiresContentLength })
         }
@@ -236,20 +236,20 @@ public final class HTTPManager: NSObject {
     }
     
     /// The user agent that's passed to every request.
-    public var userAgent: String {
+    @objc public var userAgent: String {
         return inner.sync({
             $0.sessionConfiguration.httpAdditionalHeaders?["User-Agent"] as? String
         }) ?? HTTPManager.defaultUserAgent
     }
     
     /// An `HTTPMockManager` that can be used to define mocks for this `HTTPManager`.
-    public let mockManager = HTTPMockManager()
+    @objc public let mockManager = HTTPMockManager()
     
     /// Invalidates all in-flight network operations and resets the URL session.
     ///
     /// - Note: Any tasks that have finished their network portion and are processing
     /// the results are not canceled.
-    public func resetSession() {
+    @objc public func resetSession() {
         inner.asyncBarrier { inner in
             if inner.session != nil {
                 autoreleasepool {
@@ -355,18 +355,18 @@ public final class HTTPManager: NSObject {
         if shared {
             let setup: HTTPManagerConfigurable?
             #if os(OSX)
-                setup = NSApplication.shared().delegate as? HTTPManagerConfigurable
+                setup = NSApplication.shared.delegate as? HTTPManagerConfigurable
             #elseif os(watchOS)
                 setup = WKExtension.shared().delegate as? HTTPManagerConfigurable
             #elseif os(iOS)
-                // We have to detect if we're in an app extension, because we can't access UIApplication.sharedApplication().
+                // We have to detect if we're in an app extension, because we can't access UIApplication.shared.
                 // In that event, we can't configure ourselves and the extension must do it for us.
                 // We'll check for the presence of the NSExtension key in the Info.plist.
                 if Bundle.main.infoDictionary?["NSExtension"] != nil {
                     // This appears to be an application extension. No configuration allowed.
                     setup = nil
                 } else {
-                    // This is an application. We still can't invoke UIApplication.sharedApplication directly,
+                    // This is an application. We still can't invoke UIApplication.shared directly,
                     // but we can use `valueForKey(_:)` to get it, and application extensions can still reference the type.
                     setup = (UIApplication.value(forKey: "sharedApplication") as? UIApplication)?.delegate as? HTTPManagerConfigurable
                 }
@@ -438,7 +438,7 @@ public final class HTTPManagerEnvironment: NSObject {
     /// The base URL for the environment.
     /// - Invariant: The URL is an absolute URL that is valid according to RFC 3986, the URL's path
     ///   is either empty or has a trailing slash, and the URL has no query or fragment component.
-    public let baseURL: URL
+    @objc public let baseURL: URL
     
     /// Initializes an environment with a base URL.
     /// - Parameter baseURL: The base URL to use for the environment. Must be a valid absolute URL
@@ -448,7 +448,7 @@ public final class HTTPManagerEnvironment: NSObject {
     /// - Note: If `baseURL` has a non-empty `path` that does not end in a slash, the path is modified to
     ///   include a trailing slash. If `baseURL` has a query or fragment component, these components are
     ///   stripped.
-    public convenience init?(baseURL: URL) {
+    @objc public convenience init?(baseURL: URL) {
         guard let comps = URLComponents(url: baseURL, resolvingAgainstBaseURL: true) else {
             return nil
         }
@@ -463,7 +463,7 @@ public final class HTTPManagerEnvironment: NSObject {
     /// - Note: If `string` represents a URL with a non-empty path that does not end in a slash, the path
     ///   is modified to include a trailing slash. If the URL has a query or fragment component, these
     //    components are stripped.
-    public convenience init?(string: String) {
+    @objc public convenience init?(string: String) {
         guard let comps = URLComponents(string: string) else {
             return nil
         }
@@ -479,7 +479,7 @@ public final class HTTPManagerEnvironment: NSObject {
     /// host, and port, and the first URL's path must be a prefix of the second URL's path.
     /// Scheme and host are compared case-insensitively, and if the port is nil, an appropriate
     /// default value is assumed for the HTTP and HTTPS schemes.
-    public func isPrefix(of url: URL) -> Bool {
+    @objc public func isPrefix(of url: URL) -> Bool {
         guard let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return false }
         func getPort(_ components: URLComponents) -> Int? {
             if let port = components.port { return port as Int }
@@ -1316,7 +1316,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   `.processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
-    public init(_ handler: @escaping (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
+    @objc public init(_ handler: @escaping (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
         self.handler = { task, error, attempt, callback in
             if task.isIdempotent {
                 handler(task, error, attempt, callback)
@@ -1352,7 +1352,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
     ///   `.processing` state forever.
     ///
     ///   **Requires:** This block must not be executed more than once.
-    public init(ignoringIdempotence handler: @escaping (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
+    @objc public init(ignoringIdempotence handler: @escaping (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void) {
         self.handler = handler
         super.init()
     }

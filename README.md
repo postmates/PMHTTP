@@ -323,10 +323,10 @@ However, this behavior is inappropriate for most REST API requests, and `URLSess
 document its caching strategy for such responses. To handle this case, PMHTTP inspects JSON
 responses for appropriate caching headers and explicitly prevents responses from being cached
 if they do not include the appropriate cache directives. By default this behavior is only applied
-to requests created with `.parseAsJSON()` or `.parseAsJSON(using:)`, although it can be
-overridden on a per-request basis (see `HTTPManagerRequest.defaultResponseCacheStoragePolicy`).
-Notably, requests created with `.parse(using:)` do not use this cache strategy as it would
-interfere with caching image requests.
+to requests created with `.parseAsJSON()`, `.parseAsJSON(using:)`, or `.decodeAsJSON(_:)`, although
+it can be overridden on a per-request basis (see
+`HTTPManagerRequest.defaultResponseCacheStoragePolicy`). Notably, requests created with
+`.parse(using:)` do not use this cache strategy as it would interfere with caching image requests.
 
 #### Mocking
 
@@ -405,9 +405,16 @@ Licensed under either of
 
 ### Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you shall be dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the
+work by you shall be dual licensed as above, without any additional terms or conditions.
 
 ## Version History
+
+#### Development
+
+* Convert to Swift 4.
+* Add a method `HTTPManagerParseRequest.map(_:)`.
+* Add methods `HTTPManagerDataRequest.decodeAsJSON(_:with:options:)` and `HTTPManagerActionRequest.decodeAsJSON(_:with:options:)`.
 
 #### v3.0.5 (2017-09-11)
 

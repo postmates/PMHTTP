@@ -416,15 +416,15 @@ public extension HTTPManagerTaskResult {
 /// The results of an HTTP request.
 public class PMHTTPResult: NSObject, NSCopying {
     /// `true` iff the task finished successfully.
-    public let isSuccess: Bool
+    @objc public let isSuccess: Bool
     
     /// `true` iff the task failed with an error.
-    public var isError: Bool {
+    @objc public var isError: Bool {
         return error != nil
     }
     
     /// `true` iff the task was canceled before it finished.
-    public var isCanceled: Bool {
+    @objc public var isCanceled: Bool {
         return !isSuccess && error == nil
     }
     
@@ -433,24 +433,24 @@ public class PMHTTPResult: NSObject, NSCopying {
     /// - Note: A successful result may still have a `nil` value if the parse handler
     ///   returns `nil` or if it's a POST/PUT/PATCH/DELETE request and the response
     ///   is 204 No Content.
-    public let value: Any?
+    @objc public let value: Any?
     
     /// If the task finished successfully, or if it failed with an error
     /// during processing after receiving the response, returns the `NSURLResponse`.
     /// Otherwise, if the task failed with a networking error or was canceled,
     /// returns `nil`.
-    public let response: URLResponse?
+    @objc public let response: URLResponse?
     
     /// If the task failed with an error, returns the `NSError`.
     /// Otherwise, returns `nil`.
     /// - Note: Canceled tasks are not considered to be in error and therefore
     ///   return `nil` from both `value` and `error`.
-    public let error: NSError?
+    @objc public let error: NSError?
     
     /// Returns the error or canceled state as an `NSError`, or `nil` if successful.
     ///
     /// Canceled results are converted into `NSURLErrorCancelled` errors.
-    public var objcError: NSError? {
+    @objc public var objcError: NSError? {
         if isSuccess {
             return nil
         } else if let error = error {
@@ -461,7 +461,7 @@ public class PMHTTPResult: NSObject, NSCopying {
     }
     
     /// Creates and returns a new `PMHTTPResult` representing a successful result.
-    public init(value: Any?, response: URLResponse) {
+    @objc public init(value: Any?, response: URLResponse) {
         isSuccess = true
         self.value = value
         self.response = response
@@ -470,7 +470,7 @@ public class PMHTTPResult: NSObject, NSCopying {
     }
     
     /// Creates and returns a new `PMHTTPResult` representing a failed task.
-    public init(error: NSError, response: URLResponse?) {
+    @objc public init(error: NSError, response: URLResponse?) {
         isSuccess = false
         self.error = error
         self.response = response
@@ -479,7 +479,7 @@ public class PMHTTPResult: NSObject, NSCopying {
     }
     
     /// Creates and returns a new `PMHTTPResult` representing a canceled task.
-    public class func canceledResult() -> PMHTTPResult {
+    @objc public class func canceledResult() -> PMHTTPResult {
         return PMHTTPResult(canceled: ())
     }
     
@@ -526,12 +526,12 @@ public final class PMHTTPDataResult: PMHTTPResult {
     ///   POST/PUT/PATCH/DELETE request and the response is 204 No Content.
     ///   Successful GET/HEAD requests will never have a `nil` value.
     /// - Note: This property returns the same value that `value` does.
-    public var data: Data? {
+    @objc public var data: Data? {
         return value as! Data?
     }
     
     /// Creates and returns a new `PMHTTPDataResult` representing a successful result.
-    public init(data: Data?, response: URLResponse) {
+    @objc public init(data: Data?, response: URLResponse) {
         super.init(value: data, response: response)
     }
     
@@ -991,7 +991,7 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
     /// - Important: The media types in this list will not be checked for validity. They must
     ///   follow the rules for well-formed media types, otherwise the server may handle the
     ///   request incorrectly.
-    public var expectedContentTypes: [String] {
+    @objc public var expectedContentTypes: [String] {
         get { return _request.expectedContentTypes }
         set { _request.expectedContentTypes = newValue }
     }

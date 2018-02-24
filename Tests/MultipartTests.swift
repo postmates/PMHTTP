@@ -413,7 +413,7 @@ class MultipartTests: PMHTTPTestCase {
             data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                 for i in 0..<data.count {
                     // Pick some prime number just to make sure our repeating pattern doesn't ever line up with anything
-                    bytes[i] = UInt8(truncatingBitPattern: i % 23)
+                    bytes[i] = UInt8(truncatingIfNeeded: i % 23)
                 }
             }
             let req = HTTP.request(POST: "foo")!

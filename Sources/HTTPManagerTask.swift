@@ -27,7 +27,7 @@ public final class HTTPManagerTask: NSObject {
     /// will change.
     ///
     /// - Note: This property supports key-value observing.
-    public var networkTask: URLSessionTask {
+    @objc public var networkTask: URLSessionTask {
         get { return _stateBox.networkTask }
     }
     
@@ -45,13 +45,13 @@ public final class HTTPManagerTask: NSObject {
     @nonobjc public let isIdempotent: Bool
     
     /// The `HTTPAuth` used to authenticate the request, if any.
-    public let auth: HTTPAuth?
+    @objc public let auth: HTTPAuth?
     
     /// The current state of the task.
     /// - Note: This property is thread-safe and may be accessed concurrently.
     /// - Note: This property supports KVO. The KVO notifications will execute
     ///   on an arbitrary thread.
-    public var state: State {
+    @objc public var state: State {
         return State(_stateBox.state)
     }
     
@@ -67,7 +67,7 @@ public final class HTTPManagerTask: NSObject {
     /// - Note: To suspend the underlying task you can access it with the
     ///   `networkTask` property. However, suspending the task will not remove it from
     ///   the list of outstanding tasks used to control the network activity indicator.
-    public func resume() {
+    @objc public func resume() {
         if affectsNetworkActivityIndicator {
             // We need to hop onto our session delegate queue in order to inspect our state,
             // otherwise we might show the activity indicator after we've transitioned out of running.
@@ -103,7 +103,7 @@ public final class HTTPManagerTask: NSObject {
     /// results processor is canceled at the earliest opportunity.
     ///
     /// Calling this on a task that's already moved to `.completed` is a no-op.
-    public func cancel() {
+    @objc public func cancel() {
         // NB: We don't call _cancel() because we want our KVO notifications to wrap the network
         // task cancellation too.
         willChangeValue(forKey: "state")

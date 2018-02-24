@@ -26,7 +26,7 @@ public extension HTTPManager {
     }
     
     @available(*, deprecated, message: "use 'defaultAuth' with HTTPBasicAuth")
-    public var defaultCredential: URLCredential? {
+    @objc public var defaultCredential: URLCredential? {
         get {
             return (defaultAuth as? HTTPBasicAuth)?.credential
         }
@@ -101,7 +101,7 @@ extension HTTPManagerActionParseResult where T == JSON {
 
 public extension HTTPManagerRequest {
     @available(*, deprecated, message: "use 'auth' with HTTPBasicAuth")
-    public var credential: URLCredential? {
+    @objc public var credential: URLCredential? {
         get {
             return (auth as? HTTPBasicAuth)?.credential
         }
@@ -202,7 +202,7 @@ public extension HTTPManagerUploadMultipart {
 
 public extension HTTPManagerTask {
     @available(*, deprecated, message: "use 'auth' instead")
-    public var credential: URLCredential? {
+    @objc public var credential: URLCredential? {
         return (auth as? HTTPBasicAuth)?.credential
     }
 }

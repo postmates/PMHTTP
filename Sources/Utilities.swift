@@ -86,7 +86,7 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
                 }
             }
         }
-        return Int(truncatingBitPattern: hasher.finish())
+        return Int(truncatingIfNeeded: hasher.finish())
     }
     
     var description: String {
