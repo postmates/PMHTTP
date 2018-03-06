@@ -38,10 +38,18 @@ internal extension InputStream {
             case 0: // EOF
                 if len > 0 {
                     data.append(DispatchData(bytesNoCopy: UnsafeRawBufferPointer(start: buf, count: len), deallocator: DispatchData.Deallocator.custom(nil, { [buf] in
+                        #if swift(>=4.1)
+                        buf.deallocate()
+                        #else
                         buf.deallocate(capacity: cap)
+                        #endif
                     })))
                 } else {
+                    #if swift(>=4.1)
+                    buf.deallocate()
+                    #else
                     buf.deallocate(capacity: cap)
+                    #endif
                 }
                 // This is an ugly hack, but DispatchData doesn't have any way to go to Data directly.
                 // This relies on the fact that OS_dispatch_data is toll-free bridged to NSData, even though Swift doesn't understand that.
@@ -53,18 +61,30 @@ internal extension InputStream {
                 guard len <= cap && !overflow else {
                     // The stream claims to have written more bytes than is available. We don't know
                     // how to handle this.
+                    #if swift(>=4.1)
+                    buf.deallocate()
+                    #else
                     buf.deallocate(capacity: cap)
+                    #endif
                     throw UnknownError()
                 }
                 if len == cap {
                     data.append(DispatchData(bytesNoCopy: UnsafeRawBufferPointer(start: buf, count: len), deallocator: DispatchData.Deallocator.custom(nil, { [buf] in
+                        #if swift(>=4.1)
+                        buf.deallocate()
+                        #else
                         buf.deallocate(capacity: cap)
+                        #endif
                     })))
                     buf = UnsafeMutablePointer<UInt8>.allocate(capacity: cap)
                     len = 0
                 }
             default: // -1
+                #if swift(>=4.1)
+                buf.deallocate()
+                #else
                 buf.deallocate(capacity: cap)
+                #endif
                 throw streamError ?? UnknownError()
             }
         }

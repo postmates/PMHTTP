@@ -360,7 +360,13 @@ public final class HTTPMockManager: NSObject {
             var data = Data()
             let bufferSize = 64 * 1024 // 64kB
             let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-            defer { buffer.deallocate(capacity: bufferSize) }
+            defer {
+                #if swift(>=4.1)
+                buffer.deallocate()
+                #else
+                buffer.deallocate(capacity: bufferSize)
+                #endif
+            }
             loop: repeat {
                 switch stream.read(buffer, maxLength: bufferSize) {
                 case 0: // EOF

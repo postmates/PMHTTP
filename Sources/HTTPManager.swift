@@ -1240,7 +1240,7 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
             return "UnexpectedNoContent(\(response.url?.relativeString ?? "nil"))"
         case let .unexpectedRedirect(statusCode, location, response, _):
             let statusText = HTTPURLResponse.localizedString(forStatusCode: statusCode)
-            return "UnexpectedRedirect(\(statusCode) \(statusText), \(response.url?.relativeString ?? "nil"), location: \(location as ImplicitlyUnwrappedOptional))"
+            return "UnexpectedRedirect(\(statusCode) \(statusText), \(response.url?.relativeString ?? "nil"), location: \(location.map(String.init(describing:)) ?? "nil")"
         }
     }
     
