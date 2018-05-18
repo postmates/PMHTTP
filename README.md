@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Fix `<PMHTTP/PMHTTP.h>` so it can be imported from Obj-C++ code.
+
 #### v4.0.0 (2018-02-23)
 
 * Convert to Swift 4.

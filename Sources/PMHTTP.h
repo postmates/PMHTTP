@@ -12,7 +12,7 @@
 //  except according to those terms.
 //
 
-@import Foundation;
+#import <Foundation/Foundation.h>
 
 //! Project version number for PMHTTP.
 FOUNDATION_EXPORT double PMHTTPVersionNumber;

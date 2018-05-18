@@ -12,7 +12,7 @@
 //  except according to those terms.
 //
 
-@import Foundation;
+#import <Foundation/Foundation.h>
 
 /// Error domain for \c HTTPManager errors.
 extern NSString * _Nonnull const PMHTTPErrorDomain;
