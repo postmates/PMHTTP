@@ -839,7 +839,7 @@ final class HTTPServer {
                 case _ where response.status.isInformational: fallthrough
                 case (_, .noContent), (_, .notModified):
                     // no body can be present. Print a warning and throw it away
-                    NSLog("warning: HTTPServer tried to send response \(response.status) to request method \(request?.method as ImplicitlyUnwrappedOptional) with non-empty body")
+                    NSLog("warning: HTTPServer tried to send response \(response.status) to request method \((request?.method).map(String.init(describing:)) ?? "nil") with non-empty body")
                     log("Disconnecting...")
                     socket.disconnectAfterWriting()
                     return
