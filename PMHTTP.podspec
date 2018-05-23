@@ -25,6 +25,7 @@ Pod::Spec.new do |s|
   s.private_header_files = "Sources/PMHTTPManager*.h"
 
   s.framework  = "CFNetwork"
+  s.library    = 'c++'
   s.module_map = "Sources/pmhttp.modulemap"
 
   s.dependency "PMJSON", "~> 3.0"
