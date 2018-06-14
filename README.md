@@ -415,6 +415,9 @@ work by you shall be dual licensed as above, without any additional terms or con
 * Support mocking relative URLs when no environment has been set.
 * Shrink the default mock delay to 10ms.
 * Make `HTTPManagerRequest.headerFields` mutable in Obj-C.
+* Add `HTTPManager.defaultHeaderFields` which defines the default header fields to attach to requests and, like `defaultAuth`, only applies to requests within
+  the current environment.
+* Declare conformance to `Equatable` for `HTTPManagerRequest.HTTPHeaders`.
 
 #### v4.0.1 (2018-05-17)
 

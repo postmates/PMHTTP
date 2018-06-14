@@ -97,7 +97,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     @objc public fileprivate(set) var parameters: [URLQueryItem]
     
     /// The `HTTPAuth` value to use for the request. Default is the value of
-    /// `HTTPManager.defaultAuth`.
+    /// `HTTPManager.defaultAuth` for requests in the current environment, otherwise `nil`.
     ///
     /// - SeeAlso: `HTTPBasicAuth`, `HTTPManager.defaultAuth`.
     @objc public var auth: HTTPAuth?
@@ -140,7 +140,7 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     @objc public var userInitiated: Bool = false
     
     /// The retry behavior to use for the request. Default is the value of
-    /// `HTTPManager.defaultRetryBehavior`.
+    /// `HTTPManager.defaultRetryBehavior` for requests in the current environment, otherwise `nil`.
     ///
     /// - SeeAlso: `HTTPManager.defaultRetryBehavior`.
     @objc public var retryBehavior: HTTPManagerRetryBehavior?
@@ -174,10 +174,13 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// handler (if any), and it's the handler's job to show the activity indicator.
     @objc public var affectsNetworkActivityIndicator: Bool = true
     
-    /// Additional HTTP header fields to pass in the request. Default is `[:]`.
+    /// Additional HTTP header fields to pass in the request. Default is the value of
+    /// `HTTPManager.defaultHeaderFields` for requests in the current environment, otherwise `[:]`.
     ///
     /// - Note: `Content-Type` and `Content-Length` are always ignored. If `self.auth` is non-`nil`,
     ///   it may override other headers, in particular `"Authorization"`.
+    ///
+    /// - SeeAlso: `HTTPManager.defaultHeaderFields`.
     @nonobjc public var headerFields: HTTPHeaders = [:]
     
     // possibly expose some URLRequest properties here, if they're useful
@@ -300,7 +303,7 @@ extension HTTPManagerRequest {
     /// A collection of HTTP header fields.
     ///
     /// Exposes a `Dictionary`-like interface but guarantees that all header names are normalized.
-    public struct HTTPHeaders : Collection, CustomStringConvertible, CustomDebugStringConvertible, ExpressibleByDictionaryLiteral {
+    public struct HTTPHeaders : Collection, Equatable, CustomStringConvertible, CustomDebugStringConvertible, ExpressibleByDictionaryLiteral {
         public typealias Index = Dictionary<String,String>.Index
         public typealias Iterator = Dictionary<String,String>.Iterator
         
@@ -472,6 +475,10 @@ extension HTTPManagerRequest {
             }
             
             return field.components(separatedBy: "-").lazy.map(normalizeComponent).joined(separator: "-")
+        }
+        
+        public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
+            return lhs.dictionary == rhs.dictionary
         }
     }
 }

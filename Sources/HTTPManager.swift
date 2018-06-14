@@ -169,6 +169,30 @@ public final class HTTPManager: NSObject {
         }
     }
     
+    /// The header fields to use for HTTP requests. The default value is `[:]`.
+    ///
+    /// Individual requests may override this with their own header fields.
+    ///
+    /// Changes to this property affect any newly-created requests but do not affect any existing
+    /// requests or any tasks that are in-progress.
+    ///
+    /// - Note: This value is only used for HTTP requests that are located within the current
+    ///   environment's base URL. If a request is created with an absolute path or absolute URL, and
+    ///   the resulting URL does not represent a resource found within the environment's base URL,
+    ///   the request will not be assigned the default header fields.
+    ///
+    /// - SeeAlso: `environment`, `HTTPManagerRequest.headerFields`.
+    @nonobjc public var defaultHeaderFields: HTTPManagerRequest.HTTPHeaders {
+        get {
+            return inner.sync({ $0.defaultHeaderFields })
+        }
+        set {
+            inner.asyncBarrier {
+                $0.defaultHeaderFields = newValue
+            }
+        }
+    }
+    
     /// The default retry behavior to use for requests. The default value is `nil`.
     ///
     /// Individual requests may override this behavior with their own behavior.
@@ -331,6 +355,7 @@ public final class HTTPManager: NSObject {
         var defaultRetryBehavior: HTTPManagerRetryBehavior?
         var defaultAssumeErrorsAreJSON: Bool = false
         var defaultServerRequiresContentLength: Bool = false
+        var defaultHeaderFields: HTTPManagerRequest.HTTPHeaders = [:]
 
         var session: URLSession!
         var sessionDelegate: SessionDelegate!
@@ -1077,11 +1102,11 @@ extension HTTPManager {
         return request
     }
     
-    private typealias ConfigureRequestInfo = (environment: Environment?, auth: HTTPAuth?, defaultRetryBehavior: HTTPManagerRetryBehavior?, assumeErrorsAreJSON: Bool, serverRequiresContentLength: Bool)
+    private typealias ConfigureRequestInfo = (environment: Environment?, auth: HTTPAuth?, retryBehavior: HTTPManagerRetryBehavior?, assumeErrorsAreJSON: Bool, serverRequiresContentLength: Bool, headerFields: HTTPManagerRequest.HTTPHeaders)
     
     private func _configureRequestInfo() -> ConfigureRequestInfo {
         return inner.sync({ inner in
-            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON, inner.defaultServerRequiresContentLength)
+            return (inner.environment, inner.defaultAuth, inner.defaultRetryBehavior, inner.defaultAssumeErrorsAreJSON, inner.defaultServerRequiresContentLength, inner.defaultHeaderFields)
         })
     }
     
@@ -1096,8 +1121,9 @@ extension HTTPManager {
                 request.auth = auth
             }
             request.serverRequiresContentLength = info.serverRequiresContentLength
+            request.headerFields = info.headerFields
         }
-        request.retryBehavior = info.defaultRetryBehavior
+        request.retryBehavior = info.retryBehavior
         request.assumeErrorsAreJSON = info.assumeErrorsAreJSON
     }
     
@@ -1108,6 +1134,7 @@ extension HTTPManager {
                 request.auth = auth
             }
             request.serverRequiresContentLength = inner.defaultServerRequiresContentLength
+            request.headerFields = inner.defaultHeaderFields
         }
     }
     

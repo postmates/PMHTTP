@@ -1808,6 +1808,27 @@ final class PMHTTPTests: PMHTTPTestCase {
         XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
     }
     
+    func testHeaderFieldsEnvironmentDefaults() {
+        HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
+        
+        HTTP.defaultHeaderFields = ["X-Foo": "Bar"]
+        var req = HTTP.request(GET: "foo")!
+        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+        req = HTTP.request(GET: "")!
+        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+        req = HTTP.request(GET: "/foo")!
+        XCTAssertEqual(req.headerFields, [:], "request headerFields")
+        req = HTTP.request(GET: "/v1/foo")!
+        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+        req = HTTP.request(GET: "http://\(httpServer.address)/v1/")!
+        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+        req = HTTP.request(GET: "http://apple.com/v1")!
+        XCTAssertEqual(req.headerFields, [:], "request headerFields")
+        
+        req.setDefaultEnvironmentalProperties()
+        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+    }
+    
     func testResetSessionWithStoppedTask() {
         _ = expectationForRequestCanceled(HTTP.request(GET: "foo"), startAutomatically: false)
         HTTP.resetSession()

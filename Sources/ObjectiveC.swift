@@ -22,6 +22,44 @@ extension HTTPManager {
         return HTTP
     }
     
+    @objc(defaultHeaderFields)
+    public var __objc_defaultHeaderFields: [String: String] {
+        get { return defaultHeaderFields.dictionary }
+        set {
+            defaultHeaderFields = HTTPManagerRequest.HTTPHeaders(newValue)
+        }
+    }
+    
+    /// Adds an HTTP header to the list of default header fields.
+    ///
+    /// - Parameter value: The value for the header field.
+    /// - Parameter field: The name of the header field. Header fields are case-insensitive.
+    ///
+    /// If a value was previously set for the specified *field*, the supplied *value* is appended
+    /// to the existing value using the appropriate field delimiter.
+    @objc(addValue:forDefaultHeaderField:)
+    public func __objc_addValue(_ value: String, forDefaultHeaderField field: String) {
+        defaultHeaderFields.addValue(value, forHeaderField: field)
+    }
+    
+    /// Sets a specified default HTTP header field.
+    ///
+    /// - Parameter value: The value for the header field.
+    /// - Parameter field: The name of the header field. Header fields are case-insensitive.
+    @objc(setValue:forDefaultHeaderField:)
+    public func __objc_setValue(_ value: String, forDefaultHeaderField field: String) {
+        defaultHeaderFields[field] = value
+    }
+    
+    /// Returns a specified default HTTP header field, if set.
+    ///
+    /// - Parameter field: The name of the header field. Header fields are case-insensitive.
+    /// - Returns: The value for the header field, or `nil` if no value was set.
+    @objc(valueForDefaultHeaderField:)
+    public func __objc_valueForDefaultHeaderField(_ field: String) -> String? {
+        return defaultHeaderFields[field]
+    }
+    
     /// Creates a GET request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -641,7 +679,8 @@ extension HTTPManagerRequest {
         return cachePolicy ?? NSURLRequest.CachePolicy.useProtocolCachePolicy
     }
     
-    /// Additional HTTP header fields to pass in the request. Default is `[:]`.
+    /// Additional HTTP header fields to pass in the request. Default is the value of
+    /// `HTTPManager.defaultHeaderFields` for requests in the current environment, otherwise `@{}`.
     ///
     /// If not specified, the request will fill in `Accept` and `Accept-Language`
     /// automatically when performing the request.
