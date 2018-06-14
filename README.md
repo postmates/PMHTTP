@@ -413,6 +413,7 @@ work by you shall be dual licensed as above, without any additional terms or con
 #### Development
 
 * Support mocking relative URLs when no environment has been set.
+* Shrink the default mock delay to 10ms.
 
 #### v4.0.1 (2018-05-17)
 

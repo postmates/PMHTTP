@@ -69,10 +69,10 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter data: (Optional) The body of the response. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the data.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    @objc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @objc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.01) -> HTTPMockToken {
         var headers = headers
         if headers["Content-Length"] == nil {
             headers["Content-Length"] = String(data.count)
@@ -106,10 +106,10 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter text: The body text to return. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the text.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    @objc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @objc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.01) -> HTTPMockToken {
         let data = text.data(using: String.Encoding.utf8) ?? Data()
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -133,10 +133,10 @@ public final class HTTPMockManager: NSObject {
     /// - Parameter json: The JSON body of the response. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the encoded JSON.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: An `HTTPMockToken` object that can be used to unregister the mock later.
     @discardableResult
-    @nonobjc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @nonobjc public func addMock(for url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.01) -> HTTPMockToken {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -407,8 +407,8 @@ public final class HTTPMockSequence: NSObject {
     /// - Parameter data: (Optional) The body of the response. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the data.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
-    @objc public func addMock(statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) {
+    ///   response. The default value is 10ms.
+    @objc public func addMock(statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.01) {
         mocks.append((statusCode: statusCode, headers: headers, payload: .data(data), delay: delay))
     }
     /// Adds a mock to the sequence that returns a given plain text response.
@@ -419,8 +419,8 @@ public final class HTTPMockSequence: NSObject {
     /// - Parameter text: The body text to return. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the text.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
-    @objc public func addMock(statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) {
+    ///   response. The default value is 10ms.
+    @objc public func addMock(statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.01) {
         mocks.append((statusCode: statusCode, headers: headers, payload: .text(text), delay: delay))
     }
     /// Adds a mock to the sequence that returns a given JSON response.
@@ -431,8 +431,8 @@ public final class HTTPMockSequence: NSObject {
     /// - Parameter json: The JSON body of the response. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the encoded JSON.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
-    @nonobjc public func addMock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) {
+    ///   response. The default value is 10ms.
+    @nonobjc public func addMock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.01) {
         mocks.append((statusCode: statusCode, headers: headers, payload: .json(json), delay: delay))
     }
     
@@ -453,9 +453,9 @@ public final class HTTPMockSequence: NSObject {
     /// - Parameter data: (Optional) The body of the response. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the data.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: A copy of `self` that returns a mock response.
-    public func mock(statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) -> Self {
+    public func mock(statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.01) -> Self {
         let newRequest = type(of: self).init(__copyOfRequest: self)
         var headers = headers
         if headers["Content-Length"] == nil {
@@ -484,9 +484,9 @@ public final class HTTPMockSequence: NSObject {
     /// - Parameter text: The body text to return. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the text.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: A copy of `self` that returns a mock plain text response.
-    public func mock(statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) -> Self {
+    public func mock(statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.01) -> Self {
         let data = text.data(using: String.Encoding.utf8) ?? Data()
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -503,9 +503,9 @@ public final class HTTPMockSequence: NSObject {
     /// - Parameter json: The JSON body of the response. If the `headers` does not provide a
     ///   `"Content-Length"` header, one is synthesized from the encoded JSON.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: A copy of `self` that returns a mock JSON response.
-    @nonobjc public func mock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> Self {
+    @nonobjc public func mock(statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.01) -> Self {
         let data = JSON.encodeAsData(json)
         var headers = headers
         if headers["Content-Type"] == nil {
@@ -527,12 +527,12 @@ public extension HTTPManagerParseRequest {
     /// - Parameter headers: (Optional) A collection of HTTP headers to return.
     /// - Parameter value: The parsed value to return.
     /// - Parameter delay: (Optional) The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response. The default value is 10ms.
     /// - Returns: A copy of `self` that returns a mock response.
     ///
     /// - Note: If the parse result type `T` is `JSON` and `headers` does not define the
     ///   `"Content-Type"` header, a default value of `"application/json"` will be used.
-    public func mock(headers: [String: String] = [:], value: T, delay: TimeInterval = 0.03) -> Self {
+    public func mock(headers: [String: String] = [:], value: T, delay: TimeInterval = 0.01) -> Self {
         let newRequest = type(of: self).init(__copyOfRequest: self)
         var headers = headers
         if T.self is JSON.Type && headers["Content-Type"] == nil {
@@ -586,7 +586,7 @@ public extension HTTPManagerParseRequest {
     /// - Parameter headers: A collection of HTTP headers to return.
     /// - Parameter value: The parsed object to return.
     /// - Parameter delay: The amount of time in seconds to wait before returning the
-    ///   response. The default value is 30ms.
+    ///   response.
     /// - Returns: A copy of `self` that returns a mock response.
     public func mock(headers: [String: String], value: Any?, delay: TimeInterval) -> HTTPManagerObjectParseRequest {
         return HTTPManagerObjectParseRequest(request: _request.mock(headers: headers, value: value, delay: delay))
