@@ -806,4 +806,105 @@ class MockingTests: PMHTTPTestCase {
         }
         waitForExpectations(timeout: 5, handler: nil)
     }
+    
+    func testRelativeMockWithNoEnvironment() {
+        HTTP.environment = nil
+        HTTP.mockManager.interceptUnhandledExternalURLs = true
+        HTTP.mockManager.interceptUnhandledEnvironmentURLs = true
+        HTTP.mockManager.addMock(for: "foo", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        expectationForRequestSuccess(HTTP.request(GET: "/foo")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock(for: "/foo", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "foo")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        expectationForRequestSuccess(HTTP.request(GET: "/foo")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock(for: "", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        expectationForRequestSuccess(HTTP.request(GET: "/")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock(for: "/", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        expectationForRequestSuccess(HTTP.request(GET: "/")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+    }
+    
+    func testAbsoluteMockWithNoEnvironment() {
+        HTTP.environment = nil
+        HTTP.mockManager.interceptUnhandledExternalURLs = true
+        HTTP.mockManager.interceptUnhandledEnvironmentURLs = true
+        
+        HTTP.mockManager.addMock(for: "http://localhost/foo", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "http://localhost/foo")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock(for: "http://localhost", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "http://localhost")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        expectationForRequestSuccess(HTTP.request(GET: "http://localhost/")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        HTTP.mockManager.removeAllMocks()
+        HTTP.mockManager.addMock(for: "http://localhost/", statusCode: 200, text: "Mock response")
+        expectationForRequestSuccess(HTTP.request(GET: "http://localhost")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+        
+        expectationForRequestSuccess(HTTP.request(GET: "http://localhost/")) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            XCTAssertEqual(String(data: value, encoding: .utf8), "Mock response", "body text")
+        }
+        waitForExpectations(timeout: 1, handler: nil)
+    }
 }

@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Support mocking relative URLs when no environment has been set.
+
 #### v4.0.1 (2018-05-17)
 
 * Fix `<PMHTTP/PMHTTP.h>` so it can be imported from Obj-C++ code.

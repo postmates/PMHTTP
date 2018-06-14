@@ -641,8 +641,10 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
             // Drop the leading "/" if present since we'll test that against the absolute path instead.
             if pathComps.first == "/" {
                 pathComps.removeFirst()
+                // Ensure resolving against the environment drops the path.
                 comps.percentEncodedPath = "/"
             } else {
+                // Resolving against the environment should keep the path.
                 comps.percentEncodedPath = ""
             }
             mockComps = pathComps.map(Component.init)
@@ -663,13 +665,16 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
                 absoluteComps = comps
             } else {
                 // Relative URL.
-                guard let environment = environment,
+                if let environment = environment,
                     let baseComps = URLComponents(url: environment.baseURL as URL, resolvingAgainstBaseURL: true)
-                    else { return .noMatch }
-                absoluteComps = comps.componentsRelativeTo(baseComps)
+                {
+                    absoluteComps = comps.componentsRelativeTo(baseComps)
+                } else {
+                    absoluteComps = comps
+                }
             }
             guard requestComponents.matchesComponents(absoluteComps, includePath: false) else { return .noMatch }
-            guard let requestPathComps = requestComponents.pathComponents.map({ $0.isEmpty ? ["/"] : $0 }),
+            guard let requestPathComps = requestComponents.pathComponents.map({ $0.first == "/" ? $0 : ["/"] + $0 }),
                 let pathComps = absoluteComps.pathComponents.map({ $0.isEmpty ? ["/"] : $0 })
                 else { return .noMatch }
             guard requestPathComps.count == (pathComps.count + mockComps.count) else { return .noMatch }
