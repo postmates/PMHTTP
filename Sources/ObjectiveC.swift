@@ -649,7 +649,10 @@ extension HTTPManagerRequest {
     /// - Note: If `self.credential` is non-`nil`, the `Authorization` header will be
     /// ignored. `Content-Type` and `Content-Length` are always ignored.
     @objc(headerFields) public var __objc_headerFields: [String: String] {
-        return headerFields.dictionary
+        get { return headerFields.dictionary }
+        set {
+            headerFields = HTTPHeaders(newValue)
+        }
     }
     
     /// Adds an HTTP header to the list of header fields.
