@@ -50,6 +50,7 @@
 		9EEF318F1E4D4F440086AAFF /* SSLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF318E1E4D4F440086AAFF /* SSLTests.swift */; };
 		9EEF31911E4D50A20086AAFF /* PMHTTP Certificates.p12 in Resources */ = {isa = PBXBuildFile; fileRef = 9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */; };
 		9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF69F51D2C343E00C6E603 /* KVOTests.swift */; };
+		AB7F6F2520D4CCFD003AA632 /* MetricsCallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,6 +116,7 @@
 		9EEF318E1E4D4F440086AAFF /* SSLTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SSLTests.swift; sourceTree = "<group>"; };
 		9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PMHTTP Certificates.p12"; sourceTree = "<group>"; };
 		9EEF69F51D2C343E00C6E603 /* KVOTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KVOTests.swift; sourceTree = "<group>"; };
+		AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricsCallbackTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -224,6 +226,7 @@
 				9EEF318E1E4D4F440086AAFF /* SSLTests.swift */,
 				9EEF318C1E4ABF050086AAFF /* AuthTests.swift */,
 				9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */,
+				AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */,
 				9EEF69F51D2C343E00C6E603 /* KVOTests.swift */,
 				9EDBA9B31F478BB9005EDC9F /* InputStreamTests.swift */,
 				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
@@ -407,6 +410,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB7F6F2520D4CCFD003AA632 /* MetricsCallbackTests.swift in Sources */,
 				9EDBA9B41F478BB9005EDC9F /* InputStreamTests.swift in Sources */,
 				9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */,
 				9ED901301E2EDB4E00332D39 /* ImageTests.swift in Sources */,

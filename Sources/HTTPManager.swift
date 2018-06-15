@@ -35,6 +35,9 @@ public let HTTP = HTTPManager(shared: true)
 public final class HTTPManager: NSObject {
     public typealias Environment = HTTPManagerEnvironment
     
+    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+    public typealias MetricsCallback = HTTPManagerMetricsCallback
+    
     /// A block that is invoked whenever the number of outstanding `HTTPManagerTask`s changes.
     ///
     /// If the value of this property changes while there are outstanding tasks, the old
@@ -139,6 +142,38 @@ public final class HTTPManager: NSObject {
                 if let session = $0.session {
                     session.delegateQueue.addOperation { [delegate=$0.sessionDelegate!] in
                         delegate.sessionLevelAuthenticationHandler = newValue
+                    }
+                }
+            }
+        }
+    }
+    
+    /// The callback that will be invoked whenever task metrics are collected.
+    ///
+    /// This callback is invoked every time the underlying `URLSession` collects task metrics for a
+    /// task. This means if the task is automatically retried, metrics may be collected multiple
+    /// times.
+    ///
+    /// - Note: The callback will be scheduled on the configured operation queue immediately from
+    ///   within the `URLSession` delegate method. This means that if the same serial operation
+    ///   queue is used both for the metrics callback and as the completion queue for the task
+    ///   itself, the metrics will be collected before the task's completion block is executed.
+    ///
+    /// - Note: Changing or clearing this property won't prevent any already-scheduled metrics
+    ///   callbacks from executing, even if this property is cleared from the same operation queue
+    ///   that the callback is scheduled on.
+    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+    @objc public var metricsCallback: MetricsCallback? {
+        get {
+            return inner.sync({ $0.metricsCallbackWrapper.asOptional })
+        }
+        set {
+            let wrapper = MetricsCallbackWrapper(newValue)
+            inner.asyncBarrier {
+                $0.metricsCallbackWrapper = wrapper
+                if let session = $0.session {
+                    session.delegateQueue.addOperation { [delegate=$0.sessionDelegate!] in
+                        delegate.metricsCallbackWrapper = wrapper
                     }
                 }
             }
@@ -331,6 +366,8 @@ public final class HTTPManager: NSObject {
         return try body()
     }
     
+    // MARK: -
+    
     fileprivate static func isAuthSuppressed(_ auth: HTTPAuth) -> Bool {
         if let auths = Thread.current.threadDictionary[tlsSuppressedAuthKey] as? [HTTPAuth] {
             return auths.contains(where: { $0 === auth })
@@ -351,6 +388,7 @@ public final class HTTPManager: NSObject {
         var environment: Environment?
         var sessionConfiguration: URLSessionConfiguration = .default
         var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)?
+        var metricsCallbackWrapper: MetricsCallbackWrapper = .none
         var defaultAuth: HTTPAuth?
         var defaultRetryBehavior: HTTPManagerRetryBehavior?
         var defaultAssumeErrorsAreJSON: Bool = false
@@ -443,6 +481,8 @@ public final class HTTPManager: NSObject {
         session.delegateQueue.name = "HTTPManager session delegate queue"
     }
 }
+
+// MARK: -
 
 /// The environment for an `HTTPManager`.
 ///
@@ -1492,6 +1532,58 @@ public func ==(lhs: HTTPManagerRetryBehavior.Strategy, rhs: HTTPManagerRetryBeha
     }
 }
 
+/// An object that encapsultes a callback for task metrics and the queue to invoke it on.
+@available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+public final class HTTPManagerMetricsCallback: NSObject {
+    /// The operation queue that the callback will be invoked on.
+    ///
+    /// If `nil`, the callback will be invoked on a global background queue with the `.utility` QoS.
+    @objc public let queue: OperationQueue?
+    
+    /// The callback that will be invoked with task metrics.
+    /// - Parameter task: The task for which metrics were collected.
+    /// - Parameter metrics: The task metrics that were collected.
+    @objc public let callback: (_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void
+    
+    /// Returns a new `HTTPManagerMetricsCallback` object.
+    /// - Parameter queue: The operation queue that the callback will be invoked on. If `nil`, the
+    ///   callback will be invoked on a global background queue with the `.utility` QoS.
+    /// - Parameter callback: The callback that will be invoked with task metrics.
+    /// - Parameter task: The task for which metrics were collected.
+    /// - Parameter metrics: The task metrics that were collected.
+    @objc public init(queue: OperationQueue?, callback: @escaping (_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void) {
+        self.queue = queue
+        self.callback = callback
+        super.init()
+    }
+}
+
+// MARK: - Private
+
+// Stored properties cannot be marked potentially unavailable with @unavailable.
+// Therefore we will use a custom enum for this.
+private enum MetricsCallbackWrapper {
+    case none
+    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+    case some(HTTPManager.MetricsCallback)
+    
+    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+    init(_ metricsCallback: HTTPManager.MetricsCallback?) {
+        switch metricsCallback {
+        case .none: self = .none
+        case .some(let value): self = .some(value)
+        }
+    }
+    
+    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+    var asOptional: HTTPManager.MetricsCallback? {
+        switch self {
+        case .none: return .none
+        case .some(let value): return .some(value)
+        }
+    }
+}
+
 private extension Error {
     /// Returns `true` if `self` is a transient networking error, or is a `PMJSON.JSONParserError`
     /// with a code of `.unexpectedEOF`.
@@ -1566,8 +1658,6 @@ private extension Error {
     }
 }
 
-// MARK: - Private
-
 extension HTTPManager {
     // MARK: Default User-Agent
     fileprivate static let defaultUserAgent: String = {
@@ -1632,6 +1722,8 @@ private class SessionDelegate: NSObject {
     var tasks: [TaskIdentifier: TaskInfo] = [:]
     
     var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)?
+    
+    var metricsCallbackWrapper: MetricsCallbackWrapper = .none
     
     init(apiManager: HTTPManager) {
         self.apiManager = apiManager
@@ -1962,6 +2054,27 @@ extension SessionDelegate: URLSessionDataDelegate {
                         processor(apiTask, .canceled, nil, taskInfo.attempt, { _ in return false })
                     }
                 }
+            }
+        }
+    }
+    
+    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        guard let metricsCallback = metricsCallbackWrapper.asOptional else { return }
+        guard let taskInfo = tasks[task.taskIdentifier] else {
+            log("task:didFinishCollecting; ignoring, task \(task) not tracked")
+            return
+        }
+        let apiTask = taskInfo.task
+        assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
+        log("task:didFinishCollecting for task \(task)")
+        if let operationQueue = metricsCallback.queue {
+            operationQueue.addOperation { [callback=metricsCallback.callback] in
+                callback(apiTask, metrics)
+            }
+        } else {
+            DispatchQueue.global(qos: .utility).async { [callback=metricsCallback.callback] in
+                callback(apiTask, metrics)
             }
         }
     }
