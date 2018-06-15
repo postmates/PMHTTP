@@ -299,41 +299,51 @@ class MultipartTests: PMHTTPTestCase {
     }
     
     func testDeferredBodyParts() {
-        let req = HTTP.request(POST: "foo")!
-        req.addMultipartBody { upload in
-            upload.addMultipart(text: "Hello world", withName: "message")
-            upload.addMultipart(data: "One".data(using: String.Encoding.utf8)!, withName: "one")
-            upload.addMultipart(data: "Two".data(using: String.Encoding.utf8)!, withName: "two", mimeType: "text/plain", filename: "file.txt")
-        }
-        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
-            defer { completionHandler(HTTPServer.Response(status: .ok)) }
-            let multipartBody: HTTPServer.MultipartBody
-            do {
-                multipartBody = try request.parseMultipartBody()
-            } catch {
-                return XCTFail("no multipart body; error: \(error)")
+        for useContentLength in [false, true] {
+            let req = HTTP.request(POST: "foo")!
+            if useContentLength {
+                req.serverRequiresContentLength = true
             }
-            XCTAssertEqual(multipartBody.contentType, "multipart/form-data", "multipart content type")
-            guard multipartBody.parts.count == 3 else {
-                return XCTFail("expected 3 multipart body parts, found \(multipartBody.parts.count)")
+            req.addMultipartBody { upload in
+                upload.addMultipart(text: "Hello world", withName: "message")
+                upload.addMultipart(data: "One".data(using: String.Encoding.utf8)!, withName: "one")
+                upload.addMultipart(data: "Two".data(using: String.Encoding.utf8)!, withName: "two", mimeType: "text/plain", filename: "file.txt")
             }
-            var bodyPart = multipartBody.parts[0]
-            XCTAssertEqual(bodyPart.contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"message\""), "multipart body part 0 Content-Disposition")
-            XCTAssertEqual(bodyPart.contentType, MediaType("text/plain; charset=utf-8"), "multipart body part 0 Content-Type")
-            XCTAssertEqual(String(data: bodyPart.body, encoding: String.Encoding.utf8), "Hello world", "multipart body part 0 content")
-            bodyPart = multipartBody.parts[1]
-            XCTAssertEqual(bodyPart.contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"one\""), "multipart body part 1 Content-Disposition")
-            XCTAssertEqual(bodyPart.contentType, MediaType("application/octet-stream"), "multipart body part 1 Content-Type")
-            XCTAssertEqual(String(data: bodyPart.body, encoding: String.Encoding.utf8), "One", "multipart body part 1 content")
-            bodyPart = multipartBody.parts[2]
-            XCTAssertEqual(bodyPart.contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"two\"; filename=\"file.txt\""), "multipart body part 2 Content-Disposition")
-            XCTAssertEqual(bodyPart.contentType, MediaType("text/plain"), "multipart body part 2 Content-Type")
-            XCTAssertEqual(String(data: bodyPart.body, encoding: String.Encoding.utf8), "Two", "multipart body part 2 content")
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                defer { completionHandler(HTTPServer.Response(status: .ok)) }
+                let multipartBody: HTTPServer.MultipartBody
+                do {
+                    multipartBody = try request.parseMultipartBody()
+                } catch {
+                    return XCTFail("no multipart body; error: \(error)")
+                }
+                XCTAssertEqual(multipartBody.contentType, "multipart/form-data", "multipart content type")
+                if useContentLength {
+                    XCTAssertEqual(request.headers["Content-Length"].flatMap({ Int($0) }), request.body?.count ?? 0, "content length")
+                } else {
+                    XCTAssertNil(request.headers["Content-Length"], "content length")
+                }
+                guard multipartBody.parts.count == 3 else {
+                    return XCTFail("expected 3 multipart body parts, found \(multipartBody.parts.count)")
+                }
+                var bodyPart = multipartBody.parts[0]
+                XCTAssertEqual(bodyPart.contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"message\""), "multipart body part 0 Content-Disposition")
+                XCTAssertEqual(bodyPart.contentType, MediaType("text/plain; charset=utf-8"), "multipart body part 0 Content-Type")
+                XCTAssertEqual(String(data: bodyPart.body, encoding: String.Encoding.utf8), "Hello world", "multipart body part 0 content")
+                bodyPart = multipartBody.parts[1]
+                XCTAssertEqual(bodyPart.contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"one\""), "multipart body part 1 Content-Disposition")
+                XCTAssertEqual(bodyPart.contentType, MediaType("application/octet-stream"), "multipart body part 1 Content-Type")
+                XCTAssertEqual(String(data: bodyPart.body, encoding: String.Encoding.utf8), "One", "multipart body part 1 content")
+                bodyPart = multipartBody.parts[2]
+                XCTAssertEqual(bodyPart.contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"two\"; filename=\"file.txt\""), "multipart body part 2 Content-Disposition")
+                XCTAssertEqual(bodyPart.contentType, MediaType("text/plain"), "multipart body part 2 Content-Type")
+                XCTAssertEqual(String(data: bodyPart.body, encoding: String.Encoding.utf8), "Two", "multipart body part 2 content")
+            }
+            expectationForRequestSuccess(req) { (task, response, value) in
+                XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+            }
+            waitForExpectations(timeout: 5, handler: nil)
         }
-        expectationForRequestSuccess(req) { (task, response, value) in
-            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
-        }
-        waitForExpectations(timeout: 5, handler: nil)
     }
     
     func testMixedEagerAndDeferredBodyParts() {

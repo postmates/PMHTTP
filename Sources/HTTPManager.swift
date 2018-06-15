@@ -1682,6 +1682,7 @@ extension HTTPManager {
             uploadBody = .data(JSON.encodeAsData(json))
         case .json?: break
         case let .multipartMixed(boundary, parameters, bodyParts)? where request.serverRequiresContentLength:
+            uploadBody?.evaluatePending()
             let stream = HTTPBody.createMultipartMixedStream(boundary, parameters: parameters, bodyParts: bodyParts)
             stream.open()
             do {

@@ -418,6 +418,7 @@ work by you shall be dual licensed as above, without any additional terms or con
 * Add `HTTPManager.defaultHeaderFields` which defines the default header fields to attach to requests and, like `defaultAuth`, only applies to requests within
   the current environment.
 * Declare conformance to `Equatable` for `HTTPManagerRequest.HTTPHeaders`.
+* Fix fatal error when using deferred multipart bodies along with `serverRequiresContentLength`.
 
 #### v4.0.1 (2018-05-17)
 
