@@ -398,11 +398,20 @@ extension HTTPManagerRequest {
             dictionary.formIndex(after: &i)
         }
         
+        @available(*, deprecated, message: "Use merge(newElements, uniquingKeysWith: { $1 })")
         public mutating func append(contentsOf newElements: HTTPHeaders) {
             // the headers are already normalized so we can avoid re-normalizing
-            for (key,value) in newElements {
-                dictionary[key] = value
-            }
+            dictionary.merge(newElements.dictionary, uniquingKeysWith: { $1 })
+        }
+        
+        public mutating func merge(_ other: HTTPHeaders, uniquingKeysWith combine: (_ current: String, _ new: String) throws -> String) rethrows {
+            // the headers are already normalized so we can avoid re-normalizing
+            try dictionary.merge(other.dictionary, uniquingKeysWith: combine)
+        }
+        
+        public func merging(_ other: HTTPHeaders, uniquingKeysWith combine: (_ current: String, _ new: String) throws -> String) rethrows -> HTTPHeaders {
+            // the headers are already normalized so we can avoid re-normalizing
+            return try HTTPHeaders(dictionary.merging(other.dictionary, uniquingKeysWith: combine))
         }
         
         public mutating func popFirst() -> (String, String)? {

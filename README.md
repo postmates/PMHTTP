@@ -410,6 +410,11 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Add `HTTPHeaders.merge(_:uniquingKeysWith:)` and `HTTPHeaders.merging(_:uniquingKeysWith:)`.
+* Deprecate `HTTPHeaders.append(contentsOf:)`.
+
 #### v4.1.0 (2018-06-15)
 
 * Support mocking relative URLs when no environment has been set.
