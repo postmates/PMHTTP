@@ -1174,7 +1174,9 @@ extension HTTPManager {
                 request.auth = auth
             }
             request.serverRequiresContentLength = inner.defaultServerRequiresContentLength
-            request.headerFields = inner.defaultHeaderFields
+            if !inner.defaultHeaderFields.isEmpty {
+                request.headerFields.merge(inner.defaultHeaderFields, uniquingKeysWith: { (current, _) in current })
+            }
         }
     }
     

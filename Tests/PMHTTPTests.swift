@@ -1810,8 +1810,8 @@ final class PMHTTPTests: PMHTTPTestCase {
     
     func testHeaderFieldsEnvironmentDefaults() {
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
-        
         HTTP.defaultHeaderFields = ["X-Foo": "Bar"]
+        
         var req = HTTP.request(GET: "foo")!
         XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
         req = HTTP.request(GET: "")!
@@ -1827,6 +1827,23 @@ final class PMHTTPTests: PMHTTPTestCase {
         
         req.setDefaultEnvironmentalProperties()
         XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+    }
+    
+    func testSetDefaultEnvironmentalPropertiesHeaderFieldsMerge() {
+        HTTP.defaultHeaderFields = ["X-Foo": "Bar", "Quux": "Grably"]
+        
+        var req = HTTP.request(GET: "http://apple.com/v1")!
+        req.headerFields.addValue("Foo", forHeaderField: "X-Bar")
+        XCTAssertEqual(req.headerFields, ["X-Bar": "Foo"], "request headerFields")
+        req.setDefaultEnvironmentalProperties()
+        XCTAssertEqual(req.headerFields, ["X-Bar": "Foo", "X-Foo": "Bar", "Quux": "Grably"], "request headerFields")
+        
+        req = HTTP.request(GET: "http://apple.com/v1")
+        req.headerFields.addValue("Foo", forHeaderField: "X-Bar")
+        req.headerFields.addValue("Qux", forHeaderField: "X-Foo")
+        XCTAssertEqual(req.headerFields, ["X-Bar": "Foo", "X-Foo": "Qux"], "request headerFields")
+        req.setDefaultEnvironmentalProperties()
+        XCTAssertEqual(req.headerFields, ["X-Bar": "Foo", "X-Foo": "Qux", "Quux": "Grably"], "request headerFields")
     }
     
     func testResetSessionWithStoppedTask() {

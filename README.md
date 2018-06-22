@@ -414,6 +414,8 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 * Add `HTTPHeaders.merge(_:uniquingKeysWith:)` and `HTTPHeaders.merging(_:uniquingKeysWith:)`.
 * Deprecate `HTTPHeaders.append(contentsOf:)`.
+* Merge header fields when calling `HTTPManagerRequest.setDefaultEnvironmentalProperties()`, giving priority to existing request header fields in the case
+  of a conflict.
 
 #### v4.1.0 (2018-06-15)
 
