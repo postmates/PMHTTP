@@ -67,14 +67,14 @@ internal enum UploadBody {
 private extension CharacterSet {
     static let urlQueryKeyAllowedCharacters: CharacterSet = {
         var cs = CharacterSet.urlQueryAllowed
-        cs.remove(charactersIn: "&=+")
+        cs.remove(charactersIn: "&=+;")
         cs.makeImmutable()
         return cs
     }()
     
     static let urlQueryValueAllowedCharacters: CharacterSet = {
         var cs = CharacterSet.urlQueryAllowed
-        cs.remove(charactersIn: "&+")
+        cs.remove(charactersIn: "&+;")
         cs.makeImmutable()
         return cs
     }()
