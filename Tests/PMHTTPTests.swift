@@ -1854,6 +1854,20 @@ final class PMHTTPTests: PMHTTPTestCase {
         waitForExpectations(timeout: 5, handler: nil)
     }
     
+    func testChangingSessionConfigurationDoesntInvalidateRunningTasks() {
+        let sema = DispatchSemaphore(value: 0)
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            sema.wait()
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: true)
+        let config = HTTP.sessionConfiguration
+        HTTP.sessionConfiguration = config // this resets the session asynchronously
+        _ = HTTP.sessionConfiguration // this waits for the session reset to complete
+        sema.signal()
+        waitForExpectations(timeout: 1, handler: nil)
+    }
+    
     func testExpandedParameters() {
         func queryItems(_ dict: DictionaryLiteral<String,String?>) -> [URLQueryItem] {
             return dict.map({ URLQueryItem(name: $0, value: $1) })
