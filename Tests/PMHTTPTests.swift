@@ -222,7 +222,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testParameters() {
-        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "baz", value: "wat")]
+        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "baz", value: "wat"), URLQueryItem(name: "special", value:"some;param;with;semicolons")]
         var parameters: [String: String] = [:]
         for item in queryItems {
             parameters[item.name] = item.value
@@ -284,6 +284,8 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTFail("Missing request body, or body not utf-8 (\(method))")
                     return completionHandler(HTTPServer.Response(status: .badRequest))
                 }
+                // some servers treat an un-percent-ecoded semicolon as a separator
+                XCTAssertFalse(bodyText.contains(";"), "Body text shouldn't contain semicolons")
                 var comps = URLComponents()
                 comps.percentEncodedQuery = bodyText
                 // sort the query items because the dictionary form is not order-preserving
