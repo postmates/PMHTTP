@@ -50,6 +50,7 @@
 		9EEF318F1E4D4F440086AAFF /* SSLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF318E1E4D4F440086AAFF /* SSLTests.swift */; };
 		9EEF31911E4D50A20086AAFF /* PMHTTP Certificates.p12 in Resources */ = {isa = PBXBuildFile; fileRef = 9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */; };
 		9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEF69F51D2C343E00C6E603 /* KVOTests.swift */; };
+		AB3D45EF20E41751005E51FC /* UtilitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3D45EE20E41751005E51FC /* UtilitiesTests.swift */; };
 		AB7F6F2520D4CCFD003AA632 /* MetricsCallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -116,6 +117,7 @@
 		9EEF318E1E4D4F440086AAFF /* SSLTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SSLTests.swift; sourceTree = "<group>"; };
 		9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PMHTTP Certificates.p12"; sourceTree = "<group>"; };
 		9EEF69F51D2C343E00C6E603 /* KVOTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KVOTests.swift; sourceTree = "<group>"; };
+		AB3D45EE20E41751005E51FC /* UtilitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilitiesTests.swift; sourceTree = "<group>"; };
 		AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricsCallbackTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -228,6 +230,7 @@
 				9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */,
 				AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */,
 				9EEF69F51D2C343E00C6E603 /* KVOTests.swift */,
+				AB3D45EE20E41751005E51FC /* UtilitiesTests.swift */,
 				9EDBA9B31F478BB9005EDC9F /* InputStreamTests.swift */,
 				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
 				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
@@ -417,6 +420,7 @@
 				9EA4EE371CBC197D00E4E531 /* MockingTests.swift in Sources */,
 				9E22DD2C1C88D09100C49993 /* DateParsingTests.swift in Sources */,
 				0AC2066120AE6C0F000DF552 /* ObjCPPImportTest.mm in Sources */,
+				AB3D45EF20E41751005E51FC /* UtilitiesTests.swift in Sources */,
 				9ED4FA181CC072F2001A0693 /* MultipartTests.swift in Sources */,
 				9E7FBAA91C52EFE7000D7A70 /* PMHTTPTestCase.swift in Sources */,
 				9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */,

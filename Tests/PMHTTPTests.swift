@@ -222,7 +222,7 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testParameters() {
-        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "baz", value: "wat"), URLQueryItem(name: "special", value:"some;param;with;semicolons")]
+        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "baz", value: "wat")]
         var parameters: [String: String] = [:]
         for item in queryItems {
             parameters[item.name] = item.value
@@ -284,8 +284,6 @@ final class PMHTTPTests: PMHTTPTestCase {
                     XCTFail("Missing request body, or body not utf-8 (\(method))")
                     return completionHandler(HTTPServer.Response(status: .badRequest))
                 }
-                // some servers treat an un-percent-ecoded semicolon as a separator
-                XCTAssertFalse(bodyText.contains(";"), "Body text shouldn't contain semicolons")
                 var comps = URLComponents()
                 comps.percentEncodedQuery = bodyText
                 // sort the query items because the dictionary form is not order-preserving
@@ -375,14 +373,16 @@ final class PMHTTPTests: PMHTTPTestCase {
     }
     
     func testQueryItemEdgeCases() {
-        // https://www.w3.org/TR/html5/forms.html#application/x-www-form-urlencoded-encoding-algorithm
+        // https://url.spec.whatwg.org/#urlencoded-serializing
         // x-www-form-urlencoded encoding converts spaces to `+`.
-        // URLQueryItem doesn't handle this conversion, and not all servers expect it.
-        // But because some do, we can't include `+` unescaped.
-        // And of course `&` and `=` need to be encoded.
+        // Unfortunately, not all servers expect this when parsing query strings.
+        // However all servers should handle %20, so we encoded as that.
         
-        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "key", value: "value + space"), URLQueryItem(name: " +&=", value: " +&=")]
-        let encodedQuery = "foo=bar&key=value%20%2b%20space&%20%2b%26%3d=%20%2b%26="
+        let queryItems = [URLQueryItem(name: "foo", value: "bar"), URLQueryItem(name: "key", value: "value + space"),
+                          URLQueryItem(name: " +&=", value: " +&="), URLQueryItem(name: "*-.azAZ09_", value: "*-.azAZ09_"),
+                          URLQueryItem(name: "!@?;~", value: "%")]
+        // Note: We test lowercsed strings so e.g. %3f vs %3F doesn't matter, hence "azaz09"
+        let encodedQuery = "foo=bar&key=value%20%2b%20space&%20%2b%26%3d=%20%2b%26%3d&*-.azaz09_=*-.azaz09_&%21%40%3f%3b%7e=%25"
         
         // GET
         expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in

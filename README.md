@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Percent-encode more characters for `application/x-www-form-urlencoded` bodies and query strings. Notably, semicolon (;) is now percent-encoded, as some servers treat it as a separator.
+
 #### v4.1.1 (2018-06-21)
 
 * Add `HTTPHeaders.merge(_:uniquingKeysWith:)` and `HTTPHeaders.merging(_:uniquingKeysWith:)`.

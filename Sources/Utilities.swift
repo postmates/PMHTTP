@@ -351,6 +351,8 @@ func ~=(pattern: MediaType, value: MediaType) -> Bool {
     return true
 }
 
+// MARK: -
+
 internal extension Sequence {
     func chain<Seq: Sequence>(_ seq: Seq) -> Chain<Self, Seq> where Seq.Iterator.Element == Self.Iterator.Element {
         return Chain(self, seq)
@@ -394,6 +396,21 @@ internal struct ChainGenerator<First: IteratorProtocol, Second: IteratorProtocol
     private var first: First
     private var second: Second
     private var firstDone: Bool = false
+}
+
+// MARK: -
+
+internal extension Collection {
+    /// A variant on `lazy` that always returns a sequence instead of a collection.
+    ///
+    /// This is intended to be used with lazy operations when passing the results to a type that may
+    /// make multiple passes over a collection. Operations like `flatMap` or `filter` must be
+    /// performed in order to count the resulting collection (such as when passing to
+    /// `Array.init(_:)`), and even `map` must be performed when preallocating space (such as when
+    /// calling `joined(separator:)`)
+    var lazySequence: LazySequence<Self> {
+        return lazy
+    }
 }
 
 /// Returns the mach absolute time in nanoseconds.

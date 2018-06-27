@@ -17,23 +17,22 @@ import PMJSON
 
 /// Implements application/x-www-form-urlencoded encoding.
 ///
-/// See [the spec](https://www.w3.org/TR/html5/forms.html#application/x-www-form-urlencoded-encoding-algorithm) for details.
+/// See [the spec](https://url.spec.whatwg.org/#concept-urlencoded-parser) for details.
 ///
 /// - Note: We don't actually translate spaces into `+` because, while HTML says that query strings
 ///   should be encoded using application/x-www-form-urlencoded (and therefore spaces should be `+`),
 ///   there's no actual guarantee that servers interpret query strings that way, but all servers are
-///   guaranteed to interpret `%20` as a space.
+///   guaranteed to interpret `%20` as a space. We apply this same logic to request bodies too for
+///   simplicity's sake.
 internal enum FormURLEncoded {
     static func string(for queryItems: [URLQueryItem]) -> String {
         guard !queryItems.isEmpty else {
             return ""
         }
-        // NB: don't use lazy here, or `joined(separator:)` will map all items twice.
-        // Better to have one array allocation than unnecessarily re-encoding all strings.
-        let encodedQueryItems = queryItems.map({ item -> String in
-            let encodedName = item.name.addingPercentEncoding(withAllowedCharacters: .urlQueryKeyAllowedCharacters) ?? ""
+        let encodedQueryItems = queryItems.lazySequence.map({ item -> String in
+            let encodedName = item.name.addingPercentEncoding(withAllowedCharacters: .formUrlencodedAllowedCharacters) ?? ""
             if let value = item.value {
-                let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowedCharacters) ?? ""
+                let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .formUrlencodedAllowedCharacters) ?? ""
                 return "\(encodedName)=\(encodedValue)"
             } else {
                 return encodedName
@@ -65,16 +64,11 @@ internal enum UploadBody {
 }
 
 private extension CharacterSet {
-    static let urlQueryKeyAllowedCharacters: CharacterSet = {
-        var cs = CharacterSet.urlQueryAllowed
-        cs.remove(charactersIn: "&=+;")
-        cs.makeImmutable()
-        return cs
-    }()
-    
-    static let urlQueryValueAllowedCharacters: CharacterSet = {
-        var cs = CharacterSet.urlQueryAllowed
-        cs.remove(charactersIn: "&+;")
+    static let formUrlencodedAllowedCharacters: CharacterSet = {
+        var cs: CharacterSet = ["*", "-", ".", "_"]
+        cs.insert(charactersIn: "0"..."9")
+        cs.insert(charactersIn: "A"..."Z")
+        cs.insert(charactersIn: "a"..."z")
         cs.makeImmutable()
         return cs
     }()
