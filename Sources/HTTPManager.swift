@@ -154,27 +154,41 @@ public final class HTTPManager: NSObject {
     /// task. This means if the task is automatically retried, metrics may be collected multiple
     /// times.
     ///
+    /// - Note: As task metric collection is not free, task metrics are only collected for tasks
+    ///   when the `metricsCallback` was non-`nil` prior to the task being created. Furthermore,
+    ///   assigning the `metricsCallback` to `nil` disables task metric reporting for all
+    ///   outstanding tasks, even if the `metricsCallback` is subsequently assigned to a non-`nil`
+    ///   value again before the outstanding task completes.
+    ///
     /// - Note: The callback will be scheduled on the configured operation queue immediately from
     ///   within the `URLSession` delegate method. This means that if the same serial operation
     ///   queue is used both for the metrics callback and as the completion queue for the task
     ///   itself, the metrics will be collected before the task's completion block is executed.
     ///
-    /// - Note: Changing or clearing this property won't prevent any already-scheduled metrics
-    ///   callbacks from executing, even if this property is cleared from the same operation queue
-    ///   that the callback is scheduled on.
+    /// - Note: Changing or clearing this property after a task has finished but before it has
+    ///   executed the metrics callback won't prevent the old callback from executing, even if this
+    ///   property is cleared from the same operation queue that the callback is scheduled on.
     @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
     @objc public var metricsCallback: MetricsCallback? {
         get {
             return inner.sync({ $0.metricsCallbackWrapper.asOptional })
         }
         set {
-            let wrapper = MetricsCallbackWrapper(newValue)
-            inner.asyncBarrier {
-                $0.metricsCallbackWrapper = wrapper
-                if let session = $0.session {
-                    session.delegateQueue.addOperation { [delegate=$0.sessionDelegate!] in
-                        delegate.metricsCallbackWrapper = wrapper
+            inner.asyncBarrier { inner in
+                inner.metricsCallbackWrapper = MetricsCallbackWrapper(newValue)
+                if let delegate = inner.sessionDelegate as? MetricsSessionDelegate {
+                    inner.session.delegateQueue.addOperation {
+                        // Always set this even if newValue is nil, otherwise any existing running tasks will
+                        // end up invoking the callback we removed.
+                        delegate.metricsCallback = newValue
                     }
+                    if newValue == nil {
+                        // We had a value, and now we don't.
+                        self.resetSession(inner, invalidate: false)
+                    }
+                } else if newValue != nil && inner.session != nil {
+                    // We didn't have a value, and now we do
+                    self.resetSession(inner, invalidate: false)
                 }
             }
         }
@@ -469,7 +483,12 @@ public final class HTTPManager: NSObject {
                 inner.oldSessions.append(session)
             }
         }
-        let sessionDelegate = SessionDelegate(apiManager: self)
+        let sessionDelegate: SessionDelegate
+        if #available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *), let metricsCallback = inner.metricsCallbackWrapper.asOptional {
+            sessionDelegate = MetricsSessionDelegate(apiManager: self, metricsCallback: metricsCallback)
+        } else {
+            sessionDelegate = SessionDelegate(apiManager: self)
+        }
         inner.sessionDelegate = sessionDelegate
         // Insert HTTPMockURLProtocol into the protocol classes list.
         let config = unsafeDowncast(inner.sessionConfiguration.copy() as AnyObject, to: URLSessionConfiguration.self)
@@ -1725,8 +1744,6 @@ private class SessionDelegate: NSObject {
     
     var sessionLevelAuthenticationHandler: ((_ httpManager: HTTPManager, _ challenge: URLAuthenticationChallenge, _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) -> Void)?
     
-    var metricsCallbackWrapper: MetricsCallbackWrapper = .none
-    
     init(apiManager: HTTPManager) {
         self.apiManager = apiManager
         super.init()
@@ -1752,6 +1769,17 @@ private class SessionDelegate: NSObject {
             self.authToken = authToken
             self.processor = processor
         }
+    }
+}
+
+/// A subclass of SessionDelegate that collects task metrics.
+@available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+private class MetricsSessionDelegate: SessionDelegate {
+    var metricsCallback: HTTPManager.MetricsCallback?
+    
+    init(apiManager: HTTPManager, metricsCallback: HTTPManager.MetricsCallback) {
+        self.metricsCallback = metricsCallback
+        super.init(apiManager: apiManager)
     }
 }
 
@@ -2060,27 +2088,6 @@ extension SessionDelegate: URLSessionDataDelegate {
         }
     }
     
-    @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
-    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
-        guard let metricsCallback = metricsCallbackWrapper.asOptional else { return }
-        guard let taskInfo = tasks[task.taskIdentifier] else {
-            log("task:didFinishCollecting; ignoring, task \(task) not tracked")
-            return
-        }
-        let apiTask = taskInfo.task
-        assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
-        log("task:didFinishCollecting for task \(task)")
-        if let operationQueue = metricsCallback.queue {
-            operationQueue.addOperation { [callback=metricsCallback.callback] in
-                callback(apiTask, metrics)
-            }
-        } else {
-            DispatchQueue.global(qos: .utility).async { [callback=metricsCallback.callback] in
-                callback(apiTask, metrics)
-            }
-        }
-    }
-    
     private static let cacheControlValues: Set<CaseInsensitiveASCIIString> = ["no-cache", "no-store", "max-age", "s-maxage"]
     
     @objc func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, willCacheResponse proposedResponse: CachedURLResponse, completionHandler: @escaping (CachedURLResponse?) -> Void) {
@@ -2196,6 +2203,29 @@ extension SessionDelegate: URLSessionDataDelegate {
         case nil:
             self.log("no uploadBody, providing no stream")
             completionHandler(nil)
+        }
+    }
+}
+
+@available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
+extension MetricsSessionDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        guard let metricsCallback = self.metricsCallback else { return }
+        guard let taskInfo = tasks[task.taskIdentifier] else {
+            log("task:didFinishCollecting; ignoring, task \(task) not tracked")
+            return
+        }
+        let apiTask = taskInfo.task
+        assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
+        log("task:didFinishCollecting for task \(task)")
+        if let operationQueue = metricsCallback.queue {
+            operationQueue.addOperation { [callback=metricsCallback.callback] in
+                callback(apiTask, metrics)
+            }
+        } else {
+            DispatchQueue.global(qos: .utility).async { [callback=metricsCallback.callback] in
+                callback(apiTask, metrics)
+            }
         }
     }
 }

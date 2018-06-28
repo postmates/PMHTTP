@@ -28,13 +28,14 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 completionHandler(HTTPServer.Response(status: .ok, text: "Hello world"))
             }
-            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false)
+            var task: HTTPManagerTask?
             let expectation = self.expectation(description: "task metrics")
             HTTP.metricsCallback = .init(queue: nil, callback: { (task_, metrics) in
                 XCTAssert(task === task_, "unexpected task")
                 expectation.fulfill()
             })
-            task.resume()
+            task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false)
+            task!.resume()
             waitForExpectations(timeout: 1, handler: nil)
         }
     }
@@ -44,7 +45,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
                 completionHandler(HTTPServer.Response(status: .ok, text: "Hello world"))
             }
-            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false)
+            var task: HTTPManagerTask?
             let operationQueue = OperationQueue()
             let expectation = self.expectation(description: "task metrics")
             HTTP.metricsCallback = .init(queue: operationQueue, callback: { (task_, metrics) in
@@ -52,7 +53,8 @@ final class MetricsCallbackTests: PMHTTPTestCase {
                 XCTAssert(task === task_, "unexpected task")
                 expectation.fulfill()
             })
-            task.resume()
+            task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false)
+            task!.resume()
             waitForExpectations(timeout: 1, handler: nil)
         }
     }
@@ -66,10 +68,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             operationQueue.maxConcurrentOperationCount = 1
             var gotMetrics = false
             var requestFinished = false
-            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), queue: operationQueue, startAutomatically: false) { (task, response, value) in
-                XCTAssertTrue(gotMetrics, "expected to have received metrics already")
-                requestFinished = true
-            }
+            var task: HTTPManagerTask?
             let expectation = self.expectation(description: "task metrics")
             HTTP.metricsCallback = .init(queue: operationQueue, callback: { (task_, metrics) in
                 XCTAssertEqual(OperationQueue.current, operationQueue)
@@ -78,7 +77,11 @@ final class MetricsCallbackTests: PMHTTPTestCase {
                 gotMetrics = true
                 expectation.fulfill()
             })
-            task.resume()
+            task = expectationForRequestSuccess(HTTP.request(GET: "foo"), queue: operationQueue, startAutomatically: false) { (task, response, value) in
+                XCTAssertTrue(gotMetrics, "expected to have received metrics already")
+                requestFinished = true
+            }
+            task!.resume()
             waitForExpectations(timeout: 1, handler: nil)
         }
     }
@@ -98,7 +101,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             req.retryBehavior = HTTPManagerRetryBehavior({ (task, error, attempt, callback) in
                 callback(attempt < 3)
             })
-            let task = expectationForRequestSuccess(req, startAutomatically: false)
+            var task: HTTPManagerTask?
             let operationQueue = OperationQueue()
             operationQueue.maxConcurrentOperationCount = 1
             let expectation = self.expectation(description: "task metrics")
@@ -108,8 +111,89 @@ final class MetricsCallbackTests: PMHTTPTestCase {
                 XCTAssert(task === task_, "unexpected task")
                 expectation.fulfill()
             })
+            task = expectationForRequestSuccess(req, startAutomatically: false)
+            task!.resume()
+            waitForExpectations(timeout: 1, handler: nil)
+        }
+    }
+    
+    func testSettingMetricsCallbackDoesntInvalidateRunningTasks() {
+        if #available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *) {
+            let sema = DispatchSemaphore(value: 0)
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                sema.wait()
+                completionHandler(HTTPServer.Response(status: .ok))
+            }
+            expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: true)
+            HTTP.metricsCallback = .init(queue: nil, callback: { (_, _) in }) // this resets the session asynchronously
+            _ = HTTP.sessionConfiguration // this waits for the session reset to complete
+            sema.signal()
+            waitForExpectations(timeout: 1, handler: nil)
+        }
+    }
+    
+    func testSettingMetricsCallbackAfterTaskCreationDoesntTrigger() {
+        if #available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *) {
+            let sema = DispatchSemaphore(value: 0)
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                sema.wait()
+                completionHandler(HTTPServer.Response(status: .ok, text: "Hello world"))
+            }
+            let operationQueue = OperationQueue()
+            operationQueue.maxConcurrentOperationCount = 1
+            expectationForRequestSuccess(HTTP.request(GET: "foo"), queue: operationQueue, startAutomatically: true)
+            let expectation = XCTestExpectation(description: "task metrics")
+            expectation.isInverted = true
+            HTTP.metricsCallback = .init(queue: operationQueue, callback: { (_, _) in
+                expectation.fulfill()
+            })
+            sema.signal()
+            waitForExpectations(timeout: 1, handler: nil)
+            wait(for: [expectation], timeout: 0)
+        }
+    }
+    
+    func testChangingMetricsCallbackAfterTaskCreationInvokesNewCallback() {
+        if #available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *) {
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .ok, text: "Hello world"))
+            }
+            let expectationFirst = XCTestExpectation(description: "first task metrics")
+            expectationFirst.isInverted = true
+            HTTP.metricsCallback = .init(queue: nil, callback: { (task_, metrics) in
+                expectationFirst.fulfill()
+            })
+            let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false)
+            let expectationSecond = self.expectation(description: "second task metrics")
+            HTTP.metricsCallback = .init(queue: nil, callback: { (task_, metrics) in
+                XCTAssert(task === task_, "unexpected task")
+                expectationSecond.fulfill()
+            })
             task.resume()
             waitForExpectations(timeout: 1, handler: nil)
+            wait(for: [expectationFirst], timeout: 0)
+        }
+    }
+    
+    func testClearingMetricsCallbackAfterTaskRunningDoesntTrigger() {
+        if #available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *) {
+            let sema = DispatchSemaphore(value: 0)
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                sema.wait()
+                completionHandler(HTTPServer.Response(status: .ok, text: "Hello world"))
+            }
+            let expectation = XCTestExpectation(description: "task metrics")
+            expectation.isInverted = true
+            HTTP.metricsCallback = .init(queue: nil, callback: { (_, _) in
+                expectation.fulfill()
+            })
+            let operationQueue = OperationQueue()
+            operationQueue.maxConcurrentOperationCount = 1
+            expectationForRequestSuccess(HTTP.request(GET: "foo"), queue: operationQueue, startAutomatically: true)
+            HTTP.metricsCallback = nil
+            sema.signal()
+            waitForExpectations(timeout: 1, handler: nil)
+            wait(for: [expectation], timeout: 0)
         }
     }
 }

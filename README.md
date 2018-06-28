@@ -413,6 +413,9 @@ work by you shall be dual licensed as above, without any additional terms or con
 #### Development
 
 * Percent-encode more characters for `application/x-www-form-urlencoded` bodies and query strings. Notably, semicolon (;) is now percent-encoded, as some servers treat it as a separator.
+* Optimize task metrics collection such that metrics are not collected if `metricsCallback` is `nil` ([#37][]).
+
+[#37]: https://github.com/postmates/PMHTTP/issues/37
 
 #### v4.1.1 (2018-06-21)
 
