@@ -1445,6 +1445,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
         super.init()
     }
     
+    /// A retry strategy for use with the built-in retry behaviors.
     public enum Strategy: Equatable {
         /// Retries a single time with no delay.
         case retryOnce
@@ -1462,7 +1463,7 @@ public final class HTTPManagerRetryBehavior: NSObject {
         // case retryWithReachability(timeout: NSTimeInterval)
         
         /// Evaluates the retry strategy for the given parameters.
-        fileprivate func evaluate(_ task: HTTPManagerTask, error: Error, attempt: Int, callback: @escaping (Bool) -> Void) {
+        fileprivate func evaluate(_ task: HTTPManagerTask, error: Error, attempt: Int, callback: @escaping (_ retry: Bool) -> Void) {
             switch self {
             case .retryOnce:
                 callback(attempt == 0)
@@ -1480,53 +1481,100 @@ public final class HTTPManagerRetryBehavior: NSObject {
         }
     }
     
+    // FIXME: (PMHTTP 5) Merge CustomStrategy into Strategy
+    
+    /// A custom retry strategy for use with the built-in retry behaviors.
+    /// - Parameter task: The `HTTPManagerTask` under consideration. You can use this task to
+    ///   retrieve the last `networkTask` and its `originalRequest` and `response`.
+    /// - Parameter error: The error that occurred. This may be an error from the networking portion
+    ///   or it may be an error from the processing stage.
+    /// - Parameter attempt: The number of retries so far. The first retry block is attempt `0`, the
+    ///   second is attempt `1`, etc.
+    /// - Parameter callback: A block that must be invoked to determine whether a retry should be
+    ///   done. Passing `true` means the request should be automatically retried, `false` means no
+    ///   retry. This block may be executed immediately or it may be saved and executed later on any
+    ///   thread or queue.
+    ///
+    ///   **Important:** This block must be executed at some point or the task will be stuck in the
+    ///   `.processing` state forever.
+    ///
+    ///   **Requires:** This block must not be executed more than once.
+    public typealias CustomStrategy = (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (_ retry: Bool) -> Void) -> Void
+    
     /// Returns a retry behavior that retries automatically for networking errors.
     ///
-    /// A networking error is defined as many errors in `URLError`, or a
-    /// `PMJSON.JSONParserError` with a code of `.unexpectedEOF` (as this may indicate a
-    /// truncated response). The request will not be retried for networking errors that
-    /// are unlikely to change when retrying.
+    /// A networking error is defined as many errors in `URLError`, or a `PMJSON.JSONParserError`
+    /// with a code of `.unexpectedEOF` (as this may indicate a truncated response). The request
+    /// will not be retried for networking errors that are unlikely to change when retrying.
     ///
-    /// If the request is non-idempotent, it only retries if the error indicates that a
-    /// connection was never made to the server (such as cannot find host).
+    /// If the request is non-idempotent, it only retries if the error indicates that a connection
+    /// was never made to the server (such as cannot find host).
     ///
     /// - Parameter strategy: The strategy to use when retrying.
     public static func retryNetworkFailure(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
+        return retryNetworkFailure(withCustomStrategy: strategy.evaluate)
+    }
+    
+    /// Returns a retry behavior that retries automatically for networking errors.
+    ///
+    /// A networking error is defined as many errors in `URLError`, or a `PMJSON.JSONParserError`
+    /// with a code of `.unexpectedEOF` (as this may indicate a truncated response). The request
+    /// will not be retried for networking errors that are unlikely to change when retrying.
+    ///
+    /// If the request is non-idempotent, it only retries if the error indicates that a connection
+    /// was never made to the server (such as cannot find host).
+    ///
+    /// - Parameter customStrategy: The custom strategy to use when retrying.
+    public static func retryNetworkFailure(withCustomStrategy customStrategy: @escaping CustomStrategy) -> HTTPManagerRetryBehavior {
         return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
             if task.isIdempotent {
                 if error.isTransientNetworkingError() {
-                    strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+                    customStrategy(task, error, attempt, callback)
                 } else {
                     callback(false)
                 }
             } else if error.isTransientNoConnectionError() {
                 // We did not connect to the host, so idempotence doesn't matter.
-                strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+                customStrategy(task, error, attempt, callback)
             } else {
                 callback(false)
             }
         })
     }
     
-    /// Returns a retry behavior that retries automatically for networking errors or a
-    /// 503 Service Unavailable response.
+    /// Returns a retry behavior that retries automatically for networking errors or a 503 Service
+    /// Unavailable response.
     ///
-    /// A networking error is defined as many errors in `URLError`, or a
-    /// `PMJSON.JSONParserError` with a code of `.unexpectedEOF` (as this may indicate a
-    /// truncated response). The request will not be retried for networking errors that
-    /// are unlikely to change when retrying.
+    /// A networking error is defined as many errors in `URLError`, or a `PMJSON.JSONParserError`
+    /// with a code of `.unexpectedEOF` (as this may indicate a truncated response). The request
+    /// will not be retried for networking errors that are unlikely to change when retrying.
     ///
-    /// If the request is non-idempotent, it only retries if the error indicates that a
-    /// connection was never made to the server (such as cannot find host) or in the case
-    /// of a 503 Service Unavailable response (which indicates the server did not process
-    /// the request).
+    /// If the request is non-idempotent, it only retries if the error indicates that a connection
+    /// was never made to the server (such as cannot find host) or in the case of a 503 Service
+    /// Unavailable response (which indicates the server did not process the request).
     ///
     /// - Parameter strategy: The strategy to use when retrying.
     public static func retryNetworkFailureOrServiceUnavailable(withStrategy strategy: Strategy) -> HTTPManagerRetryBehavior {
+        return retryNetworkFailureOrServiceUnavailable(withCustomStrategy: strategy.evaluate)
+    }
+    
+    /// Returns a retry behavior that retries automatically for networking errors or a 503 Service
+    /// Unavailable response.
+    ///
+    /// A networking error is defined as many errors in `URLError`, or a `PMJSON.JSONParserError`
+    /// with a code of `.unexpectedEOF` (as this may indicate a truncated response). The request
+    /// will not be retried for networking errors that are unlikely to change when retrying.
+    ///
+    /// If the request is non-idempotent, it only retries if the error indicates that a connection
+    /// was never made to the server (such as cannot find host) or in the case of a 503 Service
+    /// Unavailable response (which indicates the server did not process the request).
+    ///
+    /// - Parameter customStrategy: The custom strategy to use when retrying.
+    public static func retryNetworkFailureOrServiceUnavailable(withCustomStrategy customStrategy: @escaping CustomStrategy) -> HTTPManagerRetryBehavior {
         return HTTPManagerRetryBehavior(ignoringIdempotence: { task, error, attempt, callback in
             if task.isIdempotent {
                 if error.isTransientNetworkingError() || error.is503ServiceUnavailable() {
-                    strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+                    customStrategy(task, error, attempt, callback)
                 } else {
                     callback(false)
                 }
@@ -1535,14 +1583,14 @@ public final class HTTPManagerRetryBehavior: NSObject {
                 || error.is503ServiceUnavailable()
                 // We did connect but got a 503 Service Unavailable, so the server didn't handle the request.
             {
-                strategy.evaluate(task, error: error, attempt: attempt, callback: callback)
+                customStrategy(task, error, attempt, callback)
             } else {
                 callback(false)
             }
         })
     }
     
-    internal let handler: (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (Bool) -> Void) -> Void
+    internal let handler: (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (_ retry: Bool) -> Void) -> Void
 }
 
 public func ==(lhs: HTTPManagerRetryBehavior.Strategy, rhs: HTTPManagerRetryBehavior.Strategy) -> Bool {
