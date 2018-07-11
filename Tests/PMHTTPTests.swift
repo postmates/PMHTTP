@@ -1911,4 +1911,18 @@ final class PMHTTPTests: PMHTTPTestCase {
         helper({ HTTP.request(PUT: "foo", parameters: $0) })
         helper({ HTTP.request(DELETE: "foo", parameters: $0) })
     }
+    
+    func testSettingMainDocumentURL() {
+        let request = HTTP.request(GET: "foo")!
+        XCTAssertNil(request.preparedURLRequest.mainDocumentURL, "main document URL")
+        request.mainDocumentURL = URL(string: "http://apple.com")!
+        XCTAssertEqual(request.preparedURLRequest.mainDocumentURL, URL(string: "http://apple.com"), "main document URL")
+    }
+    
+    func testSettingHttpShouldHandleCookies() {
+        let request = HTTP.request(GET: "foo")!
+        XCTAssertTrue(request.preparedURLRequest.httpShouldHandleCookies, "should handle cookies")
+        request.httpShouldHandleCookies = false
+        XCTAssertFalse(request.preparedURLRequest.httpShouldHandleCookies, "should handle cookies")
+    }
 }

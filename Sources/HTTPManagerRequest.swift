@@ -135,6 +135,16 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     /// radio is always denied regardless of the request's `allowsCellularAccess` property.
     @objc public var allowsCellularAccess: Bool = true
     
+    /// The main document URL associated with the request.
+    ///
+    /// This URL is used for the cookie "same domain as main document" policy.
+    ///
+    /// - SeeAlso: `URLRequest.mainDocumentURL`.
+    @objc public var mainDocumentURL: URL?
+    
+    /// Indicates whether cookies will be sent with and set for this request. Default is `true`.
+    @objc public var httpShouldHandleCookies: Bool = true
+    
     /// Whether the request represents an action the user is waiting on.
     /// Set this to `true` to increase the priority. Default is `false`.
     @objc public var userInitiated: Bool = false
@@ -261,6 +271,8 @@ public class HTTPManagerRequest: NSObject, NSCopying {
         shouldFollowRedirects = request.shouldFollowRedirects
         defaultResponseCacheStoragePolicy = request.defaultResponseCacheStoragePolicy
         allowsCellularAccess = request.allowsCellularAccess
+        mainDocumentURL = request.mainDocumentURL
+        httpShouldHandleCookies = request.httpShouldHandleCookies
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
         assumeErrorsAreJSON = request.assumeErrorsAreJSON
@@ -282,6 +294,10 @@ public class HTTPManagerRequest: NSObject, NSCopying {
             request.timeoutInterval = timeout
         }
         request.allowsCellularAccess = allowsCellularAccess
+        if let url = mainDocumentURL {
+            request.mainDocumentURL = url
+        }
+        request.httpShouldHandleCookies = httpShouldHandleCookies
         request.allHTTPHeaderFields = headerFields.dictionary
         let contentType = self.contentType
         if contentType.isEmpty {
@@ -1075,6 +1091,8 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         shouldFollowRedirects = request.shouldFollowRedirects
         self.defaultResponseCacheStoragePolicy = defaultResponseCacheStoragePolicy ?? request.defaultResponseCacheStoragePolicy
         allowsCellularAccess = request.allowsCellularAccess
+        mainDocumentURL = request.mainDocumentURL
+        httpShouldHandleCookies = request.httpShouldHandleCookies
         userInitiated = request.userInitiated
         retryBehavior = request.retryBehavior
         assumeErrorsAreJSON = request.assumeErrorsAreJSON

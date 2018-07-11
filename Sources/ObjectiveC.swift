@@ -965,6 +965,16 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         set { _request.allowsCellularAccess = newValue }
     }
     
+    public override var mainDocumentURL: URL? {
+        get { return _request.mainDocumentURL }
+        set { _request.mainDocumentURL = newValue }
+    }
+    
+    public override var httpShouldHandleCookies: Bool {
+        get { return _request.httpShouldHandleCookies }
+        set { _request.httpShouldHandleCookies = newValue }
+    }
+    
     public override var userInitiated: Bool {
         get { return _request.userInitiated }
         set { _request.userInitiated = newValue }
