@@ -55,6 +55,15 @@ public final class HTTPManagerTask: NSObject {
         return State(_stateBox.state)
     }
     
+    /// The value of the original request's `userInitiated` property.
+    ///
+    /// If `true` this means the task executed at a higher priority than it would have if this
+    /// property were `false`.
+    ///
+    /// This property can be used to make decisions about things such as what dispatch queue to use
+    /// when implementing custom retry logic.
+    @objc public let userInitiated: Bool
+    
     @objc public override class func automaticallyNotifiesObservers(forKey _: String) -> Bool {
         return false
     }
@@ -122,8 +131,6 @@ public final class HTTPManagerTask: NSObject {
         let result = _stateBox.transitionState(to: .canceled)
         return result.completed && result.oldState != .canceled
     }
-    
-    internal let userInitiated: Bool
     internal let followRedirects: Bool
     internal let assumeErrorsAreJSON: Bool
     internal let defaultResponseCacheStoragePolicy: URLCache.StoragePolicy

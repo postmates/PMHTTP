@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Expose `HTTPManagerTask.userInitiated` as a public property.
+
 #### v4.2.0 (2018-07-10)
 
 * Percent-encode more characters for `application/x-www-form-urlencoded` bodies and query strings. Notably, semicolon (;) is now percent-encoded, as some servers treat it as a separator.
