@@ -123,6 +123,8 @@ public final class HTTPManagerTask: NSObject {
         }
     }
     
+    // MARK: -
+    
     /// Cancels the HTTPManagerTask without canceling the underlying network task.
     /// - Returns: `true` if the task could be canceled.
     internal func _cancel() -> Bool {
@@ -203,6 +205,8 @@ public final class HTTPManagerTask: NSObject {
     
     private let _stateBox: _PMHTTPManagerTaskStateBox
 }
+
+// MARK: -
 
 extension HTTPManagerTask {
     // NSObject already conforms to CustomStringConvertible and CustomDebugStringConvertible
