@@ -413,6 +413,7 @@ work by you shall be dual licensed as above, without any additional terms or con
 #### Development
 
 * Expose `HTTPManagerTask.userInitiated` as a public property.
+* Add another parameter to the `HTTPManager.MetricsCallback` callback. In order to retain backwards compatibility, the old initializer and property were deprecated and a new initializer and property were added with different names.
 
 #### v4.2.0 (2018-07-10)
 

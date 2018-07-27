@@ -30,7 +30,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             }
             var task: HTTPManagerTask?
             let expectation = self.expectation(description: "task metrics")
-            HTTP.metricsCallback = .init(queue: nil, callback: { (task_, metrics) in
+            HTTP.metricsCallback = .init(queue: nil, handler: { (task_, networkTask, metrics) in
                 XCTAssert(task === task_, "unexpected task")
                 expectation.fulfill()
             })
@@ -48,7 +48,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             var task: HTTPManagerTask?
             let operationQueue = OperationQueue()
             let expectation = self.expectation(description: "task metrics")
-            HTTP.metricsCallback = .init(queue: operationQueue, callback: { (task_, metrics) in
+            HTTP.metricsCallback = .init(queue: operationQueue, handler: { (task_, networkTask, metrics) in
                 XCTAssertEqual(OperationQueue.current, operationQueue)
                 XCTAssert(task === task_, "unexpected task")
                 expectation.fulfill()
@@ -70,7 +70,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             var requestFinished = false
             var task: HTTPManagerTask?
             let expectation = self.expectation(description: "task metrics")
-            HTTP.metricsCallback = .init(queue: operationQueue, callback: { (task_, metrics) in
+            HTTP.metricsCallback = .init(queue: operationQueue, handler: { (task_, networkTask, metrics) in
                 XCTAssertEqual(OperationQueue.current, operationQueue)
                 XCTAssert(task === task_, "unexpected task")
                 XCTAssertFalse(requestFinished, "recieved metrics after task finished")
@@ -107,7 +107,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             let expectation = self.expectation(description: "task metrics")
             expectation.expectedFulfillmentCount = 3
             expectation.assertForOverFulfill = true
-            HTTP.metricsCallback = .init(queue: operationQueue, callback: { (task_, metrics) in
+            HTTP.metricsCallback = .init(queue: operationQueue, handler: { (task_, networkTask, metrics) in
                 XCTAssert(task === task_, "unexpected task")
                 expectation.fulfill()
             })
@@ -125,7 +125,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
                 completionHandler(HTTPServer.Response(status: .ok))
             }
             expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: true)
-            HTTP.metricsCallback = .init(queue: nil, callback: { (_, _) in }) // this resets the session asynchronously
+            HTTP.metricsCallback = .init(queue: nil, handler: { (_, _, _) in }) // this resets the session asynchronously
             _ = HTTP.sessionConfiguration // this waits for the session reset to complete
             sema.signal()
             waitForExpectations(timeout: 1, handler: nil)
@@ -144,7 +144,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             expectationForRequestSuccess(HTTP.request(GET: "foo"), queue: operationQueue, startAutomatically: true)
             let expectation = XCTestExpectation(description: "task metrics")
             expectation.isInverted = true
-            HTTP.metricsCallback = .init(queue: operationQueue, callback: { (_, _) in
+            HTTP.metricsCallback = .init(queue: operationQueue, handler: { (_, _, _) in
                 expectation.fulfill()
             })
             sema.signal()
@@ -160,12 +160,12 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             }
             let expectationFirst = XCTestExpectation(description: "first task metrics")
             expectationFirst.isInverted = true
-            HTTP.metricsCallback = .init(queue: nil, callback: { (task_, metrics) in
+            HTTP.metricsCallback = .init(queue: nil, handler: { (task_, networkTask, metrics) in
                 expectationFirst.fulfill()
             })
             let task = expectationForRequestSuccess(HTTP.request(GET: "foo"), startAutomatically: false)
             let expectationSecond = self.expectation(description: "second task metrics")
-            HTTP.metricsCallback = .init(queue: nil, callback: { (task_, metrics) in
+            HTTP.metricsCallback = .init(queue: nil, handler: { (task_, networkTask, metrics) in
                 XCTAssert(task === task_, "unexpected task")
                 expectationSecond.fulfill()
             })
@@ -184,7 +184,7 @@ final class MetricsCallbackTests: PMHTTPTestCase {
             }
             let expectation = XCTestExpectation(description: "task metrics")
             expectation.isInverted = true
-            HTTP.metricsCallback = .init(queue: nil, callback: { (_, _) in
+            HTTP.metricsCallback = .init(queue: nil, handler: { (_, _, _) in
                 expectation.fulfill()
             })
             let operationQueue = OperationQueue()

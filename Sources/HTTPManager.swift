@@ -1611,8 +1611,37 @@ public final class HTTPManagerMetricsCallback: NSObject {
     
     /// The callback that will be invoked with task metrics.
     /// - Parameter task: The task for which metrics were collected.
+    /// - Parameter urlTask: The underlying network task for which metrics were collected.
+    ///             This may be different than `task.networkTask` if the task is configured with
+    ///             automatic retry behavior.
     /// - Parameter metrics: The task metrics that were collected.
-    @objc public let callback: (_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void
+    @objc public let handler: (_ task: HTTPManagerTask, _ urlTask: URLSessionTask, _ metrics: URLSessionTaskMetrics) -> Void
+    
+    /// The callback that will be invoked with task metrics.
+    /// - Parameter task: The task for which metrics were collected.
+    /// - Parameter metrics: The task metrics that were collected.
+    @available(*, deprecated, message: "Use .handler instead")
+    @objc public var callback: (_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void {
+        return _callback ?? { [handler] (task, metrics) in
+            handler(task, task.networkTask, metrics)
+        }
+    }
+    private var _callback: ((_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void)?
+    
+    /// Returns a new `HTTPManagerMetricsCallback` object.
+    /// - Parameter queue: The operation queue that the callback will be invoked on. If `nil`, the
+    ///   callback will be invoked on a global background queue with the `.utility` QoS.
+    /// - Parameter handler: The callback that will be invoked with task metrics.
+    /// - Parameter task: The task for which metrics were collected.
+    /// - Parameter urlTask: The underlying network task for which metrics were collected.
+    ///             This may be different than `task.networkTask` if the task is configured with
+    ///             automatic retry behavior.
+    /// - Parameter metrics: The task metrics that were collected.
+    @objc public init(queue: OperationQueue?, handler: @escaping (_ task: HTTPManagerTask, _ urlTask: URLSessionTask, _ metrics: URLSessionTaskMetrics) -> Void) {
+        self.queue = queue
+        self.handler = handler
+        super.init()
+    }
     
     /// Returns a new `HTTPManagerMetricsCallback` object.
     /// - Parameter queue: The operation queue that the callback will be invoked on. If `nil`, the
@@ -1620,10 +1649,10 @@ public final class HTTPManagerMetricsCallback: NSObject {
     /// - Parameter callback: The callback that will be invoked with task metrics.
     /// - Parameter task: The task for which metrics were collected.
     /// - Parameter metrics: The task metrics that were collected.
-    @objc public init(queue: OperationQueue?, callback: @escaping (_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void) {
-        self.queue = queue
-        self.callback = callback
-        super.init()
+    @available(*, deprecated, message: "Use init(queue:handler:) instead")
+    @objc public convenience init(queue: OperationQueue?, callback: @escaping (_ task: HTTPManagerTask, _ metrics: URLSessionTaskMetrics) -> Void) {
+        self.init(queue: queue, handler: { (task, urlTask, metrics) in callback(task, metrics) })
+        _callback = callback
     }
 }
 
@@ -2267,12 +2296,12 @@ extension MetricsSessionDelegate {
         assert(apiTask.networkTask === task, "internal HTTPManager error: taskInfo out of sync")
         log("task:didFinishCollecting for task \(task)")
         if let operationQueue = metricsCallback.queue {
-            operationQueue.addOperation { [callback=metricsCallback.callback] in
-                callback(apiTask, metrics)
+            operationQueue.addOperation { [callback=metricsCallback.handler] in
+                callback(apiTask, task, metrics)
             }
         } else {
-            DispatchQueue.global(qos: .utility).async { [callback=metricsCallback.callback] in
-                callback(apiTask, metrics)
+            DispatchQueue.global(qos: .utility).async { [callback=metricsCallback.handler] in
+                callback(apiTask, task, metrics)
             }
         }
     }
