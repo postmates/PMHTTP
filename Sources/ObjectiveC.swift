@@ -1005,6 +1005,11 @@ public final class HTTPManagerObjectParseRequest: HTTPManagerRequest, HTTPManage
         set { _request.headerFields = newValue }
     }
     
+    internal override var urlProtocolProperties: [String: Any] {
+        get { return _request.urlProtocolProperties }
+        set { _request.urlProtocolProperties = newValue }
+    }
+    
     internal override var mock: HTTPMockInstance? {
         get { return _request.mock }
         set { _request.mock = newValue }

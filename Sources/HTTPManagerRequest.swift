@@ -257,11 +257,14 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     
     internal let baseURL: URL
     
+    internal var urlProtocolProperties: [String: Any] = [:]
+    
     /// Implementation detail of `copyWithZone(_:)`.
     /// - Parameter request: Guaranteed to be the same type as `self`.
     public required init(__copyOfRequest request: HTTPManagerRequest) {
         apiManager = request.apiManager
         baseURL = request.baseURL
+        urlProtocolProperties = request.urlProtocolProperties
         requestMethod = request.requestMethod
         isIdempotent = request.isIdempotent
         parameters = request.parameters
@@ -312,6 +315,17 @@ public class HTTPManagerRequest: NSObject, NSCopying {
     
     internal func prepareURLRequest() -> ((inout URLRequest) -> Void)? {
         return nil
+    }
+    
+    internal func applyURLProtocolProperties(to request: inout URLRequest) {
+        if !urlProtocolProperties.isEmpty {
+            // [SR-2804] We have to go through NSMutableURLRequest in order to set the protocol property
+            let mutReq = { (x: NSURLRequest) in x as? NSMutableURLRequest ?? unsafeDowncast(x.mutableCopy() as AnyObject, to: NSMutableURLRequest.self) }(request as NSURLRequest)
+            for (key, value) in urlProtocolProperties {
+                URLProtocol.setProperty(value, forKey: key, in: mutReq)
+            }
+            request = mutReq as URLRequest
+        }
     }
 }
 
@@ -536,6 +550,7 @@ public class HTTPManagerNetworkRequest: HTTPManagerRequest, HTTPManagerRequestPe
     /// as appropriate.
     @objc public var preparedURLRequest: URLRequest {
         var request = _preparedURLRequest
+        applyURLProtocolProperties(to: &request)
         auth?.applyHeaders(to: &request)
         switch uploadBody {
         case .data(let data)?:
@@ -1084,6 +1099,7 @@ public final class HTTPManagerParseRequest<T>: HTTPManagerRequest, HTTPManagerRe
         self.uploadBody = uploadBody
         self.expectedContentTypes = expectedContentTypes
         super.init(apiManager: request.apiManager, URL: request.url, method: request.requestMethod, parameters: request.parameters)
+        urlProtocolProperties = request.urlProtocolProperties
         isIdempotent = request.isIdempotent
         auth = request.auth
         timeoutInterval = request.timeoutInterval

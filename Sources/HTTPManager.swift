@@ -1898,10 +1898,15 @@ extension HTTPManager {
         // to conditionally mock a request depending on the evaluation of a block, we should
         // explicitly document this behavior.
         if let mock = request.mock ?? mockManager.mockForRequest(urlRequest, environment: environment) {
-            // we have to go through NSMutableURLRequest in order to set the protocol property
-            let mutReq = unsafeDowncast((urlRequest as NSURLRequest).mutableCopy() as AnyObject, to: NSMutableURLRequest.self)
+            // [SR-2804] We have to go through NSMutableURLRequest in order to set the protocol property
+            let mutReq = { (x: NSURLRequest) in x as? NSMutableURLRequest ?? unsafeDowncast(x.mutableCopy() as AnyObject, to: NSMutableURLRequest.self) }(urlRequest as NSURLRequest)
+            for (key, value) in request.urlProtocolProperties {
+                URLProtocol.setProperty(value, forKey: key, in: mutReq)
+            }
             URLProtocol.setProperty(mock, forKey: HTTPMockURLProtocol.requestProperty, in: mutReq)
             urlRequest = mutReq as URLRequest
+        } else {
+            request.applyURLProtocolProperties(to: &urlRequest)
         }
         let originalUrlRequest = urlRequest
         request.auth?.applyHeaders(to: &urlRequest)

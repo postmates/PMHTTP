@@ -410,6 +410,12 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Add `URLProtocol` method overloads to query and set protocol properties on `HTTPManagerRequest`s ([#43][])
+
+[#43]: https://github.com/postmates/PMHTTP/issues/43 "Let me attach arbitrary URLProtocol properties to a request · Issue #43 · postmates/PMHTTP"
+
 #### v4.3.0 (2018-07-26)
 
 * Expose `HTTPManagerTask.userInitiated` as a public property ([#42][]).

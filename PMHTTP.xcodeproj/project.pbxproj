@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A3BE2C6210EE4900044D2D3 /* URLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3BE2C5210EE4900044D2D3 /* URLProtocol.swift */; };
+		0A3BE2C8210EEC940044D2D3 /* URLProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3BE2C7210EEC940044D2D3 /* URLProtocolTests.swift */; };
 		0A7677EC1CFFE2C2005D160D /* PMHTTPManagerBodyStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0A7677ED1CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */; };
 		0A7677EE1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -65,6 +67,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0A3BE2C5210EE4900044D2D3 /* URLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLProtocol.swift; sourceTree = "<group>"; };
+		0A3BE2C7210EEC940044D2D3 /* URLProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLProtocolTests.swift; sourceTree = "<group>"; };
 		0A7677E61CFFD8DF005D160D /* pmhttp.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = pmhttp.modulemap; sourceTree = "<group>"; };
 		0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerBodyStream.h; sourceTree = "<group>"; };
 		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 				9E4C77C81C3B568C000FF8AC /* HTTPManagerRequest.swift */,
 				9E4C77CA1C3B56D6000FF8AC /* HTTPManagerTask.swift */,
 				9EEF318A1E4A74C40086AAFF /* HTTPAuth.swift */,
+				0A3BE2C5210EE4900044D2D3 /* URLProtocol.swift */,
 				9EA4EE341CB71E4F00E4E531 /* Mocking.swift */,
 				9E4C77A81C360714000FF8AC /* ObjectiveC.swift */,
 				9E14D4FE1DC81E4800BE34D5 /* PlatformSpecific.swift */,
@@ -227,6 +232,7 @@
 				9EA4EE361CBC197D00E4E531 /* MockingTests.swift */,
 				9EEF318E1E4D4F440086AAFF /* SSLTests.swift */,
 				9EEF318C1E4ABF050086AAFF /* AuthTests.swift */,
+				0A3BE2C7210EEC940044D2D3 /* URLProtocolTests.swift */,
 				9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */,
 				AB7F6F2420D4CCFD003AA632 /* MetricsCallbackTests.swift */,
 				9EEF69F51D2C343E00C6E603 /* KVOTests.swift */,
@@ -404,6 +410,7 @@
 				9E4C77A91C360714000FF8AC /* ObjectiveC.swift in Sources */,
 				9E14D4FF1DC81E4800BE34D5 /* PlatformSpecific.swift in Sources */,
 				9EEF318B1E4A74C40086AAFF /* HTTPAuth.swift in Sources */,
+				0A3BE2C6210EE4900044D2D3 /* URLProtocol.swift in Sources */,
 				9ED5D3621D936295007C2A65 /* Deprecations.swift in Sources */,
 				9EA4EE351CB71E4F00E4E531 /* Mocking.swift in Sources */,
 			);
@@ -418,6 +425,7 @@
 				9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */,
 				9ED901301E2EDB4E00332D39 /* ImageTests.swift in Sources */,
 				9EA4EE371CBC197D00E4E531 /* MockingTests.swift in Sources */,
+				0A3BE2C8210EEC940044D2D3 /* URLProtocolTests.swift in Sources */,
 				9E22DD2C1C88D09100C49993 /* DateParsingTests.swift in Sources */,
 				0AC2066120AE6C0F000DF552 /* ObjCPPImportTest.mm in Sources */,
 				AB3D45EF20E41751005E51FC /* UtilitiesTests.swift in Sources */,
