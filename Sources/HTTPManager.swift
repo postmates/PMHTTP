@@ -1138,7 +1138,7 @@ extension HTTPManager {
     
     private func constructRequest<T: HTTPManagerRequest>(_ path: String, f: (URL) -> T) -> T? {
         let info = _configureRequestInfo()
-        // FIXME: Get rid of NSURL when https://github.com/apple/swift/pull/3910 is fixed.
+        // NB: Using NSURL here because `URL(string: "", relativeTo: foo)` returns `nil`.
         guard let url = NSURL(string: path, relativeTo: environment?.baseURL) as URL? else { return nil }
         let request = f(url)
         _configureRequest(request, url: url, with: info)
