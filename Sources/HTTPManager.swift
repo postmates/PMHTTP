@@ -652,6 +652,11 @@ public final class HTTPManagerEnvironment: NSObject {
 }
 
 extension HTTPManager {
+    
+    // MARK: - Request Creation
+    
+    // MARK: GET (String)
+    
     /// Creates a GET request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
@@ -690,6 +695,8 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
     }
     
+    // MARK: GET (URL)
+    
     /// Creates a GET request.
     /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
     ///   environment.
@@ -725,6 +732,8 @@ extension HTTPManager {
     public func request(GET url: URL, parameters: [URLQueryItem]) -> HTTPManagerDataRequest {
         return constructRequest(url, f: { HTTPManagerDataRequest(apiManager: self, URL: $0, method: .GET, parameters: parameters) })
     }
+    
+    // MARK: DELETE (String)
     
     /// Creates a DELETE request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -764,6 +773,8 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerActionRequest(apiManager: self, URL: $0, method: .DELETE, parameters: parameters) })
     }
     
+    // MARK: DELETE (URL)
+    
     /// Creates a DELETE request.
     /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
     ///   environment.
@@ -799,6 +810,8 @@ extension HTTPManager {
     public func request(DELETE url: URL, parameters: [URLQueryItem]) -> HTTPManagerActionRequest {
         return constructRequest(url, f: { HTTPManagerActionRequest(apiManager: self, URL: $0, method: .DELETE, parameters: parameters) })
     }
+    
+    // MARK: POST (String)
     
     /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -858,6 +871,8 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
     }
     
+    // MARK: POST (URL)
+    
     /// Creates a POST request.
     /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
     ///   environment.
@@ -911,6 +926,8 @@ extension HTTPManager {
     @nonobjc public func request(POST url: URL, json: JSON) -> HTTPManagerUploadJSONRequest {
         return constructRequest(url, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .POST, json: json) })
     }
+    
+    // MARK: PUT (String)
     
     /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -970,6 +987,8 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PUT, json: json) })
     }
     
+    // MARK: PUT (URL)
+    
     /// Creates a PUT request.
     /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
     ///   environment.
@@ -1023,6 +1042,8 @@ extension HTTPManager {
     @nonobjc public func request(PUT url: URL, json: JSON) -> HTTPManagerUploadJSONRequest {
         return constructRequest(url, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PUT, json: json) })
     }
+    
+    // MARK: PATCH (String)
     
     /// Creates a PATCH request.
     /// - Parameter path: The path for the request, interpreted relative to the
@@ -1082,6 +1103,8 @@ extension HTTPManager {
         return constructRequest(path, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PATCH, json: json) })
     }
     
+    // MARK: PATCH (URL)
+    
     /// Creates a PATCH request.
     /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
     ///   environment.
@@ -1135,6 +1158,8 @@ extension HTTPManager {
     @nonobjc public func request(PATCH url: URL, json: JSON) -> HTTPManagerUploadJSONRequest {
         return constructRequest(url, f: { HTTPManagerUploadJSONRequest(apiManager: self, URL: $0, method: .PATCH, json: json) })
     }
+    
+    // MARK: -
     
     private func constructRequest<T: HTTPManagerRequest>(_ path: String, f: (URL) -> T) -> T? {
         let info = _configureRequestInfo()
