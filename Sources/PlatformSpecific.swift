@@ -44,7 +44,7 @@ import Foundation
         ///   - filename: The filename of the attachment. Optional.
         public func addMultipartPNG(for image: UIImage, withName name: String, filename: String? = nil) {
             self.addMultipartBody(using: { upload in
-                guard let data = UIImagePNGRepresentation(image) else { return }
+                guard let data = image.pngData() else { return }
                 upload.addMultipart(data: data, withName: name, mimeType: "image/png", filename: filename)
             })
         }
@@ -69,7 +69,7 @@ import Foundation
         ///   - filename: The filename of the attachment. Optional.
         public func addMultipartJPEG(for image: UIImage, withCompressionQuality quality: CGFloat, name: String, filename: String? = nil) {
             self.addMultipartBody(using: { upload in
-                guard let data = UIImageJPEGRepresentation(image, quality) else { return }
+                guard let data = image.jpegData(compressionQuality: quality) else { return }
                 upload.addMultipart(data: data, withName: name, mimeType: "image/jpeg", filename: filename)
             })
         }
@@ -387,12 +387,12 @@ import Foundation
                 else { return nil }
             let imageProps = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as NSDictionary?
             let exifOrientation = (imageProps?[kCGImagePropertyOrientation] as? NSNumber)?.intValue
-            let orientation = exifOrientation.map(UIImageOrientation.init(exifOrientation:)) ?? .up
+            let orientation = exifOrientation.map(UIImage.Orientation.init(exifOrientation:)) ?? .up
             self.init(cgImage: cgImage, scale: scale, orientation: orientation)
         }
     }
     
-    private extension UIImageOrientation {
+    private extension UIImage.Orientation {
         init(exifOrientation orientation: Int) {
             switch orientation {
             case 1: self = .up

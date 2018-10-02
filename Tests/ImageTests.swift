@@ -27,7 +27,7 @@ import PMHTTP
         }()
         
         func testGETImage() {
-            guard let imageData = UIImageJPEGRepresentation(sampleImage, 0.9) else {
+            guard let imageData = sampleImage.jpegData(compressionQuality: 0.9) else {
                 return XCTFail("Could not get JPEG data for sample image")
             }
             expectationForHTTPRequest(httpServer, path: "image") { (request, completion) in
@@ -92,7 +92,7 @@ import PMHTTP
         }
         
         func testPOSTImage() {
-            guard let imageData = UIImageJPEGRepresentation(sampleImage, 0.9) else {
+            guard let imageData = sampleImage.jpegData(compressionQuality: 0.9) else {
                 return XCTFail("Could not get JPEG data for sample image")
             }
             expectationForHTTPRequest(httpServer, path: "image") { (request, completion) in
