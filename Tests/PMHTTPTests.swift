@@ -201,7 +201,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertTrue(task.isIdempotent, "idempotent GET request")
         }
         do {
-            let task = expectationForRequestCanceled(HTTP.request(GET: "foo").with({ $0.isIdempotent = false }))
+            let task = expectationForRequestCanceled(HTTP.request(GET: "foo").with({ $0.isIdempotent = false }), startAutomatically: false)
             task.cancel()
             task.resume()
             XCTAssertFalse(task.isIdempotent, "non-idempotent GET request")
@@ -213,7 +213,7 @@ final class PMHTTPTests: PMHTTPTestCase {
             XCTAssertFalse(task.isIdempotent, "non-idempotent POST request")
         }
         do {
-            let task = expectationForRequestCanceled(HTTP.request(POST: "foo").with({ $0.isIdempotent = true }))
+            let task = expectationForRequestCanceled(HTTP.request(POST: "foo").with({ $0.isIdempotent = true }), startAutomatically: false)
             task.cancel()
             task.resume()
             XCTAssertTrue(task.isIdempotent, "idempotent POST request")
