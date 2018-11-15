@@ -2,7 +2,7 @@
 //  Deprecations.swift
 //  PMHTTP
 //
-//  Created by Kevin Ballard on 9/21/16.
+//  Created by Lily Ballard on 9/21/16.
 //  Copyright © 2016 Postmates.
 //
 //  Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or

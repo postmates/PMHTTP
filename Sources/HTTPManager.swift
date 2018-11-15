@@ -2,7 +2,7 @@
 //  HTTPManager.swift
 //  PMHTTP
 //
-//  Created by Kevin Ballard on 12/10/15.
+//  Created by Lily Ballard on 12/10/15.
 //  Copyright © 2015 Postmates.
 //
 //  Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or

@@ -2,7 +2,7 @@
 //  InputStream+ReadAll.swift
 //  PMHTTP
 //
-//  Created by Kevin Ballard on 8/18/17.
+//  Created by Lily Ballard on 8/18/17.
 //  Copyright © 2017 Postmates. All rights reserved.
 //
 //  Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or

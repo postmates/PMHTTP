@@ -2,7 +2,7 @@
 //  ImageTests.swift
 //  PMHTTP
 //
-//  Created by Kevin Ballard on 1/17/17.
+//  Created by Lily Ballard on 1/17/17.
 //  Copyright © 2017 Postmates. All rights reserved.
 //
 //  Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or

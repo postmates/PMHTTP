@@ -74,7 +74,7 @@
 		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
 		0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerTaskStateBox.h; sourceTree = "<group>"; };
 		0A7677EB1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPManagerTaskStateBox.m; sourceTree = "<group>"; };
-		0A9E5B7B203FFDF600792BF8 /* PMHTTP.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; path = PMHTTP.podspec; sourceTree = "<group>"; };
+		0A9E5B7B203FFDF600792BF8 /* PMHTTP.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; path = PMHTTP.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		0AC2066020AE6C0F000DF552 /* ObjCPPImportTest.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjCPPImportTest.mm; sourceTree = "<group>"; };
 		9E11A8DB1D1B4AC100D63318 /* NetworkActivityTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkActivityTests.swift; sourceTree = "<group>"; };
 		9E139FA31C4EC82F00A764BD /* PMHTTPError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PMHTTPError.m; sourceTree = "<group>"; };

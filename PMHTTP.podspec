@@ -10,8 +10,8 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/postmates/PMHTTP"
   s.license      = { :type => "MIT", :file => "LICENSE-MIT" }
 
-  s.author             = "Kevin Ballard"
-  s.social_media_url   = "https://twitter.com/eridius"
+  s.author             = "Lily Ballard"
+  s.social_media_url   = "https://twitter.com/LilyInTech"
 
   s.ios.deployment_target = "8.0"
   s.osx.deployment_target = "10.10"

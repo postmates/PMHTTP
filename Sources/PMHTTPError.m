@@ -2,7 +2,7 @@
 //  PMHTTPError.m
 //  PMHTTP
 //
-//  Created by Kevin Ballard on 1/19/16.
+//  Created by Lily Ballard on 1/19/16.
 //  Copyright © 2016 Postmates.
 //
 //  Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
