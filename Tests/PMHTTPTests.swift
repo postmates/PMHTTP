@@ -1791,43 +1791,54 @@ final class PMHTTPTests: PMHTTPTestCase {
     func testServerRequiresContentLengthEnvironmentDefaults() {
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
         
-        HTTP.defaultServerRequiresContentLength = true
-        var req = HTTP.request(GET: "foo")!
-        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
-        req = HTTP.request(GET: "")!
-        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
-        req = HTTP.request(GET: "/foo")!
-        XCTAssertFalse(req.serverRequiresContentLength, "request serverRequiresContentLength")
-        req = HTTP.request(GET: "/v1/foo")!
-        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
-        req = HTTP.request(GET: "http://\(httpServer.address)/v1/")!
-        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
-        req = HTTP.request(GET: "http://apple.com/v1")!
-        XCTAssertFalse(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        func assertServerRequiresContentLength(for path: String, preprocess: ((HTTPManagerDataRequest) -> Void)? = nil, equals expected: Bool, line: UInt = #line) {
+            HTTP.defaultServerRequiresContentLength = true
+            let assert = (expected ? XCTAssertTrue : XCTAssertFalse)
+            var req = HTTP.request(GET: path)!
+            preprocess?(req)
+            assert(req.serverRequiresContentLength, "request.serverRequiresContentLength - string", #file, line)
+            req = HTTP.request(GET: NSURL(string: path)! as URL)
+            preprocess?(req)
+            assert(req.serverRequiresContentLength, "request.serverRequiresContentLength - URL", #file, line)
+            
+            HTTP.defaultServerRequiresContentLength = false
+            req = HTTP.request(GET: path)
+            preprocess?(req)
+            XCTAssertFalse(req.serverRequiresContentLength, "request.serverRequiresContentLength default false - string", line: line)
+            req = HTTP.request(GET: NSURL(string: path)! as URL)
+            preprocess?(req)
+            XCTAssertFalse(req.serverRequiresContentLength, "request.serverRequiresContentLength default false - URL", line: line)
+        }
         
-        req.setDefaultEnvironmentalProperties()
-        XCTAssertTrue(req.serverRequiresContentLength, "request serverRequiresContentLength")
+        assertServerRequiresContentLength(for: "foo", equals: true)
+        assertServerRequiresContentLength(for: "", equals: true)
+        assertServerRequiresContentLength(for: "/foo", equals: false)
+        assertServerRequiresContentLength(for: "/v1/foo", equals: true)
+        assertServerRequiresContentLength(for: "http://\(httpServer.address)/v1/", equals: true)
+        assertServerRequiresContentLength(for: "http://apple.com/v1", equals: false)
+        assertServerRequiresContentLength(for: "http://apple.com/v1", preprocess: { $0.setDefaultEnvironmentalProperties() }, equals: true)
     }
     
     func testHeaderFieldsEnvironmentDefaults() {
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
         HTTP.defaultHeaderFields = ["X-Foo": "Bar"]
         
-        var req = HTTP.request(GET: "foo")!
-        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
-        req = HTTP.request(GET: "")!
-        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
-        req = HTTP.request(GET: "/foo")!
-        XCTAssertEqual(req.headerFields, [:], "request headerFields")
-        req = HTTP.request(GET: "/v1/foo")!
-        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
-        req = HTTP.request(GET: "http://\(httpServer.address)/v1/")!
-        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
-        req = HTTP.request(GET: "http://apple.com/v1")!
-        XCTAssertEqual(req.headerFields, [:], "request headerFields")
+        func assertHeaders(for path: String, preprocess: ((HTTPManagerDataRequest) -> Void)? = nil, equals expected: HTTPManagerRequest.HTTPHeaders, line: UInt = #line) {
+            var req = HTTP.request(GET: path)!
+            preprocess?(req)
+            XCTAssertEqual(req.headerFields, expected, "request.headerFields - string", line: line)
+            req = HTTP.request(GET: NSURL(string: path)! as URL)
+            preprocess?(req)
+            XCTAssertEqual(req.headerFields, expected, "request.headerFields - URL", line: line)
+        }
         
-        req.setDefaultEnvironmentalProperties()
-        XCTAssertEqual(req.headerFields, ["X-Foo": "Bar"], "request headerFields")
+        assertHeaders(for: "foo", equals: ["X-Foo": "Bar"])
+        assertHeaders(for: "", equals: ["X-Foo": "Bar"])
+        assertHeaders(for: "/foo", equals: [:])
+        assertHeaders(for: "/v1/foo", equals: ["X-Foo": "Bar"])
+        assertHeaders(for: "http://\(httpServer.address)/v1/", equals: ["X-Foo": "Bar"])
+        assertHeaders(for: "http://apple.com/v1", equals: [:])
+        assertHeaders(for: "http://apple.com/v1", preprocess: { $0.setDefaultEnvironmentalProperties() }, equals: ["X-Foo": "Bar"])
     }
     
     func testSetDefaultEnvironmentalPropertiesHeaderFieldsMerge() {

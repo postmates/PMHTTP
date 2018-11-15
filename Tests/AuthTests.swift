@@ -86,23 +86,32 @@ final class AuthTests: PMHTTPTestCase {
     
     func testAuthEnvironmentDefaults() {
         HTTP.environment = HTTPManagerEnvironment(string: "http://\(httpServer.address)/v1")!
-        
         HTTP.defaultAuth = HTTPBasicAuth(username: "alice", password: "secure")
-        var req = HTTP.request(GET: "foo")!
-        XCTAssertNotNil(req.auth, "request auth")
-        req = HTTP.request(GET: "")!
-        XCTAssertNotNil(req.auth, "request auth")
-        req = HTTP.request(GET: "/foo")!
-        XCTAssertNil(req.auth, "request auth")
-        req = HTTP.request(GET: "/v1/foo")!
-        XCTAssertNotNil(req.auth, "request auth")
-        req = HTTP.request(GET: "http://\(httpServer.address)/v1/")!
-        XCTAssertNotNil(req.auth, "request auth")
-        req = HTTP.request(GET: "http://apple.com/v1")!
-        XCTAssertNil(req.auth, "request auth")
         
-        req.setDefaultEnvironmentalProperties()
-        XCTAssertNotNil(req.auth, "request auth")
+        func assertAuthNotNil(for path: String, preprocess: ((HTTPManagerDataRequest) -> Void)? = nil, line: UInt = #line) {
+            var req = HTTP.request(GET: path)!
+            preprocess?(req)
+            XCTAssertNotNil(req.auth, "request.auth - string", line: line)
+            req = HTTP.request(GET: NSURL(string: path)! as URL)
+            preprocess?(req)
+            XCTAssertNotNil(req.auth, "request.auth - URL", line: line)
+        }
+        func assertAuthNil(for path: String, preprocess: ((HTTPManagerDataRequest) -> Void)? = nil, line: UInt = #line) {
+            var req = HTTP.request(GET: path)!
+            preprocess?(req)
+            XCTAssertNil(req.auth, "request.auth - string", line: line)
+            req = HTTP.request(GET: NSURL(string: path)! as URL)
+            preprocess?(req)
+            XCTAssertNil(req.auth, "request.auth - URL", line: line)
+        }
+        
+        assertAuthNotNil(for: "foo")
+        assertAuthNotNil(for: "")
+        assertAuthNil(for: "/foo")
+        assertAuthNotNil(for: "/v1/foo")
+        assertAuthNotNil(for: "http://\(httpServer.address)/v1/")
+        assertAuthNil(for: "http://apple.com/v1")
+        assertAuthNotNil(for: "http://apple.com/v1", preprocess: { $0.setDefaultEnvironmentalProperties() })
     }
     
     func testRetryAuthInteraction() {

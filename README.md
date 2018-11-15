@@ -410,9 +410,15 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Fix bug where requests constructed from a `URL` would not inherit environmental defaults (e.g. auth, headers, etc) ([#52][]).
+
+[#52]: https://github.com/postmates/PMHTTP/issues/52 "Requests constructed with relative URLs do not inherit environment configuration · Issue #52 · postmates/PMHTTP"
+
 #### v4.3.1 (2018-08-01)
 
-* Add `URLProtocol` method overloads to query and set protocol properties on `HTTPManagerRequest`s ([#43][])
+* Add `URLProtocol` method overloads to query and set protocol properties on `HTTPManagerRequest`s ([#43][]).
 
 [#43]: https://github.com/postmates/PMHTTP/issues/43 "Let me attach arbitrary URLProtocol properties to a request · Issue #43 · postmates/PMHTTP"
 

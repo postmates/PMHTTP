@@ -1173,15 +1173,14 @@ extension HTTPManager {
     private func constructRequest<T: HTTPManagerRequest>(_ url: URL, f: (URL) -> T) -> T {
         let info = _configureRequestInfo()
         let request: T
+        var url = url
         if url.scheme == nil {
             // try to make it relative to the environment. This shouldn't fail, but in case it does
             // for some reason, just fall back to using the relative URL, which should produce a URL
             // loading error later. This allows us to preserve the non-optional return type.
-            let url_ = NSURL(string: url.absoluteString, relativeTo: environment?.baseURL) as URL? ?? url
-            request = f(url_)
-        } else {
-            request = f(url)
+            url = NSURL(string: url.absoluteString, relativeTo: environment?.baseURL) as URL? ?? url
         }
+        request = f(url)
         _configureRequest(request, url: url, with: info)
         return request
     }
