@@ -1573,7 +1573,6 @@ final class PMHTTPTests: PMHTTPTestCase {
     func testNoEnvironment() {
         HTTP.environment = nil
         expectationForRequestFailure(HTTP.request(GET: "foo")) { task, response, error in
-            XCTAssert(task.networkTask.error as NSError? === error as NSError, "network task error")
             if let error = error as? URLError {
                 XCTAssertEqual(error.code, URLError.unsupportedURL, "error code")
             } else {
