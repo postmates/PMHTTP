@@ -26,7 +26,7 @@ public extension HTTPManager {
     }
     
     @available(*, deprecated, message: "use 'defaultAuth' with HTTPBasicAuth")
-    @objc public var defaultCredential: URLCredential? {
+    @objc var defaultCredential: URLCredential? {
         get {
             return (defaultAuth as? HTTPBasicAuth)?.credential
         }
@@ -101,7 +101,7 @@ extension HTTPManagerActionParseResult where T == JSON {
 
 public extension HTTPManagerRequest {
     @available(*, deprecated, message: "use 'auth' with HTTPBasicAuth")
-    @objc public var credential: URLCredential? {
+    @objc var credential: URLCredential? {
         get {
             return (auth as? HTTPBasicAuth)?.credential
         }
@@ -118,7 +118,7 @@ public extension HTTPManagerNetworkRequest {
     }
     
     @available(*, unavailable, renamed: "parse(using:)")
-    @nonobjc public func parse<T>(with handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc func parse<T>(with handler: @escaping (_ response: URLResponse, _ data: Data) throws -> T) -> HTTPManagerParseRequest<T> {
         return parse(using: handler)
     }
     
@@ -137,72 +137,72 @@ extension HTTPManagerRequestPerformable {
 
 public extension HTTPManagerDataRequest {
     @available(*, unavailable, renamed: "parseAsJSON(using:)")
-    @nonobjc public func parseAsJSONWithHandler<T>(_ handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc func parseAsJSONWithHandler<T>(_ handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return parseAsJSON(using: handler)
     }
     
     @available(*, unavailable, renamed: "parseAsJSON(options:using:)")
-    @nonobjc public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (_ response: URLResponse, _ json: JSON) throws -> T) -> HTTPManagerParseRequest<T> {
         return parseAsJSON(options: options, using: handler)
     }
 }
 
 public extension HTTPManagerParseRequest {
     @available(*, unavailable, renamed: "createTask(withCompletionQueue:completion:)")
-    @nonobjc public func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
+    @nonobjc func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<T>) -> Void) -> HTTPManagerTask {
         return createTask(withCompletionQueue: queue, completion: handler)
     }
 }
 
 public extension HTTPManagerActionRequest {
     @available(*, unavailable, renamed: "parseAsJSON(using:)")
-    @nonobjc public func parseAsJSONWithHandler<T>(_ handler: @escaping (_ result: ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc func parseAsJSONWithHandler<T>(_ handler: @escaping (_ result: ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
         return parseAsJSON(using: handler)
     }
     
     @available(*, unavailable, renamed: "parseAsJSON(options:using:)")
-    @nonobjc public func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
+    @nonobjc func parseAsJSON<T>(options: JSONOptions = [], with handler: @escaping (ParseResult<JSON>) throws -> T) -> HTTPManagerParseRequest<T> {
         return parseAsJSON(options: options, using: handler)
     }
 }
 
 public extension HTTPManagerUploadFormRequest {
     @available(*, unavailable, renamed: "addMultipart(data:withName:mimeType:filename:)")
-    @nonobjc public func addMultipartData(_ data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
+    @nonobjc func addMultipartData(_ data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
         addMultipart(data: data, withName: name, mimeType: mimeType, filename: filename)
     }
     
     @available(*, unavailable, renamed: "addMultipartBody(using:)")
-    @nonobjc public func addMultipartBody(with block: @escaping (HTTPManagerUploadMultipart) -> Void) {
+    @nonobjc func addMultipartBody(with block: @escaping (HTTPManagerUploadMultipart) -> Void) {
         addMultipartBody(using: block)
     }
     
     @available(*, unavailable, renamed: "addMultipart(text:withName:)")
-    @nonobjc public func addMultipartText(_ text: String, withName name: String) {
+    @nonobjc func addMultipartText(_ text: String, withName name: String) {
         addMultipart(text: text, withName: name)
     }
     
     @available(*, unavailable, renamed: "addMultipartBody(using:)")
-    @nonobjc public func addMultipartBodyWithBlock(_ block: @escaping (HTTPManagerUploadMultipart) -> Void) {
+    @nonobjc func addMultipartBodyWithBlock(_ block: @escaping (HTTPManagerUploadMultipart) -> Void) {
         addMultipartBody(using: block)
     }
 }
 
 public extension HTTPManagerUploadMultipart {
     @available(*, unavailable, renamed: "addMultipart(data:withName:mimeType:filename:)")
-    @nonobjc public func addMultipartData(_ data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
+    @nonobjc func addMultipartData(_ data: Data, withName name: String, mimeType: String? = nil, filename: String? = nil) {
         addMultipart(data: data, withName: name, mimeType: mimeType, filename: filename)
     }
     
     @available(*, unavailable, renamed: "addMultipart(text:withName:)")
-    @nonobjc public func addMultipartText(_ text: String, withName name: String) {
+    @nonobjc func addMultipartText(_ text: String, withName name: String) {
         addMultipart(text: text, withName: name)
     }
 }
 
 public extension HTTPManagerTask {
     @available(*, deprecated, message: "use 'auth' instead")
-    @objc public var credential: URLCredential? {
+    @objc var credential: URLCredential? {
         return (auth as? HTTPBasicAuth)?.credential
     }
 }
@@ -239,67 +239,67 @@ public extension HTTPManagerTaskResult {
 public extension HTTPMockManager {
     @available(*, unavailable, renamed: "addMock(for:httpMethod:statusCode:headers:data:delay:)")
     @discardableResult
-    @nonobjc public func addMock(_ url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @nonobjc func addMock(_ url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) -> HTTPMockToken {
         return addMock(for: url, httpMethod: httpMethod, statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
     @available(*, unavailable, renamed: "addMock(for:httpMethod:statusCode:headers:text:delay:)")
     @discardableResult
-    @nonobjc public func addMock(_ url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @nonobjc func addMock(_ url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) -> HTTPMockToken {
         return addMock(for: url, httpMethod: httpMethod, statusCode: statusCode, headers: headers, text: text, delay: delay)
     }
     
     @available(*, unavailable, renamed: "addMock(for:httpMethod:statusCode:headers:json:delay:)")
     @discardableResult
-    @nonobjc public func addMock(_ url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> HTTPMockToken {
+    @nonobjc func addMock(_ url: String, httpMethod: String? = nil, statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) -> HTTPMockToken {
         return addMock(for: url, httpMethod: httpMethod, statusCode: statusCode, headers: headers, json: json, delay: delay)
     }
     
     @available(*, unavailable, renamed: "addMock(for:httpMethod:sequence:)")
     @discardableResult
-    @nonobjc public func addMock(_ url: String, httpMethod: String? = nil, sequence: HTTPMockSequence) -> HTTPMockToken {
+    @nonobjc func addMock(_ url: String, httpMethod: String? = nil, sequence: HTTPMockSequence) -> HTTPMockToken {
         return addMock(for: url, httpMethod: httpMethod, sequence: sequence)
     }
     
     @available(*, unavailable, renamed: "addMock(for:httpMethod:queue:handler:)")
     @discardableResult
-    @nonobjc public func addMock(_ url: String, httpMethod: String? = nil, queue: DispatchQueue? = nil, handler: @escaping (_ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
+    @nonobjc func addMock(_ url: String, httpMethod: String? = nil, queue: DispatchQueue? = nil, handler: @escaping (_ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
         return addMock(for: url, httpMethod: httpMethod, queue: queue, handler: handler)
     }
     
     @available(*, unavailable, renamed: "addMock(for:httpMethod:state:handler:)")
     @discardableResult
-    @nonobjc public func addMock<T>(_ url: String, httpMethod: String? = nil, state: T, handler: @escaping (_ state: inout T, _ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
+    @nonobjc func addMock<T>(_ url: String, httpMethod: String? = nil, state: T, handler: @escaping (_ state: inout T, _ request: URLRequest, _ parameters: [String: String], _ completion: @escaping (_ response: HTTPURLResponse, _ body: Data) -> Void) -> Void) -> HTTPMockToken {
         return addMock(for: url, httpMethod: httpMethod, state: state, handler: handler)
     }
 }
 
 public extension HTTPMockSequence {
     @available(*, unavailable, renamed: "addMock(statusCode:headers:data:delay:)")
-    @nonobjc public func addMock(_ statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) {
+    @nonobjc func addMock(_ statusCode: Int, headers: [String: String] = [:], data: Data = Data(), delay: TimeInterval = 0.03) {
         addMock(statusCode: statusCode, headers: headers, data: data, delay: delay)
     }
     
     @available(*, unavailable, renamed: "addMock(statusCode:headers:text:delay:)")
-    @nonobjc public func addMock(_ statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) {
+    @nonobjc func addMock(_ statusCode: Int, headers: [String: String] = [:], text: String, delay: TimeInterval = 0.03) {
         addMock(statusCode: statusCode, headers: headers, text: text, delay: delay)
     }
     
     @available(*, unavailable, renamed: "addMock(statusCode:headers:json:delay:)")
-    @nonobjc public func addMock(_ statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) {
+    @nonobjc func addMock(_ statusCode: Int, headers: [String: String] = [:], json: JSON, delay: TimeInterval = 0.03) {
         addMock(statusCode: statusCode, headers: headers, json: json, delay: delay)
     }
 }
 
 public extension HTTPManagerObjectParseRequest {
     @available(*, deprecated, message: "use 'auth' with HTTPBasicAuth")
-    public override var credential: URLCredential? {
+    override var credential: URLCredential? {
         get { return (auth as? HTTPBasicAuth)?.credential }
         set { auth = credential.flatMap(HTTPBasicAuth.init(credential:)) }
     }
     
     @available(*, unavailable, renamed: "createTask(withCompletionQueue:completion:)")
-    @nonobjc public func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Any?>) -> Void) -> HTTPManagerTask {
+    @nonobjc func createTaskWithCompletion(onQueue queue: OperationQueue? = nil, _ handler: @escaping (_ task: HTTPManagerTask, _ result: HTTPManagerTaskResult<Any?>) -> Void) -> HTTPManagerTask {
         return createTask(withCompletionQueue: queue, completion: handler)
     }
 }
