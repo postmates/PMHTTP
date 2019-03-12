@@ -42,7 +42,7 @@ import Foundation
         ///   - image: The image for the multipart.
         ///   - name: The name of the multipart body. This is the name the server expects.
         ///   - filename: The filename of the attachment. Optional.
-        public func addMultipartPNG(for image: UIImage, withName name: String, filename: String? = nil) {
+        func addMultipartPNG(for image: UIImage, withName name: String, filename: String? = nil) {
             self.addMultipartBody(using: { upload in
                 guard let data = UIImagePNGRepresentation(image) else { return }
                 upload.addMultipart(data: data, withName: name, mimeType: "image/png", filename: filename)
@@ -67,7 +67,7 @@ import Foundation
         ///     from `0.0` to `1.0`.
         ///   - name: The name of the multipart body. This is the name the server expects.
         ///   - filename: The filename of the attachment. Optional.
-        public func addMultipartJPEG(for image: UIImage, withCompressionQuality quality: CGFloat, name: String, filename: String? = nil) {
+        func addMultipartJPEG(for image: UIImage, withCompressionQuality quality: CGFloat, name: String, filename: String? = nil) {
             self.addMultipartBody(using: { upload in
                 guard let data = UIImageJPEGRepresentation(image, quality) else { return }
                 upload.addMultipart(data: data, withName: name, mimeType: "image/jpeg", filename: filename)
@@ -96,7 +96,7 @@ import Foundation
         ///   `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
         /// - Parameter scale: The scale to use for the resulting image. Defaults to `1`.
         /// - Returns: An `HTTPManagerParseRequest`.
-        public func parseAsImage(scale: CGFloat = 1) -> HTTPManagerParseRequest<UIImage> {
+        func parseAsImage(scale: CGFloat = 1) -> HTTPManagerParseRequest<UIImage> {
             let req = parse(using: { (response, data) -> UIImage in
                 if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                     throw HTTPManagerError.unexpectedNoContent(response: response)
@@ -128,7 +128,7 @@ import Foundation
         /// - Warning: The parse request inherits the `isIdempotent` value of `self`. If the parse
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
-        public func parseAsImage<T>(scale: CGFloat = 1, using handler: @escaping (_ response: URLResponse, _ image: UIImage) throws -> T) -> HTTPManagerParseRequest<T> {
+        func parseAsImage<T>(scale: CGFloat = 1, using handler: @escaping (_ response: URLResponse, _ image: UIImage) throws -> T) -> HTTPManagerParseRequest<T> {
             let req = parse(using: { (response, data) -> T in
                 if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                     throw HTTPManagerError.unexpectedNoContent(response: response)
@@ -149,7 +149,7 @@ import Foundation
         ///   `HTTPManagerError.unexpectedNoContent` is returned as the parse result.
         /// - Returns: An `HTTPManagerParseRequest`.
         @objc(parseAsImage)
-        public func __objc_parseAsImage() -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage() -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(using: { $1 }))
         }
         
@@ -162,7 +162,7 @@ import Foundation
         /// - Parameter scale: The scale to use for the resulting image.
         /// - Returns: An `HTTPManagerParseRequest`.
         @objc(parseAsImageWithScale:)
-        public func __objc_parseAsImage(scale: CGFloat) -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage(scale: CGFloat) -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(scale: scale, using: { $1 }))
         }
         
@@ -185,7 +185,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithHandler:)
-        public func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return __objc_parseAsImage(scale: 1, handler: handler)
         }
         
@@ -209,7 +209,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithScale:handler:)
-        public func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(scale: scale, using: { (response, image) in
                 var error: NSError?
                 if let value = handler(response, image, &error) {
@@ -232,7 +232,7 @@ import Foundation
         ///   Content.
         /// - Parameter scale: The scale to use for the resulting image. Defaults to `1`.
         /// - Returns: An `HTTPManagerParseRequest`.
-        public func parseAsImage(scale: CGFloat = 1) -> HTTPManagerParseRequest<UIImage?> {
+        func parseAsImage(scale: CGFloat = 1) -> HTTPManagerParseRequest<UIImage?> {
             let req = parse(using: { (response, data) -> UIImage? in
                 if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                     // No Content
@@ -266,7 +266,7 @@ import Foundation
         /// - Warning: The parse request inherits the `isIdempotent` value of `self`. If the parse
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
-        public func parseAsImage<T>(scale: CGFloat = 1, using handler: @escaping (_ response: URLResponse, _ image: UIImage?) throws -> T) -> HTTPManagerParseRequest<T> {
+        func parseAsImage<T>(scale: CGFloat = 1, using handler: @escaping (_ response: URLResponse, _ image: UIImage?) throws -> T) -> HTTPManagerParseRequest<T> {
             let req = parse(using: { (response, data) -> T in
                 if let response = response as? HTTPURLResponse, response.statusCode == 204 {
                     // No Content
@@ -289,7 +289,7 @@ import Foundation
         ///   `NSHTTPURLResponse`.
         /// - Returns: An `HTTPManagerParseRequest`.
         @objc(parseAsImage)
-        public func __objc_parseAsImage() -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage() -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(using: { $1 }))
         }
         
@@ -303,7 +303,7 @@ import Foundation
         /// - Parameter scale: The scale to use for the resulting image.
         /// - Returns: An `HTTPManagerParseRequest`.
         @objc(parseAsImageWithScale:)
-        public func __objc_parseAsImage(scale: CGFloat) -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage(scale: CGFloat) -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(scale: scale, using: { $1 }))
         }
         
@@ -327,7 +327,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithHandler:)
-        public func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage(handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return __objc_parseAsImage(scale: 1, handler: handler)
         }
         
@@ -352,7 +352,7 @@ import Foundation
         ///   handler has side effects and can throw, you should either ensure that it's safe to run
         ///   the parse handler again or set `isIdempotent` to `false`.
         @objc(parseAsImageWithScale:handler:)
-        public func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
+        func __objc_parseAsImage(scale: CGFloat, handler: @escaping @convention(block) (_ response: URLResponse, _ image: UIImage?, _ error: AutoreleasingUnsafeMutablePointer<NSError?>) -> Any?) -> HTTPManagerObjectParseRequest {
             return HTTPManagerObjectParseRequest(request: parseAsImage(scale: scale, using: { (response, image) in
                 var error: NSError?
                 if let value = handler(response, image, &error) {
