@@ -615,12 +615,7 @@ public final class HTTPManagerEnvironment: NSObject {
     private let baseURLComponents: URLComponents
     
     public override var description: String {
-        // FIXME: Switch to ObjectIdentifier.address or whatever it's called when it's available
-        #if swift(>=3.1)
-            let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
-        #else
-            let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
-        #endif
+        let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
         return "<HTTPManagerEnvironment: 0x\(String(ptr, radix: 16)) \(baseURL.absoluteString))>"
     }
     

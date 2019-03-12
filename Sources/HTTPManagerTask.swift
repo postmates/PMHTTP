@@ -220,12 +220,7 @@ extension HTTPManagerTask {
     }
     
     private func getDescription(_ debug: Bool) -> String {
-        // FIXME: Use ObjectIdentifier.address or whatever it's called when it's available
-        #if swift(>=3.1)
-            let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
-        #else
-            let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
-        #endif
+        let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
         var s = "<HTTPManagerTask: 0x\(String(ptr, radix: 16)) (\(state))"
         if let auth = auth {
             let desc = debug ? String(reflecting: auth) : String(describing: auth)

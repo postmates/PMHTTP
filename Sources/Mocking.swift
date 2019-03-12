@@ -693,12 +693,7 @@ internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
     }
     
     var description: String {
-        // FIXME: Use ObjectIdentifier.address or whatever it's called once it's available
-        #if swift(>=3.1)
-            let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
-        #else
-            let ptr = unsafeBitCast(Unmanaged.passUnretained(self).toOpaque(), to: UInt.self)
-        #endif
+        let ptr = UInt(bitPattern: Unmanaged.passUnretained(self).toOpaque())
         return "<HTTPMock: 0x\(String(ptr, radix: 16)) \(String(reflecting: urlString))\(httpMethod.map({ " \($0)" }) ?? "")>"
     }
 }

@@ -14,12 +14,6 @@
 
 import Darwin
 
-#if swift(>=3.2)
-    // nop
-#else
-    internal typealias Substring = String
-#endif
-
 /// Returns `true` iff the unicode scalar is a Linear White Space character
 /// (as defined by RFC 2616).
 internal func isLWS(_ us: UnicodeScalar) -> Bool {
