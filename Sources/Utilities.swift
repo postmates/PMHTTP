@@ -75,6 +75,19 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
         }
     }))
     
+    #if compiler(>=4.2)
+    func hash(into hasher: inout Hasher) {
+        CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
+            for x in string.utf16 {
+                if _fastPath(x <= 127) {
+                    hasher.combine(table[Int(x)])
+                } else {
+                    hasher.combine(x)
+                }
+            }
+        }
+    }
+    #else
     var hashValue: Int {
         var hasher = SipHasher()
         CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
@@ -88,6 +101,7 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
         }
         return Int(truncatingIfNeeded: hasher.finish())
     }
+    #endif
     
     var description: String {
         return string

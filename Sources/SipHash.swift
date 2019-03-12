@@ -12,6 +12,8 @@
 //  except according to those terms.
 //
 
+#if !compiler(>=4.2)
+
 /// A generic hasher that implements SipHash-2-4.
 /// Once a hasher is created, data can be added to it iteratively.
 /// Once all data has been added, call `finish()` to get the resulting value.
@@ -233,3 +235,5 @@ internal struct SipHasher: TextOutputStream {
         c.write(to: &self)
     }
 }
+
+#endif // !compiler(>=4.2)
