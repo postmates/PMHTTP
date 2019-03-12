@@ -16,6 +16,7 @@ import XCTest
 @testable import PMHTTP
 
 final class UtilitiesTests: XCTestCase {
+    #if swift(>=4.1.9) // detect Swift 4.2 compiler, necessary for compiler(>=) directive
     #if !compiler(>=5) // Swift 5 got rid of the preprocessing pass that caused double-evaluation
     func testSequenceMultiPass() {
         // This test validates that we can detect multi-pass evaluations on `lazy`.
@@ -33,6 +34,7 @@ final class UtilitiesTests: XCTestCase {
         XCTAssertEqual(s, "xxxxx")
         wait(for: expectations, timeout: 0)
     }
+    #endif
     #endif
     
     func testLazySequence() {

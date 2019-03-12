@@ -12,7 +12,7 @@
 //  except according to those terms.
 //
 
-#if !compiler(>=4.2)
+#if !swift(>=4.1.9) // detect Swift 4.2 compiler
 
 import XCTest
 @testable import PMHTTP
@@ -79,4 +79,4 @@ class SipHashTests: XCTestCase {
     }
 }
 
-#endif // !compiler(>=4.2)
+#endif // !swift(>=4.1.9)

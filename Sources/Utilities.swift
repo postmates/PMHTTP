@@ -69,7 +69,7 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
         }
     }))
     
-    #if compiler(>=4.2)
+    #if swift(>=4.1.9) // detect Swift 4.2 compiler
     func hash(into hasher: inout Hasher) {
         CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
             for x in string.utf16 {

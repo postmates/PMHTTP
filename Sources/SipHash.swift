@@ -12,7 +12,7 @@
 //  except according to those terms.
 //
 
-#if !compiler(>=4.2)
+#if !swift(>=4.1.9) // detect Swift 4.2 compiler
 
 /// A generic hasher that implements SipHash-2-4.
 /// Once a hasher is created, data can be added to it iteratively.
@@ -236,4 +236,4 @@ internal struct SipHasher: TextOutputStream {
     }
 }
 
-#endif // !compiler(>=4.2)
+#endif // !swift(>=4.1.9)
