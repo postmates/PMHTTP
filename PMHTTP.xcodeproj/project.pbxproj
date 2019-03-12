@@ -333,7 +333,7 @@
 			};
 			buildConfigurationList = 9E7DDF1B1C18F2B500EA43AD /* Build configuration list for PBXProject "PMHTTP" */;
 			compatibilityVersion = "Xcode 9.3";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
