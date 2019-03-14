@@ -209,12 +209,7 @@ internal final class HTTPBody {
 /// - Note: The returned string is *not* surrounded by quotes.
 private func quotedString(_ str: String) -> String {
     // WebKit quotes by using percent escapes.
-    // NB: Using UTF-16 here because that's the fastest encoding for String.
-    // If we find a character that needs escaping, we switch to working with unicode scalars
-    // as that's a collection that's actually mutable (unlike UTF16View).
-    if let idx = str.utf16.index(where: { (c: UTF16.CodeUnit) in c == 0xD || c == 0xA || c == 0x22 /* " */ }) {
-        // idx lies on a unicode scalar boundary
-        let start = idx.samePosition(in: str.unicodeScalars)!
+    if let start = str.unicodeScalars.index(where: { $0 == "\r" || $0 == "\n" || $0 == "\"" }) {
         var result = String(str.unicodeScalars.prefix(upTo: start))
         for c in str.unicodeScalars.suffix(from: start) {
             switch c {
