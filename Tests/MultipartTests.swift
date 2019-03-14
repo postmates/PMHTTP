@@ -465,6 +465,48 @@ class MultipartTests: PMHTTPTestCase {
         }
     }
     
+    func testContentDispositionQuoting() {
+        struct Test {
+            let str: String
+            let expectation: String
+            let line: UInt
+            init(_ str: String, expectation: String, line: UInt = #line) {
+                self.str = str
+                self.expectation = expectation
+                self.line = line
+            }
+        }
+        let tests = [
+            Test("foobar", expectation: "foobar"),
+            Test("foo\nbar", expectation: "foo%0Abar"),
+            Test("foo\rbar", expectation: "foo%0Dbar"),
+            Test("\none\"two\rthree\"", expectation: "%0Aone%22two%0Dthree%22"),
+        ]
+        let req = HTTP.request(POST: "foo")!
+        for test in tests {
+            req.addMultipart(data: Data(), withName: test.str, mimeType: nil, filename: test.str)
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            defer { completionHandler(HTTPServer.Response(status: .ok)) }
+            let multipartBody: HTTPServer.MultipartBody
+            do {
+                multipartBody = try request.parseMultipartBody()
+            } catch {
+                return XCTFail("no multipart body; error: \(error)")
+            }
+            guard multipartBody.parts.count == tests.count else {
+                return XCTFail("expected \(tests.count) multipart body parts, found \(multipartBody.parts.count)")
+            }
+            for (i, test) in tests.enumerated() {
+                XCTAssertEqual(multipartBody.parts[i].contentDisposition, HTTPServer.ContentDisposition("form-data; name=\"\(test.expectation)\"; filename=\"\(test.expectation)\""), "multipart body part \(i) Content-Disposition", line: test.line)
+            }
+        }
+        expectationForRequestSuccess(req) { (task, response, value) in
+            XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
     func testPreparedURLRequest() {
         let req = HTTP.request(POST: "foo")!
         req.addMultipart(text: "Hello world", withName: "message")
