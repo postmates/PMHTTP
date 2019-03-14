@@ -72,7 +72,12 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
     #if swift(>=4.1.9) // detect Swift 4.2 compiler
     func hash(into hasher: inout Hasher) {
         CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
-            for x in string.utf16 {
+            #if compiler(>=5)
+            let nativeView = string.utf8
+            #else
+            let nativeView = string.utf16
+            #endif
+            for x in nativeView {
                 if _fastPath(x <= 127) {
                     hasher.combine(table[Int(x)])
                 } else {
@@ -112,7 +117,16 @@ internal struct CaseInsensitiveASCIIString: Hashable, ExpressibleByStringLiteral
 
 func ==(lhs: CaseInsensitiveASCIIString, rhs: CaseInsensitiveASCIIString) -> Bool {
     return CaseInsensitiveASCIIString.lowercaseTable.withUnsafeBufferPointer { table in
-        var (lhsGen, rhsGen) = (lhs.string.utf16.makeIterator(), rhs.string.utf16.makeIterator())
+        #if swift(>=4.1.9) // Swift 4.2+ compiler, required for compiler()
+        #if compiler(>=5)
+        let (lhsView, rhsView) = (lhs.string.utf8, rhs.string.utf8)
+        #else
+        let (lhsView, rhsView) = (lhs.string.utf16, rhs.string.utf16)
+        #endif
+        #else
+        let (lhsView, rhsView) = (lhs.string.utf16, rhs.string.utf16)
+        #endif
+        var (lhsGen, rhsGen) = (lhsView.makeIterator(), rhsView.makeIterator())
         while true {
             switch (lhsGen.next(), rhsGen.next()) {
             case let (a?, b?):
