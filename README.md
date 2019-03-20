@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Updated `PMHTTPErrorIsFailedResponse` to handle `PMHTTPErrorUnexpectedNoContent` and `PMHTTPErrorUnexpectedRedirect` in addition to `PMHTTPErrorFailedResponse` and `PMHTTPErrorUnauthorized`.
+
 #### v4.3.2 (2018-11-14)
 
 * Fix bug where requests constructed from a `URL` would not inherit environmental defaults (e.g. auth, headers, etc) ([#52][]).

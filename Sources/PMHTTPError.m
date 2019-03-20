@@ -26,8 +26,18 @@ NSString * const PMHTTPLocationErrorKey = @"location";
 
 BOOL PMHTTPErrorIsFailedResponse(NSError * _Nullable error, NSInteger statusCode) {
     if (![error.domain isEqualToString:PMHTTPErrorDomain]) return NO;
-    if (statusCode == 401 && error.code == PMHTTPErrorUnauthorized) return YES;
-    if (error.code != PMHTTPErrorFailedResponse) return NO;
-    NSNumber *errorStatusCode = error.userInfo[PMHTTPStatusCodeErrorKey];
-    return [errorStatusCode isKindOfClass:[NSNumber class]] && errorStatusCode.integerValue == statusCode;
+    switch ((PMHTTPError)error.code) {
+        case PMHTTPErrorFailedResponse:
+        case PMHTTPErrorUnexpectedRedirect: {
+            NSNumber *errorStatusCode = error.userInfo[PMHTTPStatusCodeErrorKey];
+            return [errorStatusCode isKindOfClass:[NSNumber class]] && errorStatusCode.integerValue == statusCode;
+        }
+        case PMHTTPErrorUnauthorized:
+            return statusCode == 401;
+        case PMHTTPErrorUnexpectedContentType:
+            return NO;
+        case PMHTTPErrorUnexpectedNoContent:
+            return statusCode == 204;
+    }
+    return NO;
 }

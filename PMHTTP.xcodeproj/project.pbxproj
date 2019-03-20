@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		0A3BE2C6210EE4900044D2D3 /* URLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3BE2C5210EE4900044D2D3 /* URLProtocol.swift */; };
 		0A3BE2C8210EEC940044D2D3 /* URLProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3BE2C7210EEC940044D2D3 /* URLProtocolTests.swift */; };
+		0A700E7D2242FDA10024A839 /* ObjCTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A700E7C2242FDA10024A839 /* ObjCTestSupport.swift */; };
+		0A700E7F2242FF860024A839 /* PMHTTPErrorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 0A700E7E2242FF860024A839 /* PMHTTPErrorTests.m */; };
 		0A7677EC1CFFE2C2005D160D /* PMHTTPManagerBodyStream.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0A7677ED1CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */; };
 		0A7677EE1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A7677EA1CFFE2C2005D160D /* PMHTTPManagerTaskStateBox.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -69,6 +71,8 @@
 /* Begin PBXFileReference section */
 		0A3BE2C5210EE4900044D2D3 /* URLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLProtocol.swift; sourceTree = "<group>"; };
 		0A3BE2C7210EEC940044D2D3 /* URLProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLProtocolTests.swift; sourceTree = "<group>"; };
+		0A700E7C2242FDA10024A839 /* ObjCTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjCTestSupport.swift; sourceTree = "<group>"; };
+		0A700E7E2242FF860024A839 /* PMHTTPErrorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PMHTTPErrorTests.m; sourceTree = "<group>"; };
 		0A7677E61CFFD8DF005D160D /* pmhttp.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = pmhttp.modulemap; sourceTree = "<group>"; };
 		0A7677E81CFFE2C2005D160D /* PMHTTPManagerBodyStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PMHTTPManagerBodyStream.h; sourceTree = "<group>"; };
 		0A7677E91CFFE2C2005D160D /* PMHTTPManagerBodyStream.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PMHTTPManagerBodyStream.mm; sourceTree = "<group>"; };
@@ -240,7 +244,9 @@
 				9EDBA9B31F478BB9005EDC9F /* InputStreamTests.swift */,
 				9E22DD2B1C88D09100C49993 /* DateParsingTests.swift */,
 				9E681CB91C56FBF100422CE4 /* SipHashTests.swift */,
+				0A700E7C2242FDA10024A839 /* ObjCTestSupport.swift */,
 				0AC2066020AE6C0F000DF552 /* ObjCPPImportTest.mm */,
+				0A700E7E2242FF860024A839 /* PMHTTPErrorTests.m */,
 				9E7DDF321C18F2B600EA43AD /* Info.plist */,
 				9EEF31901E4D50A20086AAFF /* PMHTTP Certificates.p12 */,
 			);
@@ -421,6 +427,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB7F6F2520D4CCFD003AA632 /* MetricsCallbackTests.swift in Sources */,
+				0A700E7F2242FF860024A839 /* PMHTTPErrorTests.m in Sources */,
 				9EDBA9B41F478BB9005EDC9F /* InputStreamTests.swift in Sources */,
 				9EEF69F61D2C343E00C6E603 /* KVOTests.swift in Sources */,
 				9ED901301E2EDB4E00332D39 /* ImageTests.swift in Sources */,
@@ -434,6 +441,7 @@
 				9E681CBA1C56FBF100422CE4 /* SipHashTests.swift in Sources */,
 				9EC8F0D01C408EEC00297FC5 /* HTTPServer.swift in Sources */,
 				9E7DDF311C18F2B600EA43AD /* PMHTTPTests.swift in Sources */,
+				0A700E7D2242FDA10024A839 /* ObjCTestSupport.swift in Sources */,
 				9E555D031F0199DD0007C7EE /* PMHTTPURLTests.swift in Sources */,
 				9E11A8DC1D1B4AC100D63318 /* NetworkActivityTests.swift in Sources */,
 				9EEF318D1E4ABF050086AAFF /* AuthTests.swift in Sources */,
