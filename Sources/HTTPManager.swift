@@ -32,7 +32,7 @@ public let HTTP = HTTPManager(shared: true)
 /// `HTTPManagerRequest`s support concurrent reading from multiple threads, but it is not safe to mutate
 /// a request while concurrently accessing it from another thread. `HTTPManagerTask`s are safe to access
 /// from any thread.
-public final class HTTPManager: NSObject {
+@objc public final class HTTPManager: NSObject {
     public typealias Environment = HTTPManagerEnvironment
     
     @available(iOS 10, macOS 10.12, tvOS 10, watchOS 3, *)
@@ -518,7 +518,7 @@ public final class HTTPManager: NSObject {
 /// ```
 ///
 /// You can also use `HTTPManagerConfigurable` to configure the initial environment on the shared `HTTPManager`.
-public final class HTTPManagerEnvironment: NSObject {
+@objc public final class HTTPManagerEnvironment: NSObject {
     /// The base URL for the environment.
     /// - Invariant: The URL is an absolute URL that is valid according to RFC 3986, the URL's path
     ///   is either empty or has a trailing slash, and the URL has no query or fragment component.
