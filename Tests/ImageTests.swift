@@ -91,6 +91,15 @@ import PMHTTP
             waitForExpectations(timeout: 5, handler: nil)
         }
         
+        func testGETDefinesExpectedContentTypes() {
+            // Ensure the expectedContentTypes property is properly filled out.
+            // This test exists because we've got optional casting when constructing that property,
+            // so if casts fail, the failure case is we're not setting the property at all (and
+            // therefore accepting all MIME types).
+            let request = HTTP.request(GET: "image").parseAsImage()
+            XCTAssertFalse(request.expectedContentTypes.isEmpty, "expectedContentTypes is empty")
+        }
+        
         func testPOSTImage() {
             guard let imageData = UIImageJPEGRepresentation(sampleImage, 0.9) else {
                 return XCTFail("Could not get JPEG data for sample image")
