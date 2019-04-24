@@ -417,7 +417,9 @@ work by you shall be dual licensed as above, without any additional terms or con
 * Add computed property `HTTPManagerError.statusCode` that returns the failing status code for the error, or `nil` for `.unexpectedContentType` ([#60][]).
 * Add Obj-C function `PMHTTPErrorGetStatusCode()` that returns the failing status code for the error, or `nil` for `PMHTTPErrorUnexpectedContentType` or for non-PMHTTP errors ([#60][]).
 * Provide `PMHTTPStatusCodeErrorKey` user info key for more error types ([#59][]).
+* Add computed property `URLResponse.isUnmockedInterceptedRequest` that can be used to test if a response comes from a request that was intercepted by the mock manager without a mock installed ([#46][]).
 
+[#46]: https://github.com/postmates/PMHTTP/issues/46 "Consider making intercepted unmocked requests return 501 instead of 500 · Issue #46 · postmates/PMHTTP"
 [#59]: https://github.com/postmates/PMHTTP/issues/59 "PMHTTPStatusCodeErrorKey should be used for unauthorized and unexpectedNoContent · Issue #59 · postmates/PMHTTP"
 [#60]: https://github.com/postmates/PMHTTP/issues/60 "HTTPManagerError should have .statusCode property · Issue #60 · postmates/PMHTTP"
 [#62]: https://github.com/postmates/PMHTTP/issues/62 "Unknown Hint Identifier for Image MIME Types · Issue #62 · postmates/PMHTTP"

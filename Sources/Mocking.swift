@@ -29,7 +29,11 @@ import PMJSON
 /// **Thread safety:** All methods in this class are safe to call from any thread.
 public final class HTTPMockManager: NSObject {
     /// If `true`, any URL that is part of the current environment but not handled by any mocks
-    /// will return a 500 Internal Server Error. The default value is `false`.
+    /// will return an error. The default value is `false`.
+    ///
+    /// - Note: Testing for unmocked intercepted requests should be done with
+    /// `URLResponse.isUnmockedInterceptedRequest`.
+    ///
     /// - SeeAlso: interceptUnhandledExternalURLs
     @objc public var interceptUnhandledEnvironmentURLs: Bool {
         get {
@@ -42,7 +46,11 @@ public final class HTTPMockManager: NSObject {
         }
     }
     /// If `true`, any URL that is not part of the current environment but not handled by any mocks
-    /// will return a 500 Internal Server Error. The default value is `false`.
+    /// will return an error. The default value is `false`.
+    ///
+    /// - Note: Testing for unmocked intercepted requests should be done with
+    /// `URLResponse.isUnmockedInterceptedRequest`.
+    ///
     /// - SeeAlso: interceptUnhandledEnvironmentURLs
     @objc public var interceptUnhandledExternalURLs: Bool {
         get {
@@ -596,6 +604,20 @@ public extension HTTPManagerParseRequest {
 /// A token that can be used to unregister a mock from an `HTTPMockManager`.
 @objc public protocol HTTPMockToken {}
 
+@objc public extension URLResponse {
+    /// Returns whether the response represents an unmocked intercepted request.
+    ///
+    /// When `HTTPMockManager` is configured to intercept unmocked requests, this property will
+    /// return `true` for the response generated for any such intercepted request. Otherwise it will
+    /// return `false` for any mocked request or any request that wasn't intercepted.
+    @objc(pmhttp_IsUnmockedInterceptedRequest)
+    var isUnmockedInterceptedRequest: Bool {
+        return (self as? HTTPURLResponse)?.allHeaderFields["X-PMHTTP-Mock"] as? String == "intercepted"
+    }
+}
+
+// MARK: - Internal and Private
+
 internal class HTTPMock: HTTPMockToken, CustomStringConvertible {
     enum MatchResult {
         case noMatch
@@ -711,8 +733,12 @@ internal class HTTPMockInstance {
         self.handler = handler
     }
     
-    static let unhandledURLMock = HTTPMockInstance(queue: DispatchQueue.global(qos: .utility), parameters: [:]) { (request, parameters, completion) in
-        let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "text/plain; charset=utf-8"])!
+    static let unhandledURLMock = HTTPMockInstance(queue: DispatchQueue.global(qos: .default), parameters: [:]) { (request, parameters, completion) in
+        let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: "HTTP/1.1", headerFields: [
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-PMHTTP-Mock": "intercepted"
+            ])!
         let data = "No mock found for URL.".data(using: String.Encoding.utf8)!
         completion(response, data)
     }

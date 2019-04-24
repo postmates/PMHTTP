@@ -31,6 +31,7 @@ class MockingTests: PMHTTPTestCase {
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "mock response status code")
             XCTAssertEqual(response.mimeType, "text/plain", "mock response MIME type")
             XCTAssertEqual(response.textEncodingName, "utf-8", "mock response text encoding")
+            XCTAssertFalse(response.isUnmockedInterceptedRequest, "mock response is unmocked intercepted request")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "mock response body text")
         }
         waitForExpectations(timeout: 5, handler: nil)
@@ -561,6 +562,7 @@ class MockingTests: PMHTTPTestCase {
             } else {
                 XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
+            XCTAssertTrue(response?.isUnmockedInterceptedRequest ?? false, "mock response is unmocked intercepted request")
         }
         waitForExpectations(timeout: 5, handler: nil)
         
@@ -578,6 +580,7 @@ class MockingTests: PMHTTPTestCase {
             } else {
                 XCTFail("expected HTTPManagerError.failedResponse, found \(error)")
             }
+            XCTAssertTrue(response?.isUnmockedInterceptedRequest ?? false, "mock response is unmocked intercepted request")
         }
         waitForExpectations(timeout: 5, handler: nil)
     }
@@ -590,6 +593,7 @@ class MockingTests: PMHTTPTestCase {
         expectationForRequestSuccess(HTTP.request(GET: "http://\(httpServer.address)/foo")) { (task, response, value) in
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, "status code")
             XCTAssertEqual(String(data: value, encoding: String.Encoding.utf8), "Mock response", "body text")
+            XCTAssertFalse(response.isUnmockedInterceptedRequest, "mock response is unmocked intercepted request")
         }
         waitForExpectations(timeout: 5, handler: nil)
         
