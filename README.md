@@ -413,7 +413,11 @@ work by you shall be dual licensed as above, without any additional terms or con
 #### Development
 
 * Fix a bug when parsing images where we passed the wrong value for the type identifier hint, resulting in a warning being logged to the console ([#62][]).
+* Add computed properties on `HTTPManagerError` for convenient access to the associated values (e.g. `.response`, `.body`, etc).
+* Add computed property `HTTPManagerError.statusCode` that returns the failing status code for the error, or `nil` for `.unexpectedContentType` ([#60][]).
+* Add Obj-C function `PMHTTPErrorGetStatusCode()` that returns the failing status code for the error, or `nil` for `PMHTTPErrorUnexpectedContentType` or for non-PMHTTP errors ([#60][]).
 
+[#60]: https://github.com/postmates/PMHTTP/issues/60 "HTTPManagerError should have .statusCode property · Issue #60 · postmates/PMHTTP"
 [#62]: https://github.com/postmates/PMHTTP/issues/62 "Unknown Hint Identifier for Image MIME Types · Issue #62 · postmates/PMHTTP"
 
 #### v4.3.3 (2019-04-07)

@@ -79,3 +79,12 @@ extern NSString * _Nonnull const PMHTTPCredentialErrorKey NS_UNAVAILABLE;
 ///       PMHTTPErrorUnexpectedRedirect in addition to \c PMHTTPErrorFailedResponse.
 NS_SWIFT_UNAVAILABLE("use pattern matching against HTTPManagerError")
 BOOL PMHTTPErrorIsFailedResponse(NSError * _Nullable error, NSInteger statusCode);
+
+/// Returns the HTTP status code from a PMHTTP error.
+///
+/// \param error The \c NSError to test.
+/// \returns An \c NSNumber containing the HTTP status code represented by the error if the error is
+/// a PMHTTP error that corresponds to a specific status code, otherwise \c nil if the error is not
+/// a PMHTTP error or is an error that represents something other than a non-successful status code.
+NS_SWIFT_UNAVAILABLE("use HTTPManagerError.statusCode")
+NSNumber * _Nullable PMHTTPErrorGetStatusCode(NSError * _Nullable error);

@@ -1181,6 +1181,44 @@ final class PMHTTPTests: PMHTTPTestCase {
         }
     }
     
+    func testErrorProperties() {
+        let response = HTTPURLResponse(url: URL(string: "http://example.com")!, statusCode: 419, httpVersion: nil, headerFields: nil)!
+        
+        // statusCode
+        XCTAssertEqual(HTTPManagerError.failedResponse(statusCode: 500, response: response, body: Data(), bodyJson: nil).statusCode, 500, "statusCode - failedResponse code 500")
+        XCTAssertEqual(HTTPManagerError.failedResponse(statusCode: 404, response: response, body: Data(), bodyJson: nil).statusCode, 404, "statusCode - failedResponse code 404")
+        XCTAssertEqual(HTTPManagerError.unauthorized(auth: nil, response: response, body: Data(), bodyJson: nil).statusCode, 401, "statusCode - unauthorized")
+        XCTAssertNil(HTTPManagerError.unexpectedContentType(contentType: "text/plain", response: response, body: Data()).statusCode, "statusCode - unexpectedContentType")
+        XCTAssertEqual(HTTPManagerError.unexpectedNoContent(response: response).statusCode, 204, "statusCode - unexpectedNoContent")
+        XCTAssertEqual(HTTPManagerError.unexpectedRedirect(statusCode: 301, location: nil, response: response, body: Data()).statusCode, 301, "statusCode - unexpectedRedirect code 301")
+        XCTAssertEqual(HTTPManagerError.unexpectedRedirect(statusCode: 304, location: nil, response: response, body: Data()).statusCode, 304, "statusCode - unexpectedRedirect code 304")
+        
+        // response
+        XCTAssertEqual(HTTPManagerError.failedResponse(statusCode: 400, response: response, body: Data(), bodyJson: nil).response, response, "response - failedResponse")
+        XCTAssertEqual(HTTPManagerError.unauthorized(auth: nil, response: response, body: Data(), bodyJson: nil).response, response, "response - unauthorized")
+        XCTAssertEqual(HTTPManagerError.unexpectedContentType(contentType: "text/plain", response: response, body: Data()).response, response, "response - unexpectedContentType")
+        XCTAssertEqual(HTTPManagerError.unexpectedNoContent(response: response).response, response, "response - unexpectedNoContent")
+        XCTAssertEqual(HTTPManagerError.unexpectedRedirect(statusCode: 304, location: nil, response: response, body: Data()).response, response, "response - unexpectedRedirect")
+        
+        // body
+        let data = "hello world".data(using: .utf8)!
+        XCTAssertEqual(HTTPManagerError.failedResponse(statusCode: 400, response: response, body: data, bodyJson: nil).body, data, "body - failedResponse")
+        XCTAssertEqual(HTTPManagerError.unauthorized(auth: nil, response: response, body: data, bodyJson: nil).body, data, "body - unauthorized")
+        XCTAssertEqual(HTTPManagerError.unexpectedContentType(contentType: "text/plain", response: response, body: data).body, data, "body - unexpectedContentType")
+        XCTAssertNil(HTTPManagerError.unexpectedNoContent(response: response).body, "body - unexpectedNoContent")
+        XCTAssertEqual(HTTPManagerError.unexpectedRedirect(statusCode: 304, location: nil, response: response, body: data).body, data, "body - unexpectedRedirect")
+        
+        // bodyJson
+        let json: JSON = ["ok": true, "msg": "Hello world"]
+        XCTAssertEqual(HTTPManagerError.failedResponse(statusCode: 500, response: response, body: Data(), bodyJson: json).bodyJson, json, "bodyJson - failedResponse with json")
+        XCTAssertNil(HTTPManagerError.failedResponse(statusCode: 500, response: response, body: Data(), bodyJson: nil).bodyJson, "bodyJson - failedResponse without json")
+        XCTAssertEqual(HTTPManagerError.unauthorized(auth: nil, response: response, body: Data(), bodyJson: json).bodyJson, json, "bodyJson - unauthorized with json")
+        XCTAssertNil(HTTPManagerError.unauthorized(auth: nil, response: response, body: Data(), bodyJson: nil).bodyJson, "bodyJson - unauthorized without json")
+        XCTAssertNil(HTTPManagerError.unexpectedContentType(contentType: "text/plain", response: response, body: Data()).bodyJson, "bodyJson - unexpectedContentType")
+        XCTAssertNil(HTTPManagerError.unexpectedNoContent(response: response).bodyJson, "bodyJson - unexpectedNoContent")
+        XCTAssertNil(HTTPManagerError.unexpectedRedirect(statusCode: 304, location: nil, response: response, body: Data()).bodyJson, "bodyJson - unexpectedRedirect")
+    }
+    
     func testEnvironmentWithPath() {
         HTTP.environment = HTTPManager.Environment(string: "http://\(httpServer.address)/api/v1")!
         expectationForHTTPRequest(httpServer, path: "/api/v1/foo") { request, completionHandler in

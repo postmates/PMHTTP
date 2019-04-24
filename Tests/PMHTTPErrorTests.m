@@ -46,6 +46,7 @@
     // unexpectedContentType
     XCTAssertFalse(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedContentTypeErrorWithContentType:@"text/plain" response:response body:[NSData data]], 500), @"unexpectedContentType");
     XCTAssertFalse(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedContentTypeErrorWithContentType:@"text/plain" response:response body:[NSData data]], response.statusCode), @"unexpectedContentType");
+    XCTAssertFalse(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedContentTypeErrorWithContentType:@"text/plain" response:response body:[NSData data]], 0), @"unexpectedContentType");
     
     // unexpectedNoContent
     XCTAssert(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedNoContentErrorWith:response], 204), @"unexpectedNoContent");
@@ -61,6 +62,26 @@
     XCTAssertFalse(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:301 location:nil response:response body:[NSData data]], 304), @"unexpectedRedirect code 301");
     XCTAssertFalse(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:304 location:nil response:response body:[NSData data]], 301), @"unexpectedRedirect code 304");
     XCTAssertFalse(PMHTTPErrorIsFailedResponse([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:301 location:nil response:response body:[NSData data]], response.statusCode), @"unexpectedRedirect code 301");
+    
+    // Dummy error with the userInfo from a PMHTTP error
+    NSError *dummyError = [NSError errorWithDomain:@"DummyErrorDomain" code:PMHTTPErrorFailedResponse
+                                          userInfo:[ObjCTestSupport createFailedResponseErrorWithStatusCode:500 response:response body:[NSData data] bodyJson:nil].userInfo];
+    XCTAssertFalse(PMHTTPErrorIsFailedResponse(dummyError, 500));
+    XCTAssertFalse(PMHTTPErrorIsFailedResponse(dummyError, 419));
+}
+
+- (void)testPMHTTPErrorGetStatusCode {
+    // Use a dummy response for all errors. The status code of the response doesn't matter,
+    // PMHTTPErrorGetStatusCode looks at the error keys instead.
+    NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:[NSURL URLWithString:@"http://example.com"] statusCode:419 HTTPVersion:nil headerFields:nil];
+    
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createFailedResponseErrorWithStatusCode:500 response:response body:[NSData data] bodyJson:nil]), @500, @"failedResponse code 500");
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createFailedResponseErrorWithStatusCode:404 response:response body:[NSData data] bodyJson:nil]), @404, @"failedResponse code 404");
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnauthorizedErrorWith:nil response:response body:[NSData data] bodyJson:nil]), @401, @"unauthorized");
+    XCTAssertNil(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedContentTypeErrorWithContentType:@"text/plain" response:response body:[NSData data]]), @"unexpectedContentType");
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedNoContentErrorWith:response]), @204, @"unexpectedNoContent");
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:301 location:nil response:response body:[NSData data]]), @301, @"unexpectedRedirect code 301");
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:304 location:nil response:response body:[NSData data]]), @304, @"unexpectedRedirect code 304");
 }
 
 @end

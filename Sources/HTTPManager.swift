@@ -1316,6 +1316,62 @@ public enum HTTPManagerError: Error, CustomStringConvertible, CustomDebugStringC
     /// - Parameter body: The body of the response, if any.
     case unexpectedRedirect(statusCode: Int, location: URL?, response: HTTPURLResponse, body: Data)
     
+    /// Returns the HTTP status code for the error.
+    ///
+    /// If the error does not represent a response with a non-successful status code (e.g.
+    /// `unexpectedContentType`), this returns `nil` instead.
+    public var statusCode: Int? {
+        switch self {
+        case .failedResponse(let statusCode, _, _, _),
+             .unexpectedRedirect(let statusCode, _, _, _):
+            return statusCode
+        case .unauthorized: return 401
+        case .unexpectedContentType: return nil
+        case .unexpectedNoContent: return 204
+        }
+    }
+    
+    /// Returns the `HTTPURLResponse` for the error.
+    public var response: HTTPURLResponse {
+        switch self {
+        case .failedResponse(_, let response, _, _),
+             .unauthorized(_, let response, _, _),
+             .unexpectedContentType(_, let response, _),
+             .unexpectedNoContent(let response),
+             .unexpectedRedirect(_, _, let response, _):
+            return response
+        }
+    }
+    
+    /// Returns the response body for the error, or `nil` for `.unexpectedNoContent`.
+    public var body: Data? {
+        switch self {
+        case .failedResponse(_, _, let body, _),
+             .unauthorized(_, _, let body, _),
+             .unexpectedContentType(_, _, let body),
+             .unexpectedRedirect(_, _, _, let body):
+            return body
+        case .unexpectedNoContent: return nil
+        }
+    }
+    
+    /// Returns the response body for the error as a `JSON`, if possible.
+    ///
+    /// If a `.failedResponse` or `.unauthorized` response declares a `Content-Type` of
+    /// `application/json` or `text/json`, this returns the results of decoding the body as JSON.
+    /// Otherwise, or if the decoding fails, this returns `nil`.
+    public var bodyJson: JSON? {
+        switch self {
+            case .failedResponse(_, _, _, let bodyJson),
+                 .unauthorized(_, _, _, let bodyJson):
+            return bodyJson
+        case .unexpectedContentType,
+             .unexpectedNoContent,
+             .unexpectedRedirect:
+            return nil
+        }
+    }
+    
     public var description: String {
         switch self {
         case let .failedResponse(statusCode, response, body, json):
