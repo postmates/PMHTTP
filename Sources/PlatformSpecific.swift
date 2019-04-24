@@ -376,8 +376,10 @@ import Foundation
             // Use CGImageSource so we can provide the MIME type hint.
             // NB: CGImageSource will cache the decoded image data by default on 64-bit platforms.
             let options: NSDictionary?
-            if let mimeType = mimeType {
-                options = [kCGImageSourceTypeIdentifierHint: mimeType as CFString]
+            if let mimeType = mimeType,
+                let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, kUTTypeImage)?.takeRetainedValue()
+            {
+                options = [kCGImageSourceTypeIdentifierHint: uti]
             } else {
                 options = nil
             }

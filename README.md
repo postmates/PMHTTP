@@ -410,9 +410,15 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Fix a bug when parsing images where we passed the wrong value for the type identifier hint, resulting in a warning being logged to the console ([#62][]).
+
+[#62]: https://github.com/postmates/PMHTTP/issues/62 "Unknown Hint Identifier for Image MIME Types · Issue #62 · postmates/PMHTTP"
+
 #### v4.3.3 (2019-04-07)
 
-* Updated `PMHTTPErrorIsFailedResponse` to handle `PMHTTPErrorUnexpectedNoContent` and `PMHTTPErrorUnexpectedRedirect` in addition to `PMHTTPErrorFailedResponse` and `PMHTTPErrorUnauthorized`.
+* Update `PMHTTPErrorIsFailedResponse` to handle `PMHTTPErrorUnexpectedNoContent` and `PMHTTPErrorUnexpectedRedirect` in addition to `PMHTTPErrorFailedResponse` and `PMHTTPErrorUnauthorized`.
 * Fix warnings introduced by Xcode 10.2.
 
 #### v4.3.2 (2018-11-14)
