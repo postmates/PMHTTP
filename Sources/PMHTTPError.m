@@ -38,10 +38,13 @@ NSNumber * _Nullable PMHTTPErrorGetStatusCode(NSError * _Nullable error) {
             return [errorStatusCode isKindOfClass:[NSNumber class]] ? errorStatusCode : nil;
         }
         case PMHTTPErrorUnauthorized:
+            // NB: Ignore PMHTTPStatusCodeErrorKey and just hardcode the status here, because there's only one valid code.
+            // This protects us from hand-crafted `NSError`s that are missing the key.
             return @401;
         case PMHTTPErrorUnexpectedContentType:
             return nil;
         case PMHTTPErrorUnexpectedNoContent:
+            // NB: See above regarding hardcoding the status code.
             return @204;
     }
     return nil;

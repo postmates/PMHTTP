@@ -82,6 +82,27 @@
     XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedNoContentErrorWith:response]), @204, @"unexpectedNoContent");
     XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:301 location:nil response:response body:[NSData data]]), @301, @"unexpectedRedirect code 301");
     XCTAssertEqualObjects(PMHTTPErrorGetStatusCode([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:304 location:nil response:response body:[NSData data]]), @304, @"unexpectedRedirect code 304");
+    
+    // Ensure we're not relying on PMHTTPStatusCodeErrorKey for the error types that don't need it
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode(errorWithStatusCode([ObjCTestSupport createUnauthorizedErrorWith:nil response:response body:[NSData data] bodyJson:nil], 500)), @401, @"unauthorized with modified status code userInfo key");
+    XCTAssertEqualObjects(PMHTTPErrorGetStatusCode(errorWithStatusCode([ObjCTestSupport createUnexpectedNoContentErrorWith:response], 500)), @204, @"unexpectedNoContent");
+}
+
+- (void)testPMHTTPStatusCodeErrorKey {
+    // Ensure we provide PMHTTPStatusCodeErrorKey for all errors that PMHTTPErrorGetStatusCode returns a value for
+    NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:[NSURL URLWithString:@"http://example.com"] statusCode:419 HTTPVersion:nil headerFields:nil];
+    
+    XCTAssertEqualObjects([ObjCTestSupport createFailedResponseErrorWithStatusCode:404 response:response body:[NSData data] bodyJson:nil].userInfo[PMHTTPStatusCodeErrorKey], @404, @"failedResponse code 404");
+    XCTAssertEqualObjects([ObjCTestSupport createUnauthorizedErrorWith:nil response:response body:[NSData data] bodyJson:nil].userInfo[PMHTTPStatusCodeErrorKey], @401, @"unauthorized");
+    XCTAssertNil([ObjCTestSupport createUnexpectedContentTypeErrorWithContentType:@"text/plain" response:response body:[NSData data]].userInfo[PMHTTPStatusCodeErrorKey], @"unexpectedContentType");
+    XCTAssertEqualObjects([ObjCTestSupport createUnexpectedNoContentErrorWith:response].userInfo[PMHTTPStatusCodeErrorKey], @204, @"unexpectedNoContent");
+    XCTAssertEqualObjects([ObjCTestSupport createUnexpectedRedirectErrorWithStatusCode:304 location:nil response:response body:[NSData data]].userInfo[PMHTTPStatusCodeErrorKey], @304, @"unexpectedRedirect");
+}
+
+static NSError * _Nonnull errorWithStatusCode(NSError * _Nonnull error, NSInteger statusCode) {
+    NSMutableDictionary *userInfo = [error.userInfo mutableCopy];
+    userInfo[PMHTTPStatusCodeErrorKey] = @(statusCode);
+    return [NSError errorWithDomain:error.domain code:error.code userInfo:userInfo];
 }
 
 @end

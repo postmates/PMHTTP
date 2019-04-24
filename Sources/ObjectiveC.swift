@@ -259,6 +259,7 @@ extension HTTPManagerError: CustomNSError {
             var userInfo: [String: Any] = [
                 NSLocalizedDescriptionKey: auth?.localizedDescription?(for: self) ?? "401 Unauthorized HTTP response",
                 PMHTTPURLResponseErrorKey: response,
+                PMHTTPStatusCodeErrorKey: 401,
                 PMHTTPBodyDataErrorKey: body
             ]
             userInfo[PMHTTPAuthErrorKey] = auth
@@ -273,7 +274,8 @@ extension HTTPManagerError: CustomNSError {
         case let .unexpectedNoContent(response):
             return [
                 NSLocalizedDescriptionKey: "HTTP response returned 204 No Content when an entity was expected",
-                PMHTTPURLResponseErrorKey: response]
+                PMHTTPURLResponseErrorKey: response,
+                PMHTTPStatusCodeErrorKey: 204]
         case let .unexpectedRedirect(statusCode, location, response, body):
             let statusString = HTTPURLResponse.localizedString(forStatusCode: statusCode)
             var userInfo: [String: Any] = [
