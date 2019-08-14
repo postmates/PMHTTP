@@ -295,7 +295,7 @@ public extension HTTPManagerObjectParseRequest {
     @available(*, deprecated, message: "use 'auth' with HTTPBasicAuth")
     override var credential: URLCredential? {
         get { return (auth as? HTTPBasicAuth)?.credential }
-        set { auth = credential.flatMap(HTTPBasicAuth.init(credential:)) }
+        set { auth = newValue.flatMap(HTTPBasicAuth.init(credential:)) }
     }
     
     @available(*, unavailable, renamed: "createTask(withCompletionQueue:completion:)")

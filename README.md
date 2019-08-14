@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Fix a bug with the deprecated `HTTPManagerObjectParseRequest.credential` property where assigning to the property wouldn't work.
+
 #### v4.4.1 (2019-04-24)
 
 * Work around a CocoaPods bug with Swift versions ([CocoaPods/CocoaPods#8635][]).
