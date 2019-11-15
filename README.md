@@ -410,6 +410,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Support PMJSON 4.x in addition to PMJSON 3.x with CocoaPods. Carthage doesn't support that kind of version range so it's now just set to PMJSON 4.x only.
+
 #### v4.4.2 (2019-08-13)
 
 * Fix a bug with the deprecated `HTTPManagerObjectParseRequest.credential` property where assigning to the property wouldn't work.

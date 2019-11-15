@@ -28,5 +28,5 @@ Pod::Spec.new do |s|
   s.library    = 'c++'
   s.module_map = "Sources/pmhttp.modulemap"
 
-  s.dependency "PMJSON", "~> 3.0"
+  s.dependency "PMJSON", ">= 3.0", "< 5.0"
 end
