@@ -1,6 +1,6 @@
 # PMHTTP
 
-[![Version](https://img.shields.io/badge/version-v4.4.2-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
+[![Version](https://img.shields.io/badge/version-v4.4.3-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-ios%20%7C%20osx%20%7C%20watchos%20%7C%20tvos-lightgrey.svg)
 ![Languages](https://img.shields.io/badge/languages-swift%20%7C%20objc-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
@@ -410,7 +410,7 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
-#### Development
+#### v4.4.3 (2019-11-14)
 
 * Support PMJSON 4.x in addition to PMJSON 3.x with CocoaPods. Carthage doesn't support that kind of version range so it's now just set to PMJSON 4.x only.
 
