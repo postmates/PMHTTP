@@ -118,6 +118,33 @@ extension HTTPManager {
     }
     
     /// Creates a POST request.
+    ///
+    /// - Note: The request's `contentType` will default to `"application/octet-stream"`.
+    ///
+    /// - Parameter path: The path for the request, interpreted relative to the environment. May be
+    ///   an absolute URL.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot be parsed by
+    ///   `NSURL`.
+    @objc(requestForPOST:data:)
+    public func __objc_requestForPOST(_ path: String, data: Data) -> HTTPManagerUploadDataRequest! {
+        return request(POST: path, data: data)
+    }
+    
+    /// Creates a POST request.
+    ///
+    /// - Note: The request's `contentType` will default to `"application/octet-stream"`.
+    ///
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`.
+    @objc(requestForPOSTWithURL:data:)
+    public func __objc_requestForPOST(_ url: URL, data: Data) -> HTTPManagerUploadDataRequest {
+        return request(POST: url, data: data)
+    }
+    
+    /// Creates a POST request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON-compatible object to upload as the body of the request.
@@ -161,6 +188,33 @@ extension HTTPManager {
     }
     
     /// Creates a PUT request.
+    ///
+    /// - Note: The request's `contentType` will default to `"application/octet-stream"`.
+    ///
+    /// - Parameter path: The path for the request, interpreted relative to the environment. May be
+    ///   an absolute URL.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot be parsed by
+    ///   `NSURL`.
+    @objc(requestForPUT:data:)
+    public func __objc_requestForPUT(_ path: String, data: Data) -> HTTPManagerUploadDataRequest! {
+        return request(PUT: path, data: data)
+    }
+    
+    /// Creates a PUT request.
+    ///
+    /// - Note: The request's `contentType` will default to `"application/octet-stream"`.
+    ///
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`.
+    @objc(requestForPUTWithURL:data:)
+    public func __objc_requestForPUT(_ url: URL, data: Data) -> HTTPManagerUploadDataRequest {
+        return request(PUT: url, data: data)
+    }
+    
+    /// Creates a PUT request.
     /// - Parameter path: The path for the request, interpreted relative to the
     ///   environment. May be an absolute URL.
     /// - Parameter json: The JSON-compatible object to upload as the body of the request.
@@ -201,6 +255,33 @@ extension HTTPManager {
     @objc(requestForPATCHWithURL:)
     public func __objc_requestForPATCHWithURL(_ url: URL) -> HTTPManagerUploadFormRequest {
         return request(PATCH: url)
+    }
+    
+    /// Creates a PATCH request.
+    ///
+    /// - Note: The request's `contentType` will default to `"application/octet-stream"`.
+    ///
+    /// - Parameter path: The path for the request, interpreted relative to the environment. May be
+    ///   an absolute URL.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`, or `nil` if the `path` cannot be parsed by
+    ///   `NSURL`.
+    @objc(requestForPATCH:data:)
+    public func __objc_requestForPATCH(_ path: String, data: Data) -> HTTPManagerUploadDataRequest! {
+        return request(PATCH: path, data: data)
+    }
+    
+    /// Creates a PATCH request.
+    ///
+    /// - Note: The request's `contentType` will default to `"application/octet-stream"`.
+    ///
+    /// - Parameter url: The URL for the request. If relative, it's interpreted relative to the
+    ///   environment.
+    /// - Parameter data: The data to upload as the body of the request.
+    /// - Returns: An `HTTPManagerUploadDataRequest`.
+    @objc(requestForPATCHWithURL:data:)
+    public func __objc_requestForPATCH(_ url: URL, data: Data) -> HTTPManagerUploadDataRequest {
+        return request(PATCH: url, data: data)
     }
     
     /// Creates a PATCH request.

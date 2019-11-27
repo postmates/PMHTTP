@@ -410,6 +410,12 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
+#### Development
+
+* Add Obj-C convenience functions for creating upload requests with an `NSData` but no explicit `contentType` ([#65][]).
+
+[#65]: https://github.com/postmates/PMHTTP/issues/65 "Obj-C convenience functions for requests with data"
+
 #### v4.4.3 (2019-11-14)
 
 * Support PMJSON 4.x in addition to PMJSON 3.x with CocoaPods. Carthage doesn't support that kind of version range so it's now just set to PMJSON 4.x only.
