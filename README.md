@@ -413,8 +413,10 @@ work by you shall be dual licensed as above, without any additional terms or con
 #### Development
 
 * Add Obj-C convenience functions for creating upload requests with an `NSData` but no explicit `contentType` ([#65][]).
+* Fix the Obj-C `-setValue:forHeaderField:` and `-setValue:forDefaultHeaderField:` methods to take a nullable value ([#67][]).
 
 [#65]: https://github.com/postmates/PMHTTP/issues/65 "Obj-C convenience functions for requests with data"
+[#67]: https://github.com/postmates/PMHTTP/issues/67 "Obj-C -[HTTPManagerRequest setValue:forHeaderField:] should take nullable value"
 
 #### v4.4.3 (2019-11-14)
 

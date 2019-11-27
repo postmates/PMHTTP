@@ -44,10 +44,10 @@ extension HTTPManager {
     
     /// Sets a specified default HTTP header field.
     ///
-    /// - Parameter value: The value for the header field.
+    /// - Parameter value: The value for the header field. If `nil` the header is deleted.
     /// - Parameter field: The name of the header field. Header fields are case-insensitive.
     @objc(setValue:forDefaultHeaderField:)
-    public func __objc_setValue(_ value: String, forDefaultHeaderField field: String) {
+    public func __objc_setValue(_ value: String?, forDefaultHeaderField field: String) {
         defaultHeaderFields[field] = value
     }
     
@@ -790,9 +790,9 @@ extension HTTPManagerRequest {
     
     /// Sets a specified HTTP header field.
     ///
-    /// - Parameter value: The value for the header field.
+    /// - Parameter value: The value for the header field. If `nil` the header is deleted.
     /// - Parameter field: The name of the header field. Header fields are case-insensitive.
-    @objc(setValue:forHeaderField:) public func __objc_setValue(_ value: String, forHeaderField field: String) {
+    @objc(setValue:forHeaderField:) public func __objc_setValue(_ value: String?, forHeaderField field: String) {
         headerFields[field] = value
     }
     
