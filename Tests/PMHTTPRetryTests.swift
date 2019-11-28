@@ -444,6 +444,67 @@ final class PMHTTPRetryTests: PMHTTPTestCase {
         }
         waitForExpectations(timeout: 5, handler: nil)
     }
+    
+    func testRetryAny() {
+        for _ in 0..<3 {
+            expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+                completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
+            }
+        }
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok))
+        }
+        let req = HTTP.request(GET: "foo")!
+        req.retryBehavior = HTTPManagerRetryBehavior(any: (0...2).map({ (i) in
+            let expectation = self.expectation(description: "Retry behavior \(i+1) invoked")
+            expectation.expectedFulfillmentCount = 3 - i
+            expectation.assertForOverFulfill = true
+            return HTTPManagerRetryBehavior({ (task, error, attempt, callback) in
+                expectation.fulfill()
+                callback(attempt == 2 - i)
+            })
+        }))
+        expectationForRequestSuccess(req)
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func testRetryAnyNoBehaviors() {
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
+        }
+        let req = HTTP.request(GET: "foo")!
+        req.retryBehavior = HTTPManagerRetryBehavior(any: [])
+        expectationForRequestFailure(req) { task, response, error in
+            if let error = error as? URLError {
+                XCTAssertEqual(error.code, URLError.networkConnectionLost, "error code")
+            } else {
+                XCTFail("expected URLError, got \(error)")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    func testRetryAnyNoneSucceed() {
+        expectationForHTTPRequest(httpServer, path: "/foo") { (request, completionHandler) in
+            completionHandler(HTTPServer.Response(status: .ok, headers: ["Content-Length": "64", "Connection": "close"]))
+        }
+        let req = HTTP.request(GET: "foo")!
+        req.retryBehavior = HTTPManagerRetryBehavior(any: (1...3).map({ (i) in
+            let expectation = self.expectation(description: "Retry behavior \(i) invoked")
+            return HTTPManagerRetryBehavior({ (task, error, attempt, callback) in
+                expectation.fulfill()
+                callback(false)
+            })
+        }))
+        expectationForRequestFailure(req) { task, response, error in
+            if let error = error as? URLError {
+                XCTAssertEqual(error.code, URLError.networkConnectionLost, "error code")
+            } else {
+                XCTFail("expected URLError, got \(error)")
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
 }
 
 private class KVOLog<T: AnyObject>: NSObject {

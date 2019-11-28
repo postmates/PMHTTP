@@ -1665,6 +1665,34 @@ public final class HTTPManagerRetryBehavior: NSObject {
         })
     }
     
+    /// Returns a retry behavior that evaluates an array of behaviors until one of them succeeds.
+    ///
+    /// The returned behavior will evaluate the first behavior in the array. If that invokes the
+    /// callback with `false` it will evaluate the second, and so on until some behavior has invoked
+    /// the callback with `true` or all behaviors have been exhausted.
+    /// - Parameter retryBehaviors: The array of retry behaviors to try in turn.
+    @objc(initWithAnyRetryBehavior:)
+    public init(any retryBehaviors: [HTTPManagerRetryBehavior]) {
+        handler = { (task, error, attempt, callback) in
+            var iter = retryBehaviors.makeIterator()
+            func tryNext() {
+                guard let next = iter.next() else {
+                    callback(false)
+                    return
+                }
+                next.handler(task, error, attempt, { (shouldRetry) in
+                    if shouldRetry {
+                        callback(shouldRetry)
+                    } else {
+                        tryNext()
+                    }
+                })
+            }
+            tryNext()
+        }
+        super.init()
+    }
+    
     internal let handler: (_ task: HTTPManagerTask, _ error: Error, _ attempt: Int, _ callback: @escaping (_ retry: Bool) -> Void) -> Void
 }
 
