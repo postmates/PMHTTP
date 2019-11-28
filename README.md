@@ -1,6 +1,6 @@
 # PMHTTP
 
-[![Version](https://img.shields.io/badge/version-v4.4.3-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
+[![Version](https://img.shields.io/badge/version-v4.5.0-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-ios%20%7C%20osx%20%7C%20watchos%20%7C%20tvos-lightgrey.svg)
 ![Languages](https://img.shields.io/badge/languages-swift%20%7C%20objc-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
@@ -410,7 +410,7 @@ work by you shall be dual licensed as above, without any additional terms or con
 
 ## Version History
 
-#### Development
+#### v4.5.0 (2019-11-27)
 
 * Add Obj-C convenience functions for creating upload requests with an `NSData` but no explicit `contentType` ([#65][]).
 * Fix the Obj-C `-setValue:forHeaderField:` and `-setValue:forDefaultHeaderField:` methods to take a nullable value ([#67][]).
