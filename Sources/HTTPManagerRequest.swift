@@ -357,6 +357,10 @@ extension HTTPManagerRequest {
             }
         }
         
+        public init(minimumCapacity: Int) {
+            dictionary = Dictionary(minimumCapacity: minimumCapacity)
+        }
+        
         public var description: String {
             return String(describing: dictionary)
         }
@@ -394,6 +398,10 @@ extension HTTPManagerRequest {
             return dictionary.isEmpty
         }
         
+        public var capacity: Int {
+            return dictionary.capacity
+        }
+        
         public var startIndex: Index {
             return dictionary.startIndex
         }
@@ -414,6 +422,10 @@ extension HTTPManagerRequest {
                 guard !key.isEmpty else { return }
                 dictionary[HTTPHeaders.normalizedHTTPHeaderField(key)] = newValue
             }
+        }
+        
+        public mutating func reserveCapacity(_ minimumCapacity: Int) {
+            dictionary.reserveCapacity(minimumCapacity)
         }
         
         public func index(forKey key: String) -> Index? {
