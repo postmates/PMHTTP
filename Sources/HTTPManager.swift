@@ -2276,7 +2276,7 @@ extension SessionDelegate: URLSessionDataDelegate {
     private static let cacheControlValues: Set<CaseInsensitiveASCIIString> = ["no-cache", "no-store", "max-age", "s-maxage"]
     
     @objc func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, willCacheResponse proposedResponse: CachedURLResponse, completionHandler: @escaping (CachedURLResponse?) -> Void) {
-        guard var taskInfo = tasks[dataTask.taskIdentifier] else {
+        guard let taskInfo = tasks[dataTask.taskIdentifier] else {
             log("willCacheResponse; ignoring, task \(dataTask) not tracked")
             completionHandler(proposedResponse)
             return
