@@ -14,6 +14,10 @@
 
 #import <Foundation/Foundation.h>
 
+#if TARGET_OS_IPHONE
+#import <CoreGraphics/CoreGraphics.h>
+#endif
+
 //! Project version number for PMHTTP.
 FOUNDATION_EXPORT double PMHTTPVersionNumber;
 
