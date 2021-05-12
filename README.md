@@ -1,3 +1,7 @@
+# Now Archived and Forked
+
+PMHTTP will not be maintained in this repository going forward. Please use, create issues on, and make PRs to [the fork of PHMTTP located here.](https://github.com/PMSwift/PMHTTP)
+
 # PMHTTP
 
 [![Version](https://img.shields.io/badge/version-v4.5.0-blue.svg)](https://github.com/postmates/PMHTTP/releases/latest)
